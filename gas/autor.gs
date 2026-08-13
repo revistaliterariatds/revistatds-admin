@@ -4,12 +4,12 @@
 // `estado` (lectura) no consume el token; `approve`/`reject`/`edit` sí
 // (un solo uso por ronda, con LockService anti doble clic).
 
-function findCuentoByToken(token) {
+function findCuento(colName, value) {
   var sheet = getSheet('Tablero');
   var idx = headerIndex(sheet);
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][idx.token_autor]) === String(token)) {
+    if (String(data[i][idx[colName]]) === String(value)) {
       var row = { _rowIndex: i };
       SHEETS.Tablero.forEach(function (h, j) { row[h] = data[i][j]; });
       return row;
@@ -17,6 +17,9 @@ function findCuentoByToken(token) {
   }
   return null;
 }
+
+function findCuentoByToken(token) { return findCuento('token_autor', token); }
+function findCuentoById(id) { return findCuento('id', id); }
 
 function requireToken(token) {
   if (!token) throw new ApiError('Falta el token.');

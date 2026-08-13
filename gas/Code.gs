@@ -21,6 +21,14 @@ function doPost(e) {
       result = handleWhoami(tokenFrom(data, e));       // login → email + rol
     } else if (action === 'panel/board/list') {
       result = handleBoardList(tokenFrom(data, e));    // tablero (lectura)
+    } else if (action === 'panel/board/detail') {
+      result = handleBoardDetail(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/asignarme') {
+      result = handleAsignarme(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/pedir-correcciones') {
+      result = handlePedirCorrecciones(tokenFrom(data, e), data && data.id, data && data.motivo);
+    } else if (action === 'panel/board/revision-terminada') {
+      result = handleRevisionTerminada(tokenFrom(data, e), data && data.id);
     } else if (action === 'autor/estado') {
       result = handleAutorEstado(data && data.token);  // autor: ver estado
     } else if (action === 'autor/approve') {

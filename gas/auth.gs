@@ -104,3 +104,30 @@ function handleWhoami(idToken) {
     nombre: user.alias || user.nombre || user.email,
   });
 }
+
+// Nombre visible (alias → nombre → email).
+function displayName(email) {
+  var u = resolveUser(email);
+  return u ? (u.alias || u.nombre || u.email) : String(email || '');
+}
+
+// "Nombre · Rol" para la columna titular del tablero.
+function titularInfo(email) {
+  var u = resolveUser(email);
+  return u ? ((u.alias || u.nombre || u.email) + ' · ' + u.rol) : String(email || '');
+}
+
+// Emails activos de uno o más roles.
+function getEmailsByRoles(roles) {
+  var sheet = getSheet('Roles');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var activo = String(data[i][idx.activo]).toUpperCase() === 'TRUE';
+    if (activo && roles.indexOf(data[i][idx.rol]) >= 0) {
+      out.push(data[i][idx.email]);
+    }
+  }
+  return out;
+}
