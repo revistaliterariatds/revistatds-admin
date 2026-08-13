@@ -71,6 +71,15 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
 
+## Endpoints del autor (POST a `/exec`, con `action` + `token` en el body)
+
+| `action` en body | Consume token | Devuelve |
+|---|---|---|
+| `autor/estado` | no | `{ status, titulo, estado, version, historial }` |
+| `autor/approve` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → APROBADO) |
+| `autor/reject` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → RECHAZADO_POR_AUTOR, con `motivo`) |
+| `autor/edit` | sí | `{ status, message, version, estado }` (sube versión → EN_REVISIÓN) |
+
 Nota importante: el routing se hace por el campo `action` del body (NO por path,
 p. ej. `/exec/panel/auth/whoami`), porque agregar path a la URL de GAS rompe CORS
 (la respuesta pierde `Access-Control-Allow-Origin`). El ID token viaja en el body

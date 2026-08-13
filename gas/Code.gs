@@ -21,6 +21,14 @@ function doPost(e) {
       result = handleWhoami(tokenFrom(data, e));       // login → email + rol
     } else if (action === 'panel/board/list') {
       result = handleBoardList(tokenFrom(data, e));    // tablero (lectura)
+    } else if (action === 'autor/estado') {
+      result = handleAutorEstado(data && data.token);  // autor: ver estado
+    } else if (action === 'autor/approve') {
+      result = handleAutorApprove(data && data.token); // autor: aprobar
+    } else if (action === 'autor/reject') {
+      result = handleAutorReject(data && data.token, data && data.motivo); // autor: no aprobar
+    } else if (action === 'autor/edit') {
+      result = handleAutorEdit(data && data.token, data && data.archivos); // autor: subir versión
     } else {
       result = err('Ruta no encontrada: ' + action);
     }

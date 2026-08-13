@@ -27,6 +27,12 @@ function err(message) {
   return { status: 'error', message: message };
 }
 
+// Error de dominio para las rutas del autor (token inválido, estado incorrecto).
+function ApiError(message) {
+  this.name = 'ApiError';
+  this.message = message;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
