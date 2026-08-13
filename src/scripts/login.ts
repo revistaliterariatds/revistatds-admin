@@ -74,14 +74,21 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   if (rol && navRole) navRole.textContent = rol;
   if (!rol && navRole) navRole.textContent = 'sin acceso';
 
-  const displayName = who.ok ? (who.nombre || name) : name;
+  // Prefiere alias/nombre real de whoami; si coincide con el email, usa el
+  // nombre del perfil de Google; si tampoco hay, no duplica el email.
+  const whoName = who.ok ? (who.nombre || '') : '';
+  const displayName = (whoName && whoName !== email) ? whoName : name;
   const roleHtml = rol
     ? `<span class="role">${rol}</span>`
     : `<span class="role">error: ${who.message || 'desconocido'}</span>`;
 
+  const greet = displayName && displayName !== email
+    ? `Hola <strong>${displayName}</strong> · ${email}`
+    : `Hola ${email}`;
+
   setStatus(
     rol ? 'ok' : 'error',
-    `<p class="email">Hola ${displayName ? `<strong>${displayName}</strong> · ` : ''}${email}</p>
+    `<p class="email">${greet}</p>
      ${roleHtml}`,
   );
 }
