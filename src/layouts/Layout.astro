@@ -1,0 +1,82 @@
+---
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="robots" content="noindex" />
+
+    <!--
+      CSP del panel.
+      Fase 5 (hardening): reemplazar 'unsafe-inline' de script-src por nonce/hash
+      cuando el login esté estable (Astro inlinea scripts pequeños, p. ej. con
+      PUBLIC_GOOGLE_CLIENT_ID vacío).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://accounts.google.com https://static.cloudflareinsights.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data:;
+      connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com;
+      frame-src https://accounts.google.com;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+    " />
+
+    <title>{title}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <nav aria-label="Navegación del panel">
+      <div class="nav-inner">
+        <a href="/" class="nav-logo" aria-label="Tramas del Sur — Panel editorial">
+          <img src="/assets/img/logo/logo.jpeg" alt="Tramas del Sur" />
+        </a>
+        <div class="nav-user" id="nav-user" hidden>
+          <span id="nav-user-name"></span>
+          <span class="badge" id="nav-user-role"></span>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-logo">
+          <img src="/assets/img/logo/logo.jpeg" alt="Tramas del Sur" />
+        </div>
+        <span class="footer-copy">Revista literaria independiente</span>
+        <div class="footer-qr">
+          <a href="https://shcdigital.net.ar" target="_blank" rel="noopener noreferrer">
+            <img src="/assets/img/logo/qr.png" alt="Código QR para acceder a SHC Digital" />
+            <span>Diseño web by SHC.Digital</span>
+          </a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

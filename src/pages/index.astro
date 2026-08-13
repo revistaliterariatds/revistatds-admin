@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Panel editorial — Tramas del Sur"
+  description="Panel editorial de Tramas del Sur. Acceso exclusivo del equipo de redacción."
+>
+  <section class="panel-hero" aria-labelledby="panel-heading">
+    <p class="hero-edition">Redacción</p>
+    <h1 id="panel-heading">Panel editorial</h1>
+    <p class="sub">
+      Gestión de envíos, correcciones y publicaciones de Tramas del Sur.
+      Acceso exclusivo con cuenta Google del equipo de redacción.
+    </p>
+
+    <button id="login-button" class="btn-primary" type="button">
+      Iniciar sesión con Google
+    </button>
+
+    <div id="status-card" class="status-card" hidden></div>
+  </section>
+</Layout>
+
+<script>
+  import '../scripts/login.ts';
+</script>
