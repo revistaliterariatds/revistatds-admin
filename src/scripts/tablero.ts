@@ -34,6 +34,8 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
 let cuentos: Cuento[] = [];
 let estadoActivo = 'TODOS';
 let termino = '';
+let editores: { email: string; nombre: string }[] = [];
+const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'SUPERVISOR';
 
 // ── sesión ──
 const user = getUser();
@@ -139,11 +141,18 @@ function renderTable() {
     const soyTitular = c.editor_asignado === user?.email;
     const puedoAsignarme = user?.rol === 'EDITOR' && libre && c.estado === 'RECIBIDO';
 
-    const acciones = [];
+    const acciones: string[] = [];
     if (puedoAsignarme) {
       acciones.push(`<button type="button" class="btn-mini" data-accion="asignarme" data-id="${esc(c.id)}">Asignarme</button>`);
     }
-    if (c.url_doc_correccion && (soyTitular || user?.rol !== 'EDITOR')) {
+    if (esGestor && libre && c.estado === 'RECIBIDO') {
+      acciones.push(editorSelect('asignar', c.id));
+    }
+    if (esGestor && !libre) {
+      acciones.push(editorSelect('reasignar', c.id));
+      acciones.push(`<button type="button" class="btn-mini" data-accion="desasignar" data-id="${esc(c.id)}">Desasignar</button>`);
+    }
+    if (c.url_doc_correccion && (soyTitular || esGestor)) {
       acciones.push(`<a class="btn-mini" href="${esc(c.url_doc_correccion)}" target="_blank" rel="noopener noreferrer">Doc</a>`);
     }
 
@@ -172,6 +181,30 @@ function renderTable() {
   body.querySelectorAll('[data-accion="asignarme"]').forEach((btn) => {
     btn.addEventListener('click', () => asignarme((btn as HTMLElement).dataset.id || ''));
   });
+
+  body.querySelectorAll('[data-asignar]').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const v = (sel as HTMLSelectElement).value;
+      if (v) asignar((sel as HTMLElement).dataset.asignar || '', v);
+    });
+  });
+
+  body.querySelectorAll('[data-reasignar]').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const v = (sel as HTMLSelectElement).value;
+      if (v) reasignar((sel as HTMLElement).dataset.reasignar || '', v);
+    });
+  });
+
+  body.querySelectorAll('[data-accion="desasignar"]').forEach((btn) => {
+    btn.addEventListener('click', () => desasignar((btn as HTMLElement).dataset.id || ''));
+  });
+}
+
+function editorSelect(tipo: 'asignar' | 'reasignar', id: string): string {
+  const opts = editores.map((e) => `<option value="${esc(e.email)}">${esc(e.nombre)}</option>`).join('');
+  const label = tipo === 'asignar' ? 'Asignar a…' : 'Reasignar a…';
+  return `<select class="editor-select" data-${tipo}="${esc(id)}" aria-label="${label}"><option value="">${label}</option>${opts}</select>`;
 }
 
 // ── acciones ──
@@ -182,6 +215,10 @@ async function cargar() {
     return;
   }
   cuentos = data.cuentos;
+  if (esGestor) {
+    const ed = await api('panel/board/editors');
+    if (ed.status === 'ok') editores = ed.editores || [];
+  }
   renderPills();
   renderTable();
 }
@@ -193,6 +230,25 @@ async function asignarme(id: string) {
   } else {
     alert(data.message || 'No se pudo asignar.');
   }
+}
+
+async function asignar(id: string, editorEmail: string) {
+  const data = await api('panel/board/asignar', { id, editorEmail });
+  if (data.status === 'ok') await cargar();
+  else alert(data.message || 'No se pudo asignar.');
+}
+
+async function reasignar(id: string, editorEmail: string) {
+  const data = await api('panel/board/reasignar', { id, editorEmail });
+  if (data.status === 'ok') await cargar();
+  else alert(data.message || 'No se pudo reasignar.');
+}
+
+async function desasignar(id: string) {
+  if (!confirm('¿Desasignar este cuento?')) return;
+  const data = await api('panel/board/desasignar', { id });
+  if (data.status === 'ok') await cargar();
+  else alert(data.message || 'No se pudo desasignar.');
 }
 
 // ── detalle ──

@@ -269,3 +269,6 @@ footer {
   .board-table td:last-child { border-bottom: none; }
   .board-table td::before { content: attr(data-label); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); flex-shrink: 0; }
 }
+
+.editor-select { padding: 0.3rem 0.5rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; font-size: var(--text-xs); max-width: 150px; }
+.editor-select:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
