@@ -1,0 +1,106 @@
+// auth.gs — validación de ID token (tokeninfo) + RBAC + whoami.
+
+function AuthError(message) {
+  this.name = 'AuthError';
+  this.message = message;
+}
+
+function decodeJwtPayload(token) {
+  try {
+    var parts = String(token).split('.');
+    if (parts.length < 2) return null;
+    var b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    var padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    return JSON.parse(Utilities.newBlob(Utilities.base64Decode(padded)).getDataAsString());
+  } catch (e) {
+    return null;
+  }
+}
+
+function validateIdToken(idToken) {
+  if (!idToken) throw new AuthError('Falta el token.');
+
+  var payload = decodeJwtPayload(idToken);
+  if (!payload) throw new AuthError('Token inválido.');
+  if (payload.exp && payload.exp * 1000 < Date.now()) throw new AuthError('Token expirado.');
+
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'tok:' + (payload.sub || payload.email);
+  var cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  var url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken);
+  var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) throw new AuthError('Token no verificado.');
+  var info = JSON.parse(resp.getContentText());
+
+  var clientId = getOAuthClientId();
+  if (clientId && info.aud !== clientId) throw new AuthError('Audience inválido.');
+  if (info.email_verified !== 'true' && info.email_verified !== true) {
+    throw new AuthError('Email no verificado.');
+  }
+
+  var result = {
+    email: info.email,
+    name: info.name || payload.name || '',
+    sub: info.sub || payload.sub,
+  };
+  cache.put(cacheKey, JSON.stringify(result), 600); // 10 min
+  return result;
+}
+
+function resolveUser(email) {
+  var sheet = getSheet('Roles');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  var target = String(email).toLowerCase();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idx.email]).toLowerCase() === target) {
+      return {
+        email: data[i][idx.email],
+        rol: data[i][idx.rol],
+        nombre: data[i][idx.nombre],
+        alias: data[i][idx.alias],
+        usar_alias_notif: String(data[i][idx.usar_alias_notif]).toUpperCase() === 'TRUE',
+        activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
+      };
+    }
+  }
+  return null;
+}
+
+function updateUserName(email, name) {
+  var sheet = getSheet('Roles');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  var target = String(email).toLowerCase();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idx.email]).toLowerCase() === target && !data[i][idx.nombre]) {
+      sheet.getRange(i + 1, idx.nombre + 1).setValue(name);
+      return;
+    }
+  }
+}
+
+// Valida token + regla de acceso (gmail.com + rol activo) → devuelve el usuario.
+function requireInternalUser(idToken) {
+  var info = validateIdToken(idToken);
+  var email = String(info.email || '').toLowerCase();
+  if (!/^[^@\s]+@gmail\.com$/.test(email)) {
+    throw new AuthError('Solo se permiten cuentas @gmail.com.');
+  }
+  var user = resolveUser(email);
+  if (!user) throw new AuthError('Sin rol asignado.');
+  if (!user.activo) throw new AuthError('Usuario inactivo.');
+  if (!user.nombre && info.name) updateUserName(email, info.name);
+  return user;
+}
+
+function handleWhoami(idToken) {
+  var user = requireInternalUser(idToken);
+  return ok({
+    email: user.email,
+    rol: user.rol,
+    nombre: user.alias || user.nombre || user.email,
+  });
+}

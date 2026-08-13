@@ -1,0 +1,82 @@
+// Code.gs — router HTTP + setup inicial del proyecto.
+
+function doPost(e) {
+  try {
+    var path = (e && e.pathInfo) ? String(e.pathInfo).replace(/^\//, '') : '';
+    var body = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
+    var data = {};
+    try { data = JSON.parse(body); } catch (errParse) { data = {}; }
+
+    var result;
+    if (path === '' || path === '/') {
+      result = handleEnvio(data);                      // público (formularios del sitio)
+    } else if (path === 'panel/auth/whoami') {
+      result = handleWhoami(tokenFrom(data, e));       // login → email + rol
+    } else if (path === 'panel/board/list') {
+      result = handleBoardList(tokenFrom(data, e));    // tablero (lectura)
+    } else {
+      result = err('Ruta no encontrada: ' + path);
+    }
+    return jsonResponse(result);
+  } catch (ex) {
+    return jsonResponse({
+      status: 'error',
+      code: ex.name || 'Error',
+      message: ex.message || 'Error interno.',
+    });
+  }
+}
+
+function doGet(e) {
+  return jsonResponse({ status: 'ok', message: 'PanelTDS API', now: nowIso() });
+}
+
+// El ID token viaja en el body (idToken) o como query param.
+// El plan preveía "Authorization: Bearer", pero un header custom dispara
+// preflight OPTIONS que Apps Script no maneja → se evita mandando el token
+// en el body con Content-Type text/plain (request "simple", sin preflight).
+function tokenFrom(data, e) {
+  if (data && data.idToken) return data.idToken;
+  if (e && e.parameter && e.parameter.idToken) return e.parameter.idToken;
+  return null;
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Ejecutar UNA vez (desde el editor: seleccionar setup, Run) para:
+// 1. crear el Spreadsheet "PanelTDS" y su schema (Roles/Tablero/Historial/Config)
+// 2. sembrar Config y los roles iniciales.
+function setup() {
+  var ssId = getSecret('SPREADSHEET_ID');
+  var ss = ssId ? SpreadsheetApp.openById(ssId) : SpreadsheetApp.create('PanelTDS');
+  setSecret('SPREADSHEET_ID', ss.getId());
+
+  ensureSchema();
+  seedConfig();
+  seedRoles();
+
+  Logger.log('Setup completo: ' + ss.getUrl());
+  return ss.getUrl();
+}
+
+function seedConfig() {
+  setConfig('expira_token_dias', '30');
+  setConfig('convocatoria_actual', 'general');
+  setConfig('site_base_url', 'https://tramasdelsur.com.ar');
+}
+
+function seedRoles() {
+  var sheet = getSheet('Roles');
+  if (sheet.getLastRow() > 1) return; // ya sembrado
+
+  var admin = getSecret('ADMIN_EMAIL') || 'revistatramasdelsur@gmail.com';
+  var emitter = getSecret('EMITTER_EMAIL') || 'revistaliterariatds@gmail.com';
+
+  sheet.appendRow([admin, ROLES.ADMINISTRADOR, '', '', 'FALSE', 'TRUE']);
+  if (emitter && String(emitter).toLowerCase() !== String(admin).toLowerCase()) {
+    sheet.appendRow([emitter, ROLES.ADMINISTRADOR, '', '', 'FALSE', 'TRUE']);
+  }
+}

@@ -54,7 +54,7 @@ function setStatus(kind: 'ok' | 'error', html: string) {
   card.innerHTML = html;
 }
 
-function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
+async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   const email = payload.email ?? 'email desconocido';
   const name = payload.name ?? '';
 
@@ -69,15 +69,37 @@ function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
 
   document.getElementById('login-button')?.setAttribute('hidden', '');
 
+  const who = await fetchWhoami(idToken);
+  const rol = who?.rol ?? null;
+  if (rol && navRole) navRole.textContent = rol;
+
+  const displayName = who?.nombre || name;
+  const roleHtml = rol
+    ? `<span class="role">${rol}</span>`
+    : `<span class="role">pendiente rol (whoami sin configurar)</span>`;
+
   setStatus(
     'ok',
-    `<p class="email">Hola ${name ? `<strong>${name}</strong> · ` : ''}${email}</p>
-     <span class="role">pendiente rol (whoami)</span>`,
+    `<p class="email">Hola ${displayName ? `<strong>${displayName}</strong> · ` : ''}${email}</p>
+     ${roleHtml}`,
   );
+}
 
-  // TODO (Fase 1): llamar a `panel/auth/whoami` con Authorization: Bearer <idToken>
-  // y mostrar el rol devuelto (ADMINISTRADOR/SUPERVISOR/EDITOR) o un 403.
-  console.debug('[login] ID token recibido; APPS_SCRIPT_URL =', APPS_SCRIPT_URL || '(no configurado)');
+// POST a /panel/auth/whoami con el ID token en el body (evita preflight CORS).
+async function fetchWhoami(idToken: string): Promise<{ rol?: string; nombre?: string } | null> {
+  if (!APPS_SCRIPT_URL) return null;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}/panel/auth/whoami`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'ok' ? json : null;
+  } catch {
+    return null;
+  }
 }
 
 async function handleCredential(response: GoogleCredentialResponse) {
@@ -94,7 +116,7 @@ async function handleCredential(response: GoogleCredentialResponse) {
     setStatus('error', '<p class="email">Solo se permiten cuentas @gmail.com.</p>');
     return;
   }
-  showIdentity(payload, response.credential);
+  await showIdentity(payload, response.credential);
 }
 
 async function initLogin() {
