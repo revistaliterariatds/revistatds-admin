@@ -1,6 +1,7 @@
 // Login con Google Identity Services (popup) + perfil de Google.
-// Fase 1: de-risking de autenticación — muestra "hola <email> <nombre>".
-// El rol viene de `panel/auth/whoami` (backend GAS), se cablea en Fase 1 avanzada.
+// Al autenticar, guarda la sesión y redirige al tablero.
+
+import { setSession } from './api';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -86,8 +87,15 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
     ? `Hola <strong>${displayName}</strong> · ${email}`
     : `Hola ${email}`;
 
+  if (rol) {
+    setSession(idToken, { email, rol, nombre: displayName || name || email });
+    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${rol}</span>`);
+    setTimeout(() => { window.location.href = '/tablero/'; }, 600);
+    return;
+  }
+
   setStatus(
-    rol ? 'ok' : 'error',
+    'error',
     `<p class="email">${greet}</p>
      ${roleHtml}`,
   );

@@ -1,0 +1,64 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Tablero — Tramas del Sur"
+  description="Tablero editorial de Tramas del Sur."
+>
+  <section class="board" aria-labelledby="board-heading">
+    <header class="board-header">
+      <div>
+        <p class="board-eyebrow">Redacción</p>
+        <h1 id="board-heading">Tablero</h1>
+      </div>
+      <div class="board-tools">
+        <input
+          type="search"
+          id="buscador"
+          class="board-search"
+          placeholder="Buscar título o autor…"
+          aria-label="Buscar título o autor"
+        />
+        <button id="btn-refrescar" class="btn-ghost" type="button">Refrescar</button>
+      </div>
+    </header>
+
+    <div class="filters" role="group" aria-label="Filtros por estado">
+      <div class="filter-pills" id="estadoFilters"></div>
+    </div>
+
+    <div class="board-table-wrap">
+      <table class="board-table">
+        <thead>
+          <tr>
+            <th scope="col">Estado</th>
+            <th scope="col">Cuento</th>
+            <th scope="col">Autor</th>
+            <th scope="col">Convocatoria</th>
+            <th scope="col">Titular</th>
+            <th scope="col">Recibido</th>
+            <th scope="col" class="col-acciones">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="boardBody"></tbody>
+      </table>
+    </div>
+
+    <div class="board-empty" id="emptyState" hidden>
+      <p>No hay cuentos que coincidan. Cuando llegue el primer envío, aparece acá.</p>
+    </div>
+  </section>
+
+  <!-- Modal de detalle -->
+  <dialog id="detailModal" class="detail-modal">
+    <div class="detail-inner">
+      <button id="btn-cerrar-detalle" class="detail-close" type="button" aria-label="Cerrar">×</button>
+      <div id="detailContent"></div>
+    </div>
+  </dialog>
+</Layout>
+
+<script>
+  import '../scripts/tablero.ts';
+</script>
