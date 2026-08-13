@@ -32,6 +32,39 @@ function handleBoardDetail(idToken, id) {
   return ok({ cuento: cuentoPublico(c), historial: getHistorial(c.id) });
 }
 
+// ── asignación compartida (auto o manual) ──
+function asignarCuento(c, editorEmail, actor) {
+  var sheet = getSheet('Tablero');
+  setCell(sheet, c._rowIndex, 'editor_asignado', editorEmail);
+  setEstado(c, ESTADOS.EN_REVISION);
+  addHistory(c.id, actor, 'ASIGNADO', 'Asignado a ' + displayName(editorEmail));
+  var docUrl = createDocCorreccion(c, editorEmail);
+  setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
+  sendAsignacion(editorEmail, c, docUrl);
+  return docUrl;
+}
+
+function esGestor(user) {
+  return user.rol === ROLES.ADMINISTRADOR || user.rol === ROLES.SUPERVISOR;
+}
+
+// ── listado de editores activos (para el dropdown "Asignar a…") ──
+function handleBoardEditors(idToken) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  var sheet = getSheet('Roles');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var activo = String(data[i][idx.activo]).toUpperCase() === 'TRUE';
+    if (activo && data[i][idx.rol] === ROLES.EDITOR) {
+      out.push({ email: data[i][idx.email], nombre: data[i][idx.alias] || data[i][idx.nombre] || data[i][idx.email] });
+    }
+  }
+  return ok({ editores: out });
+}
+
 // ── autoasignación (EDITOR) ──
 function handleAsignarme(idToken, id) {
   var user = requireInternalUser(idToken);
@@ -45,18 +78,85 @@ function handleAsignarme(idToken, id) {
     if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
     if (c.estado !== ESTADOS.RECIBIDO) throw new ApiError('Solo cuentos RECIBIDO pueden autoasignarse.');
 
-    var sheet = getSheet('Tablero');
-    setCell(sheet, c._rowIndex, 'editor_asignado', user.email);
-    setEstado(c, ESTADOS.EN_REVISION);
-    addHistory(c.id, displayName(user.email), 'ASIGNADO', 'Autoasignado a ' + displayName(user.email));
-
-    var docUrl = createDocCorreccion(c, user.email);
-    setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
-
-    sendAsignacion(user.email, c, docUrl);
+    var docUrl = asignarCuento(c, user.email, displayName(user.email));
     notifyTeam('Asignado', displayName(user.email) + ' se asignó "' + c.titulo + '"');
 
     return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── asignar (ADMIN/SUPERVISOR) ──
+function handleAsignar(idToken, id, editorEmail) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  if (!editorEmail) throw new ApiError('Falta el editor.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
+    if (c.estado !== ESTADOS.RECIBIDO) throw new ApiError('Solo cuentos RECIBIDO pueden asignarse.');
+
+    var docUrl = asignarCuento(c, editorEmail, displayName(user.email));
+    notifyTeam('Asignado', displayName(user.email) + ' asignó "' + c.titulo + '" a ' + displayName(editorEmail));
+
+    return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── desasignar (ADMIN/SUPERVISOR) ──
+function handleDesasignar(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (!c.editor_asignado) throw new ApiError('El cuento no tiene editor.');
+
+    var editorAnterior = c.editor_asignado;
+    setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', '');
+    // Vuelve a RECIBIDO salvo en CONSULTA_AUTOR / RECHAZADO_POR_AUTOR.
+    if (c.estado !== ESTADOS.CONSULTA_AUTOR && c.estado !== ESTADOS.RECHAZADO_POR_AUTOR) {
+      setEstado(c, ESTADOS.RECIBIDO);
+    }
+    addHistory(c.id, displayName(user.email), 'DESASIGNADO', 'Liberado ' + displayName(editorAnterior));
+    sendLiberacion(editorAnterior, c);
+
+    return ok({ message: 'Cuento desasignado.', estado: c.estado });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── reasignar (ADMIN/SUPERVISOR) ──
+function handleReasignar(idToken, id, editorEmail) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  if (!editorEmail) throw new ApiError('Falta el editor.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (!c.editor_asignado) throw new ApiError('El cuento no tiene editor.');
+
+    var anterior = c.editor_asignado;
+    setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', editorEmail);
+    addHistory(c.id, displayName(user.email), 'REASIGNADO', 'De ' + displayName(anterior) + ' a ' + displayName(editorEmail));
+    // Notifica al nuevo editor con el Doc existente (no se recrea).
+    sendAsignacion(editorEmail, c, c.url_doc_correccion);
+
+    return ok({ message: 'Cuento reasignado.', estado: c.estado });
   } finally {
     lock.releaseLock();
   }

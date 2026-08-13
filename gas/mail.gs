@@ -88,3 +88,14 @@ function sendRevisionTerminada(adminEmails, cuento, editorNombre) {
   ].join('');
   adminEmails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }
+
+function sendLiberacion(editorEmail, cuento) {
+  var subject = 'Fuiste liberado de — ' + cuento.titulo;
+  var html = [
+    '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:24px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+    '  <p style="font-size:16px;line-height:1.6;margin:0;">Fuiste liberado de <strong>' + escapeHtml(cuento.titulo) + '</strong>.</p>',
+    '  <p style="margin:16px 0 0;"><a href="' + PANEL_URL + '" style="color:#d95f1a;">Ver panel</a></p>',
+    '</div>',
+  ].join('');
+  sendHtmlMail(editorEmail, subject, html);
+}
