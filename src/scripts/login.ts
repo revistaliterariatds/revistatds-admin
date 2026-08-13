@@ -157,6 +157,7 @@ async function initLogin() {
     client_id: CLIENT_ID,
     callback: handleCredential,
     ux_mode: 'popup',
+    use_fedcm_for_prompt: false, // evita el flujo FedCM que Chrome puede bloquear
   });
 
   const btn = document.getElementById('login-button');
