@@ -93,14 +93,15 @@ interface WhoamiResult {
   message?: string;
 }
 
-// POST a /panel/auth/whoami con el ID token en el body (evita preflight CORS).
+// POST a panel/auth/whoami. El `action` va en el body (no en el path):
+// agregar path a la URL de GAS rompe CORS (ver Code.gs).
 async function fetchWhoami(idToken: string): Promise<WhoamiResult> {
   if (!APPS_SCRIPT_URL) return { ok: false, message: 'falta PUBLIC_APPS_SCRIPT_URL' };
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}/panel/auth/whoami`, {
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ action: 'panel/auth/whoami', idToken }),
     });
     const json = await res.json();
     if (json.status === 'ok') return { ok: true, rol: json.rol, nombre: json.nombre };

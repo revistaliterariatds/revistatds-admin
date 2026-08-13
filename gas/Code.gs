@@ -2,20 +2,27 @@
 
 function doPost(e) {
   try {
-    var path = (e && e.pathInfo) ? String(e.pathInfo).replace(/^\//, '') : '';
     var body = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     var data = {};
     try { data = JSON.parse(body); } catch (errParse) { data = {}; }
 
+    // Routing por `action` en el body (SIEMPRE a /exec, sin path):
+    // agregar path (/exec/panel/...) rompe el CORS de Apps Script
+    // (la respuesta pierde Access-Control-Allow-Origin). Por eso el router
+    // usa un campo del body, con fallback a query param y pathInfo.
+    var action = (data && data.action)
+      || (e && e.parameter && e.parameter.action)
+      || (e && e.pathInfo ? String(e.pathInfo).replace(/^\//, '') : '');
+
     var result;
-    if (path === '' || path === '/') {
+    if (!action) {
       result = handleEnvio(data);                      // público (formularios del sitio)
-    } else if (path === 'panel/auth/whoami') {
+    } else if (action === 'panel/auth/whoami') {
       result = handleWhoami(tokenFrom(data, e));       // login → email + rol
-    } else if (path === 'panel/board/list') {
+    } else if (action === 'panel/board/list') {
       result = handleBoardList(tokenFrom(data, e));    // tablero (lectura)
     } else {
-      result = err('Ruta no encontrada: ' + path);
+      result = err('Ruta no encontrada: ' + action);
     }
     return jsonResponse(result);
   } catch (ex) {

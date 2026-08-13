@@ -64,15 +64,17 @@ Formulario docente agrega `"tipo": "docente"` y no manda `edad`/`genero`/adulto.
 
 Respuesta: `{ "status": "ok" | "error", ... }`.
 
-## Endpoints del panel (POST, con `idToken` en el body)
+## Endpoints del panel (POST a `/exec`, con `action` + `idToken` en el body)
 
-| Ruta | Auth | Devuelve |
+| `action` en body | Auth | Devuelve |
 |---|---|---|
-| `/exec/panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
-| `/exec/panel/board/list` | idToken | `{ status, cuentos: [...] }` |
+| `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
+| `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
 
-Nota: el ID token viaja en el body (`idToken`), no en header `Authorization`,
-porque un header custom dispara preflight OPTIONS que Apps Script no maneja.
+Nota importante: el routing se hace por el campo `action` del body (NO por path,
+p. ej. `/exec/panel/auth/whoami`), porque agregar path a la URL de GAS rompe CORS
+(la respuesta pierde `Access-Control-Allow-Origin`). El ID token viaja en el body
+(`idToken`), no en header `Authorization`, por la misma razón (evita preflight).
 
 ## Alternativa con clasp
 
