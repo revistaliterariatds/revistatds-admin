@@ -70,35 +70,43 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   document.getElementById('login-button')?.setAttribute('hidden', '');
 
   const who = await fetchWhoami(idToken);
-  const rol = who?.rol ?? null;
+  const rol = who.ok ? (who.rol ?? null) : null;
   if (rol && navRole) navRole.textContent = rol;
+  if (!rol && navRole) navRole.textContent = 'sin acceso';
 
-  const displayName = who?.nombre || name;
+  const displayName = who.ok ? (who.nombre || name) : name;
   const roleHtml = rol
     ? `<span class="role">${rol}</span>`
-    : `<span class="role">pendiente rol (whoami sin configurar)</span>`;
+    : `<span class="role">error: ${who.message || 'desconocido'}</span>`;
 
   setStatus(
-    'ok',
+    rol ? 'ok' : 'error',
     `<p class="email">Hola ${displayName ? `<strong>${displayName}</strong> · ` : ''}${email}</p>
      ${roleHtml}`,
   );
 }
 
+interface WhoamiResult {
+  ok: boolean;
+  rol?: string;
+  nombre?: string;
+  message?: string;
+}
+
 // POST a /panel/auth/whoami con el ID token en el body (evita preflight CORS).
-async function fetchWhoami(idToken: string): Promise<{ rol?: string; nombre?: string } | null> {
-  if (!APPS_SCRIPT_URL) return null;
+async function fetchWhoami(idToken: string): Promise<WhoamiResult> {
+  if (!APPS_SCRIPT_URL) return { ok: false, message: 'falta PUBLIC_APPS_SCRIPT_URL' };
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}/panel/auth/whoami`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ idToken }),
     });
-    if (!res.ok) return null;
     const json = await res.json();
-    return json.status === 'ok' ? json : null;
+    if (json.status === 'ok') return { ok: true, rol: json.rol, nombre: json.nombre };
+    return { ok: false, message: json.message || `error ${res.status}` };
   } catch {
-    return null;
+    return { ok: false, message: 'no se pudo contactar el backend (red/CORS)' };
   }
 }
 
