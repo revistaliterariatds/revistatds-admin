@@ -48,6 +48,7 @@ function renderNav() {
   const navUsers = document.getElementById('nav-users');
   const navConfig = document.getElementById('nav-config');
   const navAnalytics = document.getElementById('nav-analytics');
+  const navDescargas = document.getElementById('nav-descargas');
   if (!navUser || !user) return;
   navUser.hidden = false;
   navName.textContent = user.nombre || user.email;
@@ -55,6 +56,7 @@ function renderNav() {
   if (navUsers) navUsers.hidden = !esGestor;
   if (navConfig) navConfig.hidden = !esGestor;
   if (navAnalytics) navAnalytics.hidden = !esGestor;
+  if (navDescargas) navDescargas.hidden = !esGestor;
   navLogout?.addEventListener('click', () => {
     clearSession();
     window.location.href = '/';

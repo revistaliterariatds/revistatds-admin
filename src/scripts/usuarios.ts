@@ -17,6 +17,7 @@ function renderNav() {
   const usersLink = document.getElementById('nav-users');
   const configLink = document.getElementById('nav-config');
   const analyticsLink = document.getElementById('nav-analytics');
+  const descargasLink = document.getElementById('nav-descargas');
   if (!user || !nav || !name || !role) return;
   nav.hidden = false;
   name.textContent = user.nombre || user.email;
@@ -24,6 +25,7 @@ function renderNav() {
   if (usersLink) usersLink.hidden = !esGestor;
   if (configLink) configLink.hidden = !esGestor;
   if (analyticsLink) analyticsLink.hidden = !esGestor;
+  if (descargasLink) descargasLink.hidden = !esGestor;
   document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
 }
 

@@ -10,6 +10,7 @@ var SHEETS = {
   ],
   Historial: ['id_cuento', 'timestamp', 'actor', 'accion', 'detalle'],
   Config: ['clave', 'valor'],
+  Descargas: ['archivo', 'accion', 'fecha'],
 };
 
 function getSpreadsheet() {

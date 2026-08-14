@@ -21,6 +21,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `board.gs` | Tablero del panel (lectura) |
 | `users.gs` | Gestión de usuarios y roles |
 | `analytics.gs` | Snapshots diarios y consulta histórica de visitas |
+| `descargas.gs` | Registro y consulta de descargas/lecturas de ediciones PDF |
 | `appsscript.json` | Manifest: scopes + webapp (executeAs `USER_DEPLOYING`, access `ANYONE_ANONYMOUS`) |
 
 ## Puesta en marcha (manual, sin clasp)
@@ -77,6 +78,8 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
 | `panel/config/save` | idToken + ADMIN/SUPERVISOR | actualiza un valor permitido de `Config` |
 | `panel/analytics/daily` | idToken + ADMIN/SUPERVISOR | serie de visitas por día desde Cloudflare |
+| `descarga` | pública (anónima) | registra un clic de leer/descargar una edición PDF |
+| `panel/descargas/list` | idToken + ADMIN/WEBMASTER/SUPERVISOR | totales y desglose por edición |
 
 La consulta usa el dataset GraphQL soportado `httpRequestsAdaptiveGroups`,
 filtrado por hostname y agrupado por hora. `snapshotAnalyticsYesterday()` guarda

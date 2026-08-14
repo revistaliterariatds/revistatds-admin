@@ -17,6 +17,10 @@ function doPost(e) {
     var result;
     if (!action) {
       result = handleEnvio(data);                      // público (formularios del sitio)
+    } else if (action === 'descarga') {
+      result = handleDescarga(data);                   // público (clic en ediciones PDF)
+    } else if (action === 'panel/descargas/list') {
+      result = handleDescargasList(tokenFrom(data, e), data && data.days);
     } else if (action === 'panel/auth/whoami') {
       result = handleWhoami(tokenFrom(data, e));       // login → email + rol
     } else if (action === 'panel/board/list') {

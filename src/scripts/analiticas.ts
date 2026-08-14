@@ -13,6 +13,7 @@ function renderNav() {
   (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
   (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
   (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
+  (document.getElementById('nav-descargas') as HTMLElement).hidden = !esGestor;
   document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
 }
 
