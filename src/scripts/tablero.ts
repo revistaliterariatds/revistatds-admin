@@ -45,10 +45,14 @@ function renderNav() {
   const navName = document.getElementById('nav-user-name');
   const navRole = document.getElementById('nav-user-role');
   const navLogout = document.getElementById('nav-logout');
+  const navUsers = document.getElementById('nav-users');
+  const navConfig = document.getElementById('nav-config');
   if (!navUser || !user) return;
   navUser.hidden = false;
   navName.textContent = user.nombre || user.email;
   navRole.textContent = user.rol;
+  if (navUsers) navUsers.hidden = !esGestor;
+  if (navConfig) navConfig.hidden = !esGestor;
   navLogout?.addEventListener('click', () => {
     clearSession();
     window.location.href = '/';
@@ -269,6 +273,16 @@ async function abrirDetalle(id: string) {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="pedir">Pedir correcciones</button>`);
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="terminar">Revisión terminada</button>`);
   }
+  if (esGestor && c.estado === 'ESPERANDO_APROBACIÓN') {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="consultar">Consultar al autor</button>`);
+  }
+  if (esGestor && c.estado === 'APROBADO') {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="publicar">Marcar publicado</button>`);
+  }
+  if (esGestor && c.estado === 'RECHAZADO_POR_AUTOR') {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="devolver">Devolver al editor</button>`);
+    acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="descartar">Descartar</button>`);
+  }
   if (c.url_doc_correccion) {
     acciones.push(`<a class="btn-enviar" href="${esc(c.url_doc_correccion)}" target="_blank" rel="noopener noreferrer">Abrir Doc</a>`);
   }
@@ -318,6 +332,34 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/board/revision-terminada', { id });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo.');
+  });
+
+  content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Enviar esta versión al autor para aprobación?')) return;
+    const r = await api('panel/board/consultar-autor', { id });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo consultar al autor.');
+  });
+
+  content.querySelector('[data-detalle-accion="publicar"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Marcar este cuento como publicado?')) return;
+    const r = await api('panel/board/publicar', { id });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo publicar.');
+  });
+
+  content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Devolver este cuento al editor para retrabajarlo?')) return;
+    const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'devolver' });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo devolver al editor.');
+  });
+
+  content.querySelector('[data-detalle-accion="descartar"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Descartar definitivamente este cuento?')) return;
+    const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'descartar' });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo descartar.');
   });
 }
 

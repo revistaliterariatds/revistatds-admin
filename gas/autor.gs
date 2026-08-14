@@ -84,6 +84,8 @@ function handleAutorApprove(token) {
     if (c.estado !== ESTADOS.CONSULTA_AUTOR) {
       throw new ApiError('No hay una consulta pendiente de aprobación.');
     }
+    // La copia aprobada queda persistida antes de cambiar el estado.
+    guardarVersionAprobada(c);
     setEstado(c, ESTADOS.APROBADO);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'APROBADO', 'El autor aprobó la versión.');
@@ -120,22 +122,29 @@ function handleAutorEdit(token, archivos) {
     if (c.estado !== ESTADOS.CORRECCIONES_SOLICITADAS && c.estado !== ESTADOS.CONSULTA_AUTOR) {
       throw new ApiError('No corresponde subir una versión en este estado.');
     }
-    var archivosArr = Array.isArray(archivos) ? archivos : [];
-    if (archivosArr.length === 0) throw new ApiError('Adjuntá al menos un archivo.');
+    var archivosArr = validarArchivos(archivos);
 
     // Guardar la nueva versión en la carpeta del cuento.
     var version = parseInt(c.version_actual || '1', 10) + 1;
     var folder = getCuentoFolder(c);
     var subfolder = getOrCreateFolder(folder, 'v' + version);
-    archivosArr.forEach(function (f) {
-      try { saveFile(subfolder, f); } catch (e) { /* archivo roto no debe tirar el alta */ }
-    });
+    saveFiles(subfolder, archivosArr);
 
     var sheet = getSheet('Tablero');
     setCell(sheet, c._rowIndex, 'version_actual', String(version));
+    c.version_actual = String(version);
+    if (c.editor_asignado) {
+      var docUrl = createDocCorreccion(c, c.editor_asignado, subfolder);
+      setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
+      c.url_doc_correccion = docUrl;
+    }
     setEstado(c, ESTADOS.EN_REVISION);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'NUEVA_VERSION', 'El autor subió la versión ' + version + '.');
+    if (c.editor_asignado) {
+      try { sendNuevaVersion(c.editor_asignado, c); }
+      catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la nueva versión de "' + c.titulo + '".'); }
+    }
     return ok({ message: 'Versión recibida. El editor la revisará.', version: String(version), estado: ESTADOS.EN_REVISION });
   } finally {
     lock.releaseLock();

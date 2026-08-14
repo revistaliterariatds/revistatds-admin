@@ -70,6 +70,10 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 |---|---|---|
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
+| `panel/users/list` | idToken + ADMIN/SUPERVISOR | `{ status, users: [...], puede_editar }` |
+| `panel/users/save` | idToken + ADMIN | alta/edición de una fila de `Roles` |
+| `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
+| `panel/config/save` | idToken + ADMIN/SUPERVISOR | actualiza un valor permitido de `Config` |
 
 ## Endpoints del autor (POST a `/exec`, con `action` + `token` en el body)
 
@@ -79,6 +83,18 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `autor/approve` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → APROBADO) |
 | `autor/reject` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → RECHAZADO_POR_AUTOR, con `motivo`) |
 | `autor/edit` | sí | `{ status, message, version, estado }` (sube versión → EN_REVISIÓN) |
+
+### Validación de archivos
+
+El backend valida independientemente del navegador hasta 3 archivos por operación,
+con un máximo de 10 MB por archivo. Se acepta cualquier formato, igual que el
+formulario productivo actual; se normaliza el nombre y se rechaza base64 inválido.
+Si falla el guardado de un archivo, se eliminan los archivos ya creados de esa
+operación y no se avanza la versión ni el estado.
+
+Los asuntos de mail se pueden editar desde Configuración. Admiten la variable
+`{{titulo}}`; los cuerpos HTML siguen siendo plantillas controladas por código
+hasta completar la siguiente etapa de parametrización.
 
 Nota importante: el routing se hace por el campo `action` del body (NO por path,
 p. ej. `/exec/panel/auth/whoami`), porque agregar path a la URL de GAS rompe CORS

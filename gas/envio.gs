@@ -27,11 +27,10 @@ function handleEnvio(data) {
   var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
   var tokenExpira = new Date(Date.now() + expiraDias * 24 * 3600 * 1000);
 
-  var folder = createCuentoFolder(id);
   var archivos = Array.isArray(data.archivos) ? data.archivos : [];
-  archivos.forEach(function (f) {
-    try { saveFile(folder, f); } catch (e) { /* archivo corrupto no debe tirar el alta */ }
-  });
+  var archivosValidados = validarArchivos(archivos);
+  var folder = createCuentoFolder(id);
+  saveFiles(folder, archivosValidados);
 
   var now = new Date();
   getSheet('Tablero').appendRow([

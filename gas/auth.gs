@@ -92,6 +92,7 @@ function requireInternalUser(idToken) {
   var user = resolveUser(email);
   if (!user) throw new AuthError('Sin rol asignado.');
   if (!user.activo) throw new AuthError('Usuario inactivo.');
+  if (ROLES_INTERNOS.indexOf(user.rol) < 0) throw new AuthError('Rol inválido.');
   if (!user.nombre && info.name) updateUserName(email, info.name);
   return user;
 }

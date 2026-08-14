@@ -56,6 +56,11 @@ const { title, description } = Astro.props;
           <img src="/assets/img/logo/logo.jpeg" alt="Tramas del Sur" />
         </a>
         <div class="nav-user" id="nav-user" hidden>
+          <div class="nav-links">
+            <a href="/tablero/">Tablero</a>
+            <a href="/usuarios/" id="nav-users" hidden>Usuarios</a>
+            <a href="/configuracion/" id="nav-config" hidden>Configuración</a>
+          </div>
           <span id="nav-user-name"></span>
           <span class="badge" id="nav-user-role"></span>
           <button id="nav-logout" class="btn-ghost" type="button">Salir</button>

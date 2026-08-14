@@ -55,9 +55,16 @@ function setStatus(kind: 'ok' | 'error', html: string) {
   card.innerHTML = html;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[char] as string));
+}
+
 async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   const email = payload.email ?? 'email desconocido';
   const name = payload.name ?? '';
+  const safeEmail = escapeHtml(email);
 
   const navUser = document.getElementById('nav-user');
   const navName = document.getElementById('nav-user-name');
@@ -79,13 +86,16 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   // nombre del perfil de Google; si tampoco hay, no duplica el email.
   const whoName = who.ok ? (who.nombre || '') : '';
   const displayName = (whoName && whoName !== email) ? whoName : name;
+  const safeDisplayName = escapeHtml(displayName);
+  const safeRole = rol ? escapeHtml(rol) : '';
+  const safeMessage = escapeHtml(who.message || 'desconocido');
   const roleHtml = rol
-    ? `<span class="role">${rol}</span>`
-    : `<span class="role">error: ${who.message || 'desconocido'}</span>`;
+    ? `<span class="role">${safeRole}</span>`
+    : `<span class="role">error: ${safeMessage}</span>`;
 
   const greet = displayName && displayName !== email
-    ? `Hola <strong>${displayName}</strong> · ${email}`
-    : `Hola ${email}`;
+    ? `Hola <strong>${safeDisplayName}</strong> · ${safeEmail}`
+    : `Hola ${safeEmail}`;
 
   if (rol) {
     setSession(idToken, { email, rol, nombre: displayName || name || email });

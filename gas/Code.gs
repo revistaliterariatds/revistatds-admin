@@ -37,6 +37,20 @@ function doPost(e) {
       result = handlePedirCorrecciones(tokenFrom(data, e), data && data.id, data && data.motivo);
     } else if (action === 'panel/board/revision-terminada') {
       result = handleRevisionTerminada(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/consultar-autor') {
+      result = handleConsultarAutor(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/publicar') {
+      result = handlePublicar(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/resolver-rechazo') {
+      result = handleResolverRechazo(tokenFrom(data, e), data && data.id, data && data.resolucion);
+    } else if (action === 'panel/users/list') {
+      result = handleUsersList(tokenFrom(data, e));
+    } else if (action === 'panel/users/save') {
+      result = handleUserSave(tokenFrom(data, e), data);
+    } else if (action === 'panel/config/list') {
+      result = handleConfigList(tokenFrom(data, e));
+    } else if (action === 'panel/config/save') {
+      result = handleConfigSave(tokenFrom(data, e), data && data.key, data && data.value);
     } else if (action === 'autor/estado') {
       result = handleAutorEstado(data && data.token);  // autor: ver estado
     } else if (action === 'autor/approve') {

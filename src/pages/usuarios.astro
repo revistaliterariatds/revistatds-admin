@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Usuarios — Tramas del Sur" description="Gestión de usuarios del panel editorial.">
+  <section class="users-page" aria-labelledby="users-heading">
+    <header class="board-header">
+      <div>
+        <p class="board-eyebrow">Administración</p>
+        <h1 id="users-heading">Usuarios</h1>
+      </div>
+      <button id="btn-nuevo-usuario" class="btn-primary" type="button">Agregar usuario</button>
+    </header>
+
+    <div id="users-alert" class="status-card" hidden></div>
+    <div class="board-table-wrap">
+      <table class="board-table">
+        <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Notificaciones</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+
+    <form id="user-form" class="user-form" hidden>
+      <h2 id="user-form-title" class="detail-sub">Agregar usuario</h2>
+      <div class="form-row">
+        <div class="form-group"><label for="user-email">Email Gmail</label><input id="user-email" type="email" required /></div>
+        <div class="form-group"><label for="user-name">Nombre</label><input id="user-name" type="text" maxlength="120" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="user-role">Rol</label><select id="user-role"><option>EDITOR</option><option>SUPERVISOR</option><option>ADMINISTRADOR</option></select></div>
+        <div class="form-group"><label for="user-alias">Alias (opcional)</label><input id="user-alias" type="text" maxlength="120" /></div>
+      </div>
+      <label class="check-row"><input id="user-alias-notif" type="checkbox" /> Usar alias en notificaciones</label>
+      <label class="check-row"><input id="user-active" type="checkbox" checked /> Usuario activo</label>
+      <div class="detail-acciones"><button class="btn-primary" type="submit">Guardar</button><button id="btn-cancelar-usuario" class="btn-ghost" type="button">Cancelar</button></div>
+    </form>
+  </section>
+</Layout>
+
+<script>
+  import '../scripts/usuarios.ts';
+</script>

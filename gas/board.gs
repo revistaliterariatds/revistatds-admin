@@ -225,3 +225,91 @@ function handleRevisionTerminada(idToken, id) {
     lock.releaseLock();
   }
 }
+
+// ── enviar la versión corregida a aprobación del autor ──
+function handleConsultarAutor(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (c.estado !== ESTADOS.ESPERANDO_APROBACION) {
+      throw new ApiError('Solo se puede consultar al autor una revisión terminada.');
+    }
+
+    var token = Utilities.getUuid();
+    var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
+    var sheet = getSheet('Tablero');
+    setCell(sheet, c._rowIndex, 'token_autor', token);
+    setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
+
+    try {
+      sendConsultaAutor(c.email_autor, c, token, textoDocCorreccion(c));
+    } catch (e) {
+      setCell(sheet, c._rowIndex, 'token_autor', '');
+      setCell(sheet, c._rowIndex, 'token_expira', '');
+      throw new ApiError('No se pudo enviar el mail al autor: ' + (e.message || e));
+    }
+
+    setEstado(c, ESTADOS.CONSULTA_AUTOR);
+    addHistory(c.id, displayName(user.email), 'CONSULTA_AUTOR', 'Se envió la versión al autor para aprobación.');
+    return ok({ message: 'La versión fue enviada al autor.', estado: ESTADOS.CONSULTA_AUTOR });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── publicación (ADMIN/SUPERVISOR) ──
+function handlePublicar(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar un cuento aprobado.');
+
+    setEstado(c, ESTADOS.PUBLICADO);
+    addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La versión aprobada fue marcada como publicada.');
+    notifyTeam('Publicado', displayName(user.email) + ' publicó "' + c.titulo + '"');
+    return ok({ message: 'Cuento marcado como publicado.', estado: ESTADOS.PUBLICADO });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── resolución de rechazo del autor (ADMIN/SUPERVISOR) ──
+function handleResolverRechazo(idToken, id, resolucion) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  if (resolucion !== 'devolver' && resolucion !== 'descartar') {
+    throw new ApiError('Resolución inválida.');
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (c.estado !== ESTADOS.RECHAZADO_POR_AUTOR) {
+      throw new ApiError('El cuento no está rechazado por el autor.');
+    }
+
+    var nuevoEstado = resolucion === 'devolver' ? ESTADOS.EN_REVISION : ESTADOS.DESCARTADO;
+    setEstado(c, nuevoEstado);
+    addHistory(c.id, displayName(user.email), resolucion === 'devolver' ? 'DEVUELTO_A_EDITOR' : 'DESCARTADO',
+      resolucion === 'devolver' ? 'El equipo devolvió el cuento al editor.' : 'El equipo descartó el cuento.');
+    if (resolucion === 'devolver' && c.editor_asignado) {
+      try { sendDevolucionEditor(c.editor_asignado, c); }
+      catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la devolución de "' + c.titulo + '".'); }
+    }
+    return ok({ message: resolucion === 'devolver' ? 'Cuento devuelto al editor.' : 'Cuento descartado.', estado: nuevoEstado });
+  } finally {
+    lock.releaseLock();
+  }
+}
