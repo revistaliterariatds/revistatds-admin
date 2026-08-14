@@ -38,7 +38,7 @@ let editores: { email: string; nombre: string }[] = [];
 
 // ── sesión ──
 const user = getUser();
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'SUPERVISOR';
+const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');

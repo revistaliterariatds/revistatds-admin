@@ -51,7 +51,7 @@ function sendAsignacion(editorEmail, cuento, docUrl) {
 }
 
 function notifyTeam(tipo, detalle) {
-  var emails = getEmailsByRoles([ROLES.ADMINISTRADOR, ROLES.SUPERVISOR]);
+  var emails = getEmailsByRoles(ROLES_GESTORES);
   if (emails.length === 0) return;
   var subject = '[' + tipo + '] ' + detalle;
   var html = [

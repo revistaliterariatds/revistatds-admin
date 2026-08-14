@@ -19,12 +19,12 @@ function handleUsersList(idToken) {
       activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
     });
   }
-  return ok({ users: users, puede_editar: user.rol === ROLES.ADMINISTRADOR });
+  return ok({ users: users, puede_editar: user.rol === ROLES.ADMINISTRADOR || user.rol === ROLES.WEBMASTER });
 }
 
 function handleUserSave(idToken, payload) {
   var actor = requireInternalUser(idToken);
-  if (actor.rol !== ROLES.ADMINISTRADOR) throw new AuthError('Solo ADMINISTRADOR puede modificar usuarios.');
+  if (actor.rol !== ROLES.ADMINISTRADOR && actor.rol !== ROLES.WEBMASTER) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede modificar usuarios.');
   payload = payload || {};
 
   var email = String(payload.email || '').trim().toLowerCase();

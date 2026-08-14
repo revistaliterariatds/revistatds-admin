@@ -46,7 +46,7 @@ function asignarCuento(c, editorEmail, actor) {
 }
 
 function esGestor(user) {
-  return user.rol === ROLES.ADMINISTRADOR || user.rol === ROLES.SUPERVISOR;
+  return ROLES_GESTORES.indexOf(user.rol) >= 0;
 }
 
 // ── listado de editores activos (para el dropdown "Asignar a…") ──
@@ -216,7 +216,7 @@ function handleRevisionTerminada(idToken, id) {
     setEstado(c, ESTADOS.ESPERANDO_APROBACION);
     addHistory(c.id, displayName(user.email), 'REVISION_TERMINADA', 'El editor terminó la revisión.');
 
-    var admins = getEmailsByRoles([ROLES.ADMINISTRADOR, ROLES.SUPERVISOR]);
+    var admins = getEmailsByRoles(ROLES_GESTORES);
     if (admins.length === 0) admins = [getSecret('ADMIN_EMAIL')].filter(Boolean);
     sendRevisionTerminada(admins, c, displayName(user.email));
 
