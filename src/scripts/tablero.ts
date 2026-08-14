@@ -94,55 +94,32 @@ function convocatoriaLabel(c: string): string {
 }
 
 // ── filtros ──
-function renderPills() {
+function renderEstadoSelect() {
   const cont: Record<string, number> = {};
   cuentos.forEach((c) => { cont[c.estado] = (cont[c.estado] || 0) + 1; });
-  const todos = cuentos.length;
 
-  const pills = [{ key: 'TODOS', label: 'Todos', n: todos }];
+  const el = document.getElementById('filtro-estado') as HTMLSelectElement;
+  const options = [`<option value="TODOS">Todos los estados (${cuentos.length})</option>`];
   Object.keys(ESTADOS).forEach((k) => {
-    if (cont[k]) pills.push({ key: k, label: ESTADOS[k].label, n: cont[k] });
+    const n = cont[k] || 0;
+    options.push(`<option value="${k}">${esc(ESTADOS[k].label)} (${n})</option>`);
   });
-
-  const el = document.getElementById('estadoFilters')!;
-  el.innerHTML = pills.map((p) =>
-    `<button type="button" class="pill ${p.key === estadoActivo ? 'active' : ''}" data-estado="${p.key}">
-       ${esc(p.label)} <span class="pill-n">${p.n}</span>
-     </button>`,
-  ).join('');
-
-  el.querySelectorAll('.pill').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      estadoActivo = btn.getAttribute('data-estado') || 'TODOS';
-      renderPills();
-      renderTable();
-    });
-  });
+  el.innerHTML = options.join('');
+  el.value = estadoActivo;
 }
 
-function renderConvocatoriaPills() {
+function renderConvocatoriaSelect() {
   const cont: Record<string, number> = {};
   cuentos.forEach((c) => { cont[c.convocatoria] = (cont[c.convocatoria] || 0) + 1; });
 
-  const pills = [{ key: 'TODAS', label: 'Todas', n: cuentos.length }];
+  const el = document.getElementById('filtro-convocatoria') as HTMLSelectElement;
+  const options = [`<option value="TODAS">Todas (${cuentos.length})</option>`];
   ['general', 'docentes'].forEach((k) => {
-    if (cont[k]) pills.push({ key: k, label: convocatoriaLabel(k), n: cont[k] });
+    const n = cont[k] || 0;
+    options.push(`<option value="${k}">${esc(convocatoriaLabel(k))} (${n})</option>`);
   });
-
-  const el = document.getElementById('convocatoriaFilters')!;
-  el.innerHTML = pills.map((p) =>
-    `<button type="button" class="pill ${p.key === convocatoriaActiva ? 'active' : ''}" data-conv="${p.key}">
-       ${esc(p.label)} <span class="pill-n">${p.n}</span>
-     </button>`,
-  ).join('');
-
-  el.querySelectorAll('.pill').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      convocatoriaActiva = btn.getAttribute('data-conv') || 'TODAS';
-      renderConvocatoriaPills();
-      renderTable();
-    });
-  });
+  el.innerHTML = options.join('');
+  el.value = convocatoriaActiva;
 }
 
 function visibles(): Cuento[] {
@@ -252,8 +229,8 @@ async function cargar() {
   }
   cuentos = data.cuentos;
   if (esGestor && ed.status === 'ok') editores = ed.editores || [];
-  renderPills();
-  renderConvocatoriaPills();
+  renderEstadoSelect();
+  renderConvocatoriaSelect();
   renderTable();
 }
 
@@ -410,6 +387,18 @@ function init() {
     renderTable();
   });
 
+  const filtroEstado = document.getElementById('filtro-estado') as HTMLSelectElement;
+  filtroEstado?.addEventListener('change', () => {
+    estadoActivo = filtroEstado.value || 'TODOS';
+    renderTable();
+  });
+
+  const filtroConvocatoria = document.getElementById('filtro-convocatoria') as HTMLSelectElement;
+  filtroConvocatoria?.addEventListener('change', () => {
+    convocatoriaActiva = filtroConvocatoria.value || 'TODAS';
+    renderTable();
+  });
+
   document.getElementById('btn-refrescar')?.addEventListener('click', cargar);
 
   document.getElementById('btn-limpiar-filtros')?.addEventListener('click', () => {
@@ -417,8 +406,8 @@ function init() {
     convocatoriaActiva = 'TODAS';
     termino = '';
     if (buscador) buscador.value = '';
-    renderPills();
-    renderConvocatoriaPills();
+    renderEstadoSelect();
+    renderConvocatoriaSelect();
     renderTable();
   });
 

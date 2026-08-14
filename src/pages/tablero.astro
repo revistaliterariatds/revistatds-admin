@@ -30,12 +30,18 @@ import Layout from '../layouts/Layout.astro';
         <button id="btn-limpiar-filtros" class="btn-mini" type="button">Limpiar filtros</button>
       </div>
       <div class="filter-group">
-        <span class="filter-label" id="filter-label-estado">Estado</span>
-        <div class="filter-pills" id="estadoFilters" role="group" aria-labelledby="filter-label-estado"></div>
+        <label class="filter-label" for="filtro-estado">Estado</label>
+        <select id="filtro-estado" class="filter-select" aria-label="Filtrar por estado">
+          <option value="TODOS">Todos los estados</option>
+        </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label" id="filter-label-convocatoria">Convocatoria</span>
-        <div class="filter-pills" id="convocatoriaFilters" role="group" aria-labelledby="filter-label-convocatoria"></div>
+        <label class="filter-label" for="filtro-convocatoria">Convocatoria</label>
+        <select id="filtro-convocatoria" class="filter-select" aria-label="Filtrar por convocatoria">
+          <option value="TODAS">Todas</option>
+          <option value="general">General</option>
+          <option value="docentes">Docentes</option>
+        </select>
       </div>
     </div>
 
