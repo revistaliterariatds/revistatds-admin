@@ -15,7 +15,8 @@ function descargasSheet() {
 }
 
 function clearDescargasCache() {
-  CacheService.getScriptCache().remove('descargas-summary');
+  var cache = CacheService.getScriptCache();
+  ['all', '1', '7', '30', '90', '365'].forEach(function (key) { cache.remove('descargas-summary:' + key); });
 }
 
 // Endpoint público (sin token): registra un clic de leer/descargar un PDF.
