@@ -17,9 +17,6 @@ function handleAnalyticsDaily(idToken, days) {
   }
 
   var end = new Date();
-  var start = new Date(end.getTime() - (days - 1) * 86400000);
-  var startDate = start.toISOString();
-  var endDate = end.toISOString();
   var endCacheDate = Utilities.formatDate(end, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var cache = CacheService.getScriptCache();
   var cacheKey = 'analytics:' + days + ':' + endCacheDate;
@@ -31,24 +28,29 @@ function handleAnalyticsDaily(idToken, days) {
     + ' viewer { zones(filter: { zoneTag: $zoneTag }) {'
     + ' httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $startDate, datetime_leq: $endDate, clientRequestHTTPHost: $host, requestSource: "eyeball" })'
     + ' { sum { visits } dimensions { datetimeHour } } } } }';
-  var response = UrlFetchApp.fetch(CF_GRAPHQL_URL, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify({ query: query, variables: { zoneTag: zoneTag, startDate: startDate, endDate: endDate, host: host } }),
-    muteHttpExceptions: true,
-  });
-  if (response.getResponseCode() !== 200) throw new ApiError('Cloudflare devolvió HTTP ' + response.getResponseCode() + '.');
-
-  var body = JSON.parse(response.getContentText());
-  if (body.errors && body.errors.length) throw new ApiError('Cloudflare: ' + body.errors[0].message);
-  var zone = (((body.data || {}).viewer || {}).zones || [])[0];
-  var groups = zone ? zone.httpRequestsAdaptiveGroups || [] : [];
   var byDate = {};
-  groups.forEach(function (group) {
-    var date = String(group.dimensions.datetimeHour || '').slice(0, 10);
-    if (date) byDate[date] = (byDate[date] || 0) + Number((group.sum || {}).visits || 0);
-  });
+  // Esta zona limita GraphQL a ventanas de un día como máximo.
+  for (var offset = 0; offset < days; offset++) {
+    var day = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - offset, 0, 0, 0));
+    var nextDay = new Date(day.getTime() + 86400000 - 1);
+    var response = UrlFetchApp.fetch(CF_GRAPHQL_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
+      payload: JSON.stringify({ query: query, variables: { zoneTag: zoneTag, startDate: day.toISOString(), endDate: nextDay.toISOString(), host: host } }),
+      muteHttpExceptions: true,
+    });
+    if (response.getResponseCode() !== 200) throw new ApiError('Cloudflare devolvió HTTP ' + response.getResponseCode() + '.');
+
+    var body = JSON.parse(response.getContentText());
+    if (body.errors && body.errors.length) throw new ApiError('Cloudflare: ' + body.errors[0].message);
+    var zone = (((body.data || {}).viewer || {}).zones || [])[0];
+    var groups = zone ? zone.httpRequestsAdaptiveGroups || [] : [];
+    groups.forEach(function (group) {
+      var date = String(group.dimensions.datetimeHour || '').slice(0, 10);
+      if (date) byDate[date] = (byDate[date] || 0) + Number((group.sum || {}).visits || 0);
+    });
+  }
   var daily = Object.keys(byDate).sort().map(function (date) {
     return { date: date, visits: byDate[date] };
   });
