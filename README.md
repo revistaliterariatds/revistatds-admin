@@ -84,7 +84,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 ## Agenda
 
 - Pestaña visible para todos los logueados: calendario mensual (lun–dom), hoy resaltado, **varias citas por día** (contador + tooltip con creador y nº de comentarios) y "próximas citas".
-- Tipos con color (`reunion` · `cierre_edicion` · `evento` · `otro`), Meet manual (link + acceso a `meet.google.com/new`), hilo de comentarios por cita.
+- Tipos con color (`reunion` · `cierre_edicion` · `evento` · `otro`), Meet manual (link + acceso a `meet.google.com/home`), hilo de comentarios por cita.
 - Permisos: **ver/crear/comentar** todos los logueados; **editar/borrar** ADMIN/WEBMASTER.
 - Mail al crear (checkbox "Notificar por mail"): a todos los roles activos, con botones **"Ver agenda"** y **"Agregar a mi calendario"** (Google Calendar `action=TEMPLATE`, con horario o día completo) y link de Meet.
 - Caché: `CacheService` 30 s + `localStorage` (`tds-agenda-cache-v2`) con render instantáneo e invalidación en cada mutación.

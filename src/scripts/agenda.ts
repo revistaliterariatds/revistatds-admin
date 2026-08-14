@@ -251,7 +251,7 @@ function renderFormulario(cita: Cita | null, key: string) {
       <div class="form-group">
         <label for="cita-meet">Link de reunión (Meet) <span>(opcional)</span></label>
         <input id="cita-meet" type="url" maxlength="500" value="${esc(cita?.meet_link || '')}" placeholder="https://meet.google.com/…" />
-        <small>Creá tu reunión en <a href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer">meet.google.com/new</a> y pegá el link acá.</small>
+        <small>Creá tu reunión en <a href="https://meet.google.com/home" target="_blank" rel="noopener noreferrer">meet.google.com/home</a> y pegá el link acá.</small>
       </div>
       ${esNueva ? `
       <div class="check-row">
