@@ -20,6 +20,12 @@ function analyticsDateKey(date) {
   return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
 }
 
+function analyticsCellDate(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, 'UTC', 'yyyy-MM-dd');
+  var text = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : '';
+}
+
 function cloudflareConfig() {
   var token = getSecret('CLOUDFLARE_API_TOKEN');
   var zoneTag = getSecret('CLOUDFLARE_ZONE_TAG');
@@ -55,12 +61,19 @@ function saveAnalyticsSnapshot(date, visits) {
   var key = analyticsDateKey(date);
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === key) {
+    if (analyticsCellDate(data[i][0]) === key) {
       sheet.getRange(i + 1, 2, 1, 3).setValues([[visits, 'cloudflare-http', new Date()]]);
+      clearAnalyticsCache();
       return;
     }
   }
   sheet.appendRow([key, visits, 'cloudflare-http', new Date()]);
+  clearAnalyticsCache();
+}
+
+function clearAnalyticsCache() {
+  var cache = CacheService.getScriptCache();
+  ['7', '30', '90', '365', 'all'].forEach(function (key) { cache.remove('analytics-snapshots:' + key); });
 }
 
 // Trigger diario: se ejecuta sobre el día UTC anterior, ya cerrado.
@@ -99,11 +112,12 @@ function readAnalyticsSnapshots(days) {
   var data = sheet.getDataRange().getValues();
   var cutoff = days ? new Date(Date.now() - days * 86400000) : null;
   return data.slice(1).filter(function (row) {
-    if (!row[0]) return false;
+    var key = analyticsCellDate(row[0]);
+    if (!key) return false;
     if (!cutoff) return true;
-    return new Date(String(row[0] + 'T00:00:00Z')).getTime() >= cutoff.getTime();
+    return new Date(key + 'T00:00:00Z').getTime() >= cutoff.getTime();
   }).map(function (row) {
-    return { date: String(row[0]).slice(0, 10), visits: Number(row[1] || 0) };
+    return { date: analyticsCellDate(row[0]), visits: Number(row[1] || 0) };
   }).sort(function (a, b) { return a.date.localeCompare(b.date); });
 }
 
