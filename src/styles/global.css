@@ -342,6 +342,7 @@ footer {
   .board-table td { border-bottom: 1px solid var(--rule-soft); padding: 0.6rem 1rem; display: flex; justify-content: space-between; gap: 1rem; }
   .board-table td:last-child { border-bottom: none; }
   .board-table td::before { content: attr(data-label); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); flex-shrink: 0; }
+  .board-table td.col-acciones { flex-wrap: wrap; justify-content: flex-start; white-space: normal; }
 }
 
 .editor-select { padding: 0.3rem 0.5rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; font-size: var(--text-xs); max-width: 150px; }
