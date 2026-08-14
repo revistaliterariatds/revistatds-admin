@@ -51,6 +51,10 @@ nav {
   font-size: var(--text-sm);
   color: var(--ink-soft);
 }
+.nav-links { display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem; border: 1px solid var(--rule); border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.45); }
+.nav-links a { display: inline-flex; align-items: center; min-height: 30px; padding: 0.35rem 0.65rem; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--ink-soft); text-decoration: none; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; transition: color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease); }
+.nav-links a:hover { border-color: var(--orange); color: var(--orange-deep); background: var(--paper-warm); }
+.nav-links a[aria-current="page"] { border-color: var(--orange); color: var(--orange-deep); background: var(--orange-soft); }
 .nav-user .badge {
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-sm);
@@ -194,6 +198,8 @@ footer {
 @media (max-width: 860px) {
   :root { --content-pad: 1.5rem; }
   .footer-inner { flex-direction: column; text-align: center; }
+  .nav-inner { align-items: flex-start; flex-wrap: wrap; height: auto; min-height: var(--nav-height); padding-top: 0.55rem; padding-bottom: 0.55rem; }
+  .nav-user { flex-wrap: wrap; justify-content: flex-end; }
 }
 
 /* ── TIPOS DE BADGE ── */
@@ -282,6 +288,7 @@ footer {
 .chart-point { fill: var(--paper-white); stroke: var(--orange); stroke-width: 3; }
 .analytics-empty { min-height: 220px; display: grid; place-items: center; color: var(--ink-muted); font-size: var(--text-sm); }
 @media (max-width: 700px) { .analytics-kpis { grid-template-columns: 1fr; } .analytics-card-head { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 620px) { .nav-inner { gap: 0.5rem; } .nav-user { width: 100%; justify-content: space-between; } .nav-links { order: 3; width: 100%; justify-content: stretch; overflow-x: auto; } .nav-links a { flex: 1 0 auto; justify-content: center; } }
 #motivo { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; resize: vertical; }
 #motivo:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 
