@@ -11,40 +11,46 @@ function handleAnalyticsDaily(idToken, days) {
   if ([7, 30].indexOf(days) < 0) throw new ApiError('Período inválido.');
 
   var token = getSecret('CLOUDFLARE_API_TOKEN');
-  var accountTag = getSecret('CLOUDFLARE_ACCOUNT_TAG');
-  var siteTag = getSecret('CLOUDFLARE_SITE_TAG');
-  if (!token || !accountTag || !siteTag) {
-    throw new ApiError('Analíticas no configuradas: faltan propiedades de Cloudflare.');
+  var zoneTag = getSecret('CLOUDFLARE_ZONE_TAG');
+  if (!token || !zoneTag) {
+    throw new ApiError('Analíticas no configuradas: faltan CLOUDFLARE_API_TOKEN o CLOUDFLARE_ZONE_TAG.');
   }
 
   var end = new Date();
   var start = new Date(end.getTime() - (days - 1) * 86400000);
-  var startDate = Utilities.formatDate(start, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  var endDate = Utilities.formatDate(end, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var startDate = start.toISOString();
+  var endDate = end.toISOString();
+  var endCacheDate = Utilities.formatDate(end, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'analytics:' + days + ':' + endDate;
+  var cacheKey = 'analytics:' + days + ':' + endCacheDate;
   var cached = cache.get(cacheKey);
   if (cached) return ok({ days: days, daily: JSON.parse(cached), cached: true });
 
-  var query = 'query DailyVisits($accountTag: String!, $startDate: Date!, $endDate: Date!, $siteTag: String!) {'
-    + ' viewer { accounts(filter: { accountTag: $accountTag }) {'
-    + ' webAnalyticsAdaptiveGroups(limit: 10000, filter: { date_geq: $startDate, date_leq: $endDate, siteTag: $siteTag, action: "visit" }, orderBy: [date_ASC])'
-    + ' { count dimensions { date } } } } }';
+  var host = String(getConfig('site_base_url') || 'https://tramasdelsur.com.ar').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  var query = 'query DailyVisits($zoneTag: String!, $startDate: Time!, $endDate: Time!, $host: String!) {'
+    + ' viewer { zones(filter: { zoneTag: $zoneTag }) {'
+    + ' httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $startDate, datetime_leq: $endDate, clientRequestHTTPHost: $host, requestSource: "eyeball" })'
+    + ' { sum { visits } dimensions { datetimeHour } } } } }';
   var response = UrlFetchApp.fetch(CF_GRAPHQL_URL, {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify({ query: query, variables: { accountTag: accountTag, startDate: startDate, endDate: endDate, siteTag: siteTag } }),
+    payload: JSON.stringify({ query: query, variables: { zoneTag: zoneTag, startDate: startDate, endDate: endDate, host: host } }),
     muteHttpExceptions: true,
   });
   if (response.getResponseCode() !== 200) throw new ApiError('Cloudflare devolvió HTTP ' + response.getResponseCode() + '.');
 
   var body = JSON.parse(response.getContentText());
   if (body.errors && body.errors.length) throw new ApiError('Cloudflare: ' + body.errors[0].message);
-  var groups = (((body.data || {}).viewer || {}).accounts || [])[0];
-  groups = groups ? groups.webAnalyticsAdaptiveGroups || [] : [];
-  var daily = groups.map(function (group) {
-    return { date: group.dimensions.date, visits: Number(group.count || 0) };
+  var zone = (((body.data || {}).viewer || {}).zones || [])[0];
+  var groups = zone ? zone.httpRequestsAdaptiveGroups || [] : [];
+  var byDate = {};
+  groups.forEach(function (group) {
+    var date = String(group.dimensions.datetimeHour || '').slice(0, 10);
+    if (date) byDate[date] = (byDate[date] || 0) + Number((group.sum || {}).visits || 0);
+  });
+  var daily = Object.keys(byDate).sort().map(function (date) {
+    return { date: date, visits: byDate[date] };
   });
   cache.put(cacheKey, JSON.stringify(daily), CF_CACHE_SECONDS);
   return ok({ days: days, daily: daily, cached: false });
