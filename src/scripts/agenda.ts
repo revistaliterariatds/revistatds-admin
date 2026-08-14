@@ -35,6 +35,20 @@ let mesVisible = new Date();
 let diaActivo = '';
 let citaActiva: Cita | null = null;
 
+const AGENDA_CACHE_KEY = 'tds-agenda-cache-v1';
+
+function readCachedCitas(): Cita[] | null {
+  try { return JSON.parse(localStorage.getItem(AGENDA_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
+function saveCachedCitas(list: Cita[]) {
+  try { localStorage.setItem(AGENDA_CACHE_KEY, JSON.stringify(list)); } catch { /* sin caché local */ }
+}
+
+function clearCachedCitas() {
+  try { localStorage.removeItem(AGENDA_CACHE_KEY); } catch { /* sin caché local */ }
+}
+
 // ── sesión ──
 function renderNav() {
   const navUser = document.getElementById('nav-user');
@@ -273,6 +287,7 @@ function renderFormulario(cita: Cita | null, key: string) {
         : await api('panel/agenda/editar', { id: cita.id, ...payload });
       if (data.status !== 'ok') throw new Error(data.message || 'No se pudo guardar.');
       modal.close();
+      clearCachedCitas();
       await recargar();
     } catch (err) { showAlert(err instanceof Error ? err.message : 'No se pudo guardar.', true); }
   });
@@ -324,7 +339,7 @@ async function abrirDetalle(id: string) {
   content.querySelector('#cita-borrar')?.addEventListener('click', async () => {
     if (!confirm(`¿Borrar la cita "${c.titulo}" y sus comentarios?`)) return;
     const r = await api('panel/agenda/borrar', { id: c.id });
-    if (r.status === 'ok') { modal.close(); await recargar(); }
+    if (r.status === 'ok') { modal.close(); clearCachedCitas(); await recargar(); }
     else showAlert(r.message || 'No se pudo borrar.', true);
   });
 
@@ -333,7 +348,7 @@ async function abrirDetalle(id: string) {
     const texto = (document.getElementById('cita-nuevo-comentario') as HTMLTextAreaElement).value.trim();
     if (!texto) return;
     const r = await api('panel/agenda/comentar', { id: c.id, comentario: texto });
-    if (r.status === 'ok') await abrirDetalle(c.id);
+    if (r.status === 'ok') { clearCachedCitas(); await abrirDetalle(c.id); }
     else showAlert(r.message || 'No se pudo comentar.', true);
   });
 }
@@ -341,11 +356,21 @@ async function abrirDetalle(id: string) {
 // ── datos ──
 async function recargar() {
   hideAlert();
+  const cached = readCachedCitas();
+  if (cached) {
+    citas = cached;
+    renderCalendario();
+    renderProximas();
+  }
   const data = await api('panel/agenda/list');
-  if (data.status !== 'ok') { showAlert(data.message || 'No se pudo cargar la agenda.', true); return; }
+  if (data.status !== 'ok') {
+    if (!cached) showAlert(data.message || 'No se pudo cargar la agenda.', true);
+    return;
+  }
   citas = data.citas || [];
   renderCalendario();
   renderProximas();
+  saveCachedCitas(citas);
 }
 
 function init() {
