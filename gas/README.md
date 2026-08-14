@@ -19,6 +19,8 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `mail.gs` | Mails con estilo TDS inline |
 | `envio.gs` | Endpoint público `envio` (compatible con el sitio) |
 | `board.gs` | Tablero del panel (lectura) |
+| `agenda.gs` | Agenda: citas, comentarios y auto-citas de ediciones |
+| `ediciones.gs` | Ciclo de ediciones (abrir/cerrar con fecha elegida, sin solapamiento) |
 | `users.gs` | Gestión de usuarios y roles |
 | `analytics.gs` | Snapshots diarios y consulta histórica de visitas |
 | `descargas.gs` | Registro y consulta de descargas/lecturas de ediciones PDF |
@@ -33,7 +35,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 3. En **Configuración del proyecto** → activar "Mostrar `appsscript.json`" y pegar
    el manifest (o dejar que se genere y ajustar `webapp`/scopes).
 4. **Ejecutar `setup()` una vez** (autorizar los permisos):
-    - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config` (la hoja `Analiticas` se crea al primer snapshot);
+    - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`, `Agenda`, `AgendaComentarios`, `Ediciones` (la hoja `Analiticas` se crea al primer snapshot);
    - siembra `Config` y los roles iniciales (ADMINISTRADOR + emisor).
 5. **Script Properties** (Configuración del proyecto → Propiedades de secuencia de
    comandos) — agregar:
@@ -73,6 +75,16 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 |---|---|---|
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
+| `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío |
+| `panel/ediciones/list` | idToken + ADMIN/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
+| `panel/ediciones/abrir` | idToken + ADMIN/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
+| `panel/ediciones/cerrar` | idToken + ADMIN/WEBMASTER | cierra edición con `fecha_cierre` elegida |
+| `panel/agenda/list` | idToken | citas del mes (fecha/hora normalizadas, contador de comentarios) |
+| `panel/agenda/detalle` | idToken | cita + hilo de comentarios |
+| `panel/agenda/crear` | idToken | crea cita (con `notificar` opcional → mail a roles activos) |
+| `panel/agenda/comentar` | idToken | agrega comentario al hilo |
+| `panel/agenda/editar` | idToken + ADMIN/WEBMASTER | edita cita |
+| `panel/agenda/borrar` | idToken + ADMIN/WEBMASTER | borra cita y sus comentarios |
 | `panel/users/list` | idToken + ADMIN/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
 | `panel/users/save` | idToken + ADMIN/WEBMASTER | alta/edición de una fila de `Roles` |
 | `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
@@ -114,6 +126,13 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 | `autor/approve` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → APROBADO) |
 | `autor/reject` | sí | `{ status, message, estado }` (CONSULTA_AUTOR → RECHAZADO_POR_AUTOR, con `motivo`) |
 | `autor/edit` | sí | `{ status, message, version, estado }` (sube versión → EN_REVISIÓN) |
+
+### Mails del autor
+
+- **Consulta de aprobación**: adjunta el **doc de corrección en PDF** (`pdfDocCorreccion`), sin links de Drive ni docs editables (fallback: texto en el cuerpo). Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
+- **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + ADMINISTRADOR/WEBMASTER/SUPERVISOR** para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
+- **Pedir correcciones**: link de un solo uso para subir versión.
+- **Confirmación de recibido**: primer link de seguimiento (token).
 
 ### Validación de archivos
 
