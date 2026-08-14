@@ -54,24 +54,37 @@ src/
 ├── pages/tablero.astro     ← tablero editorial y detalle
 ├── pages/usuarios.astro    ← usuarios y roles
 ├── pages/configuracion.astro ← configuración y asuntos de mail
-├── pages/analiticas.astro  ← visitas y snapshots históricos
+├── pages/analiticas.astro  ← visitas, contador histórico y snapshots
+├── pages/descargas.astro   ← descargas/lecturas de ediciones PDF
 ├── scripts/login.ts        ← GIS popup + decode ID token
 ├── scripts/tablero.ts      ← filtros, asignaciones y transiciones
 ├── scripts/usuarios.ts     ← gestión RBAC de usuarios
 ├── scripts/configuracion.ts ← valores operativos y asuntos
 ├── scripts/analiticas.ts   ← gráfico SVG de visitas
+├── scripts/descargas.ts    ← contadores por edición
 └── styles/
     ├── tokens.css         ← design tokens (copia de variables.css del sitio)
     └── global.css
 ```
+
+## Rendimiento
+
+- Keep-warm de Apps Script: trigger cada 5 min (`keepAlive` + `setupKeepAliveTrigger`) para evitar el cold start.
+- Caché backend en `CacheService`: Config 10 min, Usuarios 60 s, Tablero 30 s (invalidada en cada mutación), analíticas y descargas 5 min (invalidada al registrar).
+- Frontend con render instantáneo (`localStorage`) y carga en paralelo en el tablero.
+
+## Medición de descargas
+
+El sitio público registra clics en los PDF de ediciones (`descarga`, público). El panel muestra totales por edición con desglose "leer"/"descargar" y filtro por período. Los datos son append-only en la hoja `Descargas` y crecen históricamente desde su activación.
 
 ## Estado verificado
 
 - Login GIS y expiración automática del ID token.
 - Tablero, filtros, asignación, reasignación y detalle editorial.
 - Flujo de autor: estado, aprobación, rechazo y nuevas versiones.
-- Usuarios, Configuración y analíticas con permisos por rol.
+- Usuarios, Configuración, Visitas y Descargas con permisos por rol.
 - Snapshots diarios de visitas en la hoja `Analiticas` e histórico indefinido práctico.
+- Contador histórico de visitas y medición de descargas de ediciones.
 - Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
 - QA integral y corte productivo todavía pendientes.
 

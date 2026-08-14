@@ -89,6 +89,21 @@ histórico indefinido mientras exista espacio en Sheets. Ejecutar una vez
 `setupAnalyticsTrigger()` para instalar el trigger diario. Configurar en Script Properties
 `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ZONE_TAG` (el ID de zona del dominio).
 El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
+
+## Keep-warm y caché
+
+- `setupKeepAliveTrigger()` instala un trigger cada 5 minutos a `keepAlive()` para
+  evitar el cold start de Apps Script.
+- `CacheService` cachea Config (10 min), Usuarios (60 s), Tablero (30 s, invalidado
+  en cada mutación) y analíticas/descargas (5 min, invalidados al registrar datos).
+- Las funciones de limpieza invalidan por período:
+  `clearAnalyticsCache()` y `clearDescargasCache()`.
+
+## Descargas de ediciones
+
+- `descarga` (público): registra `{ archivo, accion (leer|descargar) }` en la hoja `Descargas`.
+- `panel/descargas/list`: totales por edición y desglose por acción (ADMIN/WEBMASTER/SUPERVISOR).
+- El sitio público agrega un tracker aditivo en `assets/js/app.js` que no interfiere con el circuito de envíos.
 El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`.
 
 ## Endpoints del autor (POST a `/exec`, con `action` + `token` en el body)
