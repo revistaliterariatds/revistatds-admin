@@ -35,10 +35,10 @@ let cuentos: Cuento[] = [];
 let estadoActivo = 'TODOS';
 let termino = '';
 let editores: { email: string; nombre: string }[] = [];
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'SUPERVISOR';
 
 // ── sesión ──
 const user = getUser();
+const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'SUPERVISOR';
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');
