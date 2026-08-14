@@ -268,7 +268,30 @@ footer {
 .check-row { display: block; margin: 0.6rem 0; font-size: var(--text-sm); color: var(--ink-soft); }
 .check-row input { margin-right: 0.45rem; }
 .form-help { color: var(--ink-muted); font-size: var(--text-sm); margin: -0.5rem 0 1rem; }
-.config-template { min-height: 4.2rem; resize: vertical; line-height: 1.5; }
+.config-page { max-width: 920px; margin: 0 auto; padding: var(--space-lg) var(--content-pad) var(--space-xl); }
+.config-intro { margin-top: 0.4rem; color: var(--ink-soft); font-size: var(--text-sm); }
+.config-form { display: grid; gap: 1.25rem; }
+.config-section { padding: 1.5rem; background: var(--paper-white); border: 1px solid var(--rule); box-shadow: var(--shadow-xs); }
+.config-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--rule-soft); }
+.config-kicker { margin-bottom: 0.25rem; color: var(--orange); font-size: var(--text-xs); letter-spacing: 0.16em; text-transform: uppercase; }
+.config-section h2 { font-family: 'Playfair Display', serif; font-size: var(--text-xl); font-weight: 400; }
+.config-section-copy { max-width: 60ch; margin-top: 0.35rem; color: var(--ink-muted); font-size: var(--text-sm); }
+.config-mark { color: var(--rule); font-family: 'Playfair Display', serif; font-size: 2rem; line-height: 1; }
+.config-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
+.config-field-wide { grid-column: 1 / -1; }
+.config-section label { color: var(--ink-soft); font-size: var(--text-sm); }
+.config-section label span { color: var(--ink-muted); font-weight: 300; }
+.config-section small { display: block; margin-top: 0.35rem; color: var(--ink-muted); font-size: var(--text-xs); }
+.template-hint { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; padding: 0.7rem 0.85rem; background: var(--paper-warm); color: var(--ink-soft); font-size: var(--text-xs); }
+.template-hint code { padding: 0.2rem 0.4rem; border: 1px solid var(--rule); background: var(--paper-white); color: var(--orange-deep); font-family: monospace; }
+.template-hint span { color: var(--ink-muted); }
+.config-template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; }
+.config-template-field { padding: 0.9rem; border: 1px solid var(--rule-soft); background: var(--paper-warm); }
+.config-template-field label { display: block; margin-bottom: 0.45rem; font-size: var(--text-xs); letter-spacing: 0.07em; text-transform: uppercase; }
+.config-template { min-height: 5rem; width: 100%; resize: vertical; line-height: 1.5; background: var(--paper-white); }
+.config-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.25rem 0; }
+.config-actions p { color: var(--ink-muted); font-size: var(--text-xs); }
+@media (max-width: 700px) { .config-settings-grid, .config-template-grid { grid-template-columns: 1fr; } .config-field-wide { grid-column: auto; } .config-section { padding: 1.1rem; } .config-actions { align-items: flex-start; flex-direction: column-reverse; } }
 .analytics-period { color: var(--ink-soft); font-size: var(--text-sm); }
 .analytics-period select { margin-left: 0.4rem; padding: 0.45rem; border: 1px solid var(--rule); background: var(--paper-white); }
 .analytics-card { min-height: 320px; padding: var(--space-md); background: var(--paper-white); border: 1px solid var(--rule); overflow-x: auto; }

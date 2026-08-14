@@ -3,24 +3,35 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Configuración — Tramas del Sur" description="Configuración del panel editorial.">
-  <section class="users-page" aria-labelledby="config-heading">
+  <section class="config-page" aria-labelledby="config-heading">
     <header class="board-header">
-      <div><p class="board-eyebrow">Administración</p><h1 id="config-heading">Configuración</h1></div>
+      <div><p class="board-eyebrow">Administración</p><h1 id="config-heading">Configuración</h1><p class="config-intro">Ajustes del circuito editorial y asuntos de las notificaciones.</p></div>
     </header>
     <div id="config-alert" class="status-card" hidden></div>
-    <form id="config-form" class="user-form" hidden>
-      <div class="form-group"><label for="config-expira">Duración de links de autor (días)</label><input id="config-expira" type="number" min="1" max="365" required /><small>Entre 1 y 365 días.</small></div>
-      <div class="form-group"><label for="config-convocatoria">Convocatoria actual</label><select id="config-convocatoria"><option value="general">General</option><option value="docentes">Docentes</option></select></div>
-      <div class="form-group"><label for="config-site">URL base del sitio</label><input id="config-site" type="url" required /><small>Debe usar HTTPS.</small></div>
-      <h2 class="detail-sub">Asuntos de mail</h2>
-      <p class="form-help">Variables disponibles: <code>{'{{titulo}}'}</code>.</p>
-      <div class="form-group"><label for="mail-subject-confirmation">Confirmación de envío</label><textarea class="config-template" id="mail-subject-confirmation" rows="2" maxlength="200" required></textarea></div>
-      <div class="form-group"><label for="mail-subject-correcciones">Correcciones solicitadas</label><textarea class="config-template" id="mail-subject-correcciones" rows="2" maxlength="200" required></textarea></div>
-      <div class="form-group"><label for="mail-subject-revision">Revisión terminada</label><textarea class="config-template" id="mail-subject-revision" rows="2" maxlength="200" required></textarea></div>
-      <div class="form-group"><label for="mail-subject-consulta">Consulta al autor</label><textarea class="config-template" id="mail-subject-consulta" rows="2" maxlength="200" required></textarea></div>
-      <div class="form-group"><label for="mail-subject-version">Nueva versión</label><textarea class="config-template" id="mail-subject-version" rows="2" maxlength="200" required></textarea></div>
-      <div class="form-group"><label for="mail-subject-devolucion">Devolución al editor</label><textarea class="config-template" id="mail-subject-devolucion" rows="2" maxlength="200" required></textarea></div>
-      <button class="btn-primary" type="submit">Guardar configuración</button>
+    <form id="config-form" class="config-form" hidden>
+      <section class="config-section">
+        <div class="config-section-head"><div><p class="config-kicker">Circuito</p><h2>Ajustes generales</h2></div><span class="config-mark">01</span></div>
+        <div class="config-settings-grid">
+          <div class="form-group"><label for="config-expira">Duración de links de autor <span>(días)</span></label><input id="config-expira" type="number" min="1" max="365" required /><small>Entre 1 y 365 días.</small></div>
+          <div class="form-group"><label for="config-convocatoria">Convocatoria actual</label><select id="config-convocatoria"><option value="general">General</option><option value="docentes">Docentes</option></select><small>Se usa como valor operativo por defecto.</small></div>
+          <div class="form-group config-field-wide"><label for="config-site">URL base del sitio</label><input id="config-site" type="url" required /><small>Debe usar HTTPS.</small></div>
+        </div>
+      </section>
+
+      <section class="config-section">
+        <div class="config-section-head"><div><p class="config-kicker">Correspondencia</p><h2>Asuntos de mail</h2><p class="config-section-copy">Personalizá los asuntos que recibe el equipo y cada autor. Los cuerpos HTML permanecen controlados por el sistema.</p></div><span class="config-mark">02</span></div>
+        <div class="template-hint">Variable disponible <code>{'{{titulo}}'}</code><span>Se reemplaza automáticamente por el título del cuento.</span></div>
+        <div class="config-template-grid">
+          <div class="config-template-field"><label for="mail-subject-confirmation">Confirmación de envío</label><textarea class="config-template" id="mail-subject-confirmation" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-correcciones">Correcciones solicitadas</label><textarea class="config-template" id="mail-subject-correcciones" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-revision">Revisión terminada</label><textarea class="config-template" id="mail-subject-revision" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-consulta">Consulta al autor</label><textarea class="config-template" id="mail-subject-consulta" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-version">Nueva versión</label><textarea class="config-template" id="mail-subject-version" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-devolucion">Devolución al editor</label><textarea class="config-template" id="mail-subject-devolucion" rows="3" maxlength="200" required></textarea></div>
+        </div>
+      </section>
+
+      <div class="config-actions"><p>Los cambios se aplican a los próximos mails.</p><button class="btn-primary" type="submit">Guardar configuración</button></div>
     </form>
   </section>
 </Layout>
