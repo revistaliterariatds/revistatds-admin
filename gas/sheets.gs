@@ -13,7 +13,7 @@ var SHEETS = {
   Descargas: ['archivo', 'accion', 'fecha'],
   Ediciones: ['numero', 'estado', 'fecha_apertura', 'fecha_cierre'],
   Agenda: [
-    'id', 'fecha', 'hora', 'titulo', 'comentario', 'tipo', 'meet_link',
+    'id', 'fecha', 'hora', 'hora_fin', 'titulo', 'comentario', 'tipo', 'meet_link',
     'edicion', 'creado_por', 'creado_at', 'actualizado_at',
   ],
   AgendaComentarios: ['id', 'cita_id', 'autor', 'comentario', 'creado_at'],
@@ -40,6 +40,21 @@ function ensureSchema() {
       sheet.appendRow(SHEETS[name]);
     }
   });
+  migrarAgendaHoraFin();
+}
+
+// Migración idempotente: agrega la columna 'hora_fin' (después de 'hora') a la
+// hoja Agenda si no existe. Requerida para horarios con inicio y fin.
+function migrarAgendaHoraFin() {
+  var sheet = getSheet('Agenda');
+  if (!sheet) return;
+  var lastCol = sheet.getLastColumn();
+  var headers = lastCol ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  if (headers.indexOf('hora_fin') >= 0) return;
+  var horaIdx = headers.indexOf('hora');
+  if (horaIdx < 0) return; // sin columna 'hora' no hay nada que migrar
+  sheet.insertColumnAfter(horaIdx + 1); // insertColumnAfter es 1-based
+  sheet.getRange(1, horaIdx + 2).setValue('hora_fin');
 }
 
 // Devuelve {index, columns} donde index es un mapa nombre->índice de columna.

@@ -184,19 +184,25 @@ function sendLiberacion(editorEmail, cuento) {
 // ── Agenda: notificación de nueva cita + link "Agregar a mi calendario" ──
 
 // Link de Google Calendar pre-cargado (Opción A, sin scopes ni eventos reales).
+function minutosDeHora(h) {
+  var parts = String(h).split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
 function agendaCalendarLink(cita) {
   var text = encodeURIComponent(cita.titulo || 'Cita de agenda');
   var fecha = String(cita.fecha || '').replace(/-/g, '');
   var dates;
   if (cita.hora) {
-    var parts = String(cita.hora).split(':');
-    var mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + 60; // 1 hora de duración
-    var endKey = String(cita.fecha || '');
-    var endMin = mins;
+    var startMin = minutosDeHora(cita.hora);
+    var endMin = cita.hora_fin ? minutosDeHora(cita.hora_fin) : startMin + 60;
+    var startKey = String(cita.fecha || '');
+    var endKey = startKey;
     if (endMin >= 1440) { endMin -= 1440; endKey = sumarDiasKey(endKey, 1); }
+    var start = startKey.replace(/-/g, '') + 'T' + String(cita.hora).replace(':', '') + '00';
     var end = endKey.replace(/-/g, '') + 'T' +
       ('0' + Math.floor(endMin / 60)).slice(-2) + ('0' + (endMin % 60)).slice(-2) + '00';
-    dates = fecha + 'T' + String(cita.hora).replace(':', '') + '00/' + end;
+    dates = start + '/' + end;
   } else {
     dates = fecha + '/' + sumarDiasKey(String(cita.fecha || ''), 1).replace(/-/g, '');
   }
@@ -218,7 +224,7 @@ function sendAgendaNotificacion(cita) {
   if (emails.length === 0) return;
   var subject = getMailSubject('mail_subject_agenda', 'Nueva cita en la agenda — {{titulo}}', { titulo: cita.titulo });
   var fecha = String(cita.fecha || '');
-  var hora = cita.hora ? ' · ' + String(cita.hora) : '';
+  var hora = cita.hora ? ' · ' + String(cita.hora) + (cita.hora_fin ? ' – ' + String(cita.hora_fin) : '') : '';
   var meetHtml = cita.meet_link
     ? '  <p style="margin:0 0 24px;"><a href="' + escapeHtml(cita.meet_link) + '" style="color:#d95f1a;">Unirse a la reunión (Meet)</a></p>'
     : '';

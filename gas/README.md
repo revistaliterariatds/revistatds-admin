@@ -79,7 +79,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/ediciones/list` | idToken + ADMIN/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + ADMIN/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
 | `panel/ediciones/cerrar` | idToken + ADMIN/WEBMASTER | cierra edición con `fecha_cierre` elegida |
-| `panel/agenda/list` | idToken | citas del mes (fecha/hora normalizadas, contador de comentarios) |
+| `panel/agenda/list` | idToken | citas del mes (fecha/hora y `hora_fin` normalizadas, contador de comentarios) |
 | `panel/agenda/detalle` | idToken | cita + hilo de comentarios |
 | `panel/agenda/crear` | idToken | crea cita (con `notificar` opcional → mail a roles activos) |
 | `panel/agenda/comentar` | idToken | agrega comentario al hilo |

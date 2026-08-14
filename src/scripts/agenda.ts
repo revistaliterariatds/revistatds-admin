@@ -6,6 +6,7 @@ interface Cita {
   id: string;
   fecha: string;
   hora: string;
+  hora_fin: string;
   titulo: string;
   comentario: string;
   tipo: string;
@@ -110,6 +111,11 @@ function tipoInfo(t: string): { label: string; color: string } {
   return TIPOS[t] || TIPOS.otro;
 }
 
+function fmtHorario(c: Cita): string {
+  if (!c.hora) return '';
+  return c.hora_fin ? `${c.hora} – ${c.hora_fin}` : c.hora;
+}
+
 // ── calendario ──
 function renderCalendario() {
   const titulo = document.getElementById('cal-titulo')!;
@@ -167,7 +173,7 @@ function renderProximas() {
     <li>
       <button type="button" class="proxima-item" data-cita-id="${esc(c.id)}">
         <span class="proxima-dot" style="background:${tipoInfo(c.tipo).color}" aria-hidden="true"></span>
-        <span class="proxima-fecha">${fmtFechaCorta(c.fecha)}${c.hora ? ' · ' + esc(c.hora) : ''}</span>
+        <span class="proxima-fecha">${fmtFechaCorta(c.fecha)}${c.hora ? ' · ' + esc(fmtHorario(c)) : ''}</span>
         <span class="proxima-titulo">${esc(c.titulo)}</span>
       </button>
     </li>`).join('');
@@ -196,7 +202,7 @@ function abrirDia(key: string) {
       ${delDia.map((c) => `
         <button type="button" class="cita-item" data-cita-id="${esc(c.id)}">
           <i class="cal-dot" style="background:${tipoInfo(c.tipo).color}" aria-hidden="true"></i>
-          <span class="cita-item-hora">${c.hora ? esc(c.hora) : 'Todo el día'}</span>
+          <span class="cita-item-hora">${c.hora ? esc(fmtHorario(c)) : 'Todo el día'}</span>
           <span class="cita-item-titulo">${esc(c.titulo)}</span>
           <span class="cita-item-meta">${c.comentarios} coment. · ${esc(c.creado_por_nombre || c.creado_por)}</span>
         </button>`).join('')}
@@ -234,9 +240,15 @@ function renderFormulario(cita: Cita | null, key: string) {
         <label for="cita-titulo">Título <span>(obligatorio)</span></label>
         <input id="cita-titulo" type="text" maxlength="200" required value="${esc(cita?.titulo || '')}" />
       </div>
-      <div class="form-group">
-        <label for="cita-hora">Horario <span>(opcional)</span></label>
-        <input id="cita-hora" type="time" value="${esc(cita?.hora || '')}" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cita-hora">Inicio <span>(opcional)</span></label>
+          <input id="cita-hora" type="time" value="${esc(cita?.hora || '')}" />
+        </div>
+        <div class="form-group">
+          <label for="cita-hora-fin">Fin <span>(opcional)</span></label>
+          <input id="cita-hora-fin" type="time" value="${esc(cita?.hora_fin || '')}" />
+        </div>
       </div>
       <div class="form-group">
         <label for="cita-tipo">Tipo</label>
@@ -275,6 +287,7 @@ function renderFormulario(cita: Cita | null, key: string) {
     const payload = {
       fecha: key,
       hora: (document.getElementById('cita-hora') as HTMLInputElement).value,
+      hora_fin: (document.getElementById('cita-hora-fin') as HTMLInputElement).value,
       titulo: (document.getElementById('cita-titulo') as HTMLInputElement).value.trim(),
       comentario: (document.getElementById('cita-comentario') as HTMLTextAreaElement).value.trim(),
       tipo: (document.getElementById('cita-tipo') as HTMLSelectElement).value,
@@ -308,7 +321,7 @@ async function abrirDetalle(id: string) {
   content.innerHTML = `
     <div class="cita-detalle-top" style="border-top:4px solid ${tipo.color}">
       <h2 class="detail-titulo">${esc(c.titulo)}</h2>
-      <p class="cita-detalle-meta">${esc(fmtFecha(c.fecha))}${c.hora ? ' · ' + esc(c.hora) : ''} · ${esc(tipo.label)}</p>
+      <p class="cita-detalle-meta">${esc(fmtFecha(c.fecha))}${c.hora ? ' · ' + esc(fmtHorario(c)) : ''} · ${esc(tipo.label)}</p>
       ${c.comentario ? `<p class="cita-detalle-comentario">${esc(c.comentario)}</p>` : ''}
       ${c.meet_link ? `<p class="cita-detalle-meta"><a href="${esc(c.meet_link)}" target="_blank" rel="noopener noreferrer">Unirse a la reunión (Meet)</a></p>` : ''}
       <p class="cita-detalle-meta cita-detalle-autor">Creada por ${esc(c.creado_por_nombre || c.creado_por)}${c.edicion ? ' · Edición ' + esc(c.edicion) : ''}</p>

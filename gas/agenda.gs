@@ -38,17 +38,19 @@ function fmtCelda(valor, patron) {
 function normalizarCita(c) {
   c.fecha = fmtCelda(c.fecha, 'yyyy-MM-dd');
   c.hora = fmtCelda(c.hora, 'HH:mm');
+  c.hora_fin = fmtCelda(c.hora_fin, 'HH:mm');
   return c;
 }
 
 function findCitaById(id) {
+  migrarAgendaHoraFin();
   var sheet = getSheet('Agenda');
   var idx = headerIndex(sheet);
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idx.id]) === String(id)) {
       var c = { _rowIndex: i };
-      SHEETS.Agenda.forEach(function (h, j) { c[h] = data[i][j]; });
+      SHEETS.Agenda.forEach(function (h) { c[h] = data[i][idx[h]]; });
       return normalizarCita(c);
     }
   }
@@ -88,18 +90,20 @@ function contarComentarios() {
 // ── listado completo (el cliente filtra por mes) ──
 function handleAgendaList(idToken) {
   var user = requireInternalUser(idToken);
+  migrarAgendaHoraFin();
   var cache = CacheService.getScriptCache();
   var cached = cache.get('agenda-list');
   if (cached) return JSON.parse(cached);
 
   var sheet = getSheet('Agenda');
   if (!sheet) return ok({ citas: [], yo: { email: user.email, rol: user.rol, es_admin: esAdmin(user) } });
+  var idx = headerIndex(sheet);
   var data = sheet.getDataRange().getValues();
   var cont = contarComentarios();
   var citas = [];
   for (var i = 1; i < data.length; i++) {
     var c = citaPublica({});
-    SHEETS.Agenda.forEach(function (h, j) { c[h] = data[i][j]; });
+    SHEETS.Agenda.forEach(function (h) { c[h] = data[i][idx[h]]; });
     normalizarCita(c);
     c.comentarios = cont[String(c.id)] || 0;
     c.creado_por_nombre = displayName(c.creado_por);
@@ -123,19 +127,24 @@ function validarCamposCita(payload) {
   var fecha = String(payload.fecha || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new ApiError('Fecha inválida.');
   var hora = String(payload.hora || '').trim();
-  if (hora && !/^\d{2}:\d{2}$/.test(hora)) throw new ApiError('Horario inválido (HH:mm).');
+  if (hora && !/^\d{2}:\d{2}$/.test(hora)) throw new ApiError('Horario de inicio inválido (HH:mm).');
+  var horaFin = String(payload.hora_fin || '').trim();
+  if (horaFin && !/^\d{2}:\d{2}$/.test(horaFin)) throw new ApiError('Horario de fin inválido (HH:mm).');
+  if (horaFin && !hora) throw new ApiError('Para definir una hora de fin primero indicá el inicio.');
+  if (hora && horaFin && horaFin <= hora) throw new ApiError('La hora de fin debe ser posterior a la de inicio.');
   var titulo = String(payload.titulo || '').trim().slice(0, 200);
   if (!titulo) throw new ApiError('El título de la cita es obligatorio.');
   var tipo = String(payload.tipo || 'otro').trim();
   if (!TIPOS_AGENDA[tipo]) tipo = 'otro';
   var meet = String(payload.meet_link || '').trim().slice(0, 500);
   if (meet && !/^https?:\/\//i.test(meet)) throw new ApiError('El link de reunión debe ser una URL válida.');
-  return { fecha: fecha, hora: hora, titulo: titulo, tipo: tipo, meet_link: meet };
+  return { fecha: fecha, hora: hora, hora_fin: horaFin, titulo: titulo, tipo: tipo, meet_link: meet };
 }
 
 // ── crear cita (todos los internos) ──
 function handleAgendaCrear(idToken, payload) {
   var user = requireInternalUser(idToken);
+  migrarAgendaHoraFin();
   var v = validarCamposCita(payload);
   var comentario = String(payload.comentario || '').trim().slice(0, 2000);
   var notificar = payload.notificar === true || String(payload.notificar).toUpperCase() === 'TRUE';
@@ -143,14 +152,14 @@ function handleAgendaCrear(idToken, payload) {
   var id = 'A' + Date.now().toString(36) + '-' + Utilities.getUuid().slice(0, 8);
   var ahora = nowIso();
   getSheet('Agenda').appendRow([
-    id, v.fecha, v.hora, v.titulo, comentario, v.tipo, v.meet_link,
+    id, v.fecha, v.hora, v.hora_fin, v.titulo, comentario, v.tipo, v.meet_link,
     '', user.email, ahora, ahora,
   ]);
   clearAgendaCache();
 
   if (notificar) {
     try {
-      sendAgendaNotificacion({ id: id, fecha: v.fecha, hora: v.hora, titulo: v.titulo, comentario: comentario, meet_link: v.meet_link });
+      sendAgendaNotificacion({ id: id, fecha: v.fecha, hora: v.hora, hora_fin: v.hora_fin, titulo: v.titulo, comentario: comentario, meet_link: v.meet_link });
     } catch (e) {
       return ok({ message: 'Cita creada, pero no se pudieron enviar las notificaciones: ' + (e.message || e), id: id });
     }
@@ -178,6 +187,7 @@ function handleAgendaComentar(idToken, id, comentario) {
 function handleAgendaEditar(idToken, id, payload) {
   var user = requireInternalUser(idToken);
   if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede editar citas.');
+  migrarAgendaHoraFin();
   var c = findCitaById(id);
   if (!c) throw new ApiError('Cita no encontrada.');
 
@@ -186,6 +196,7 @@ function handleAgendaEditar(idToken, id, payload) {
   var sheet = getSheet('Agenda');
   setCell(sheet, c._rowIndex, 'fecha', v.fecha);
   setCell(sheet, c._rowIndex, 'hora', v.hora);
+  setCell(sheet, c._rowIndex, 'hora_fin', v.hora_fin);
   setCell(sheet, c._rowIndex, 'titulo', v.titulo);
   setCell(sheet, c._rowIndex, 'comentario', comentario);
   setCell(sheet, c._rowIndex, 'tipo', v.tipo);
@@ -220,10 +231,11 @@ function handleAgendaBorrar(idToken, id) {
 
 // ── cita automática del sistema (sin mail), usada por Ediciones ──
 function crearCitaAutomatica(fecha, titulo, comentario, tipo, creadorEmail) {
+  migrarAgendaHoraFin();
   var id = 'A' + Date.now().toString(36) + '-' + Utilities.getUuid().slice(0, 8);
   var ahora = nowIso();
   getSheet('Agenda').appendRow([
-    id, fecha, '', titulo, comentario, tipo, '', '', creadorEmail || 'Sistema', ahora, ahora,
+    id, fecha, '', '', titulo, comentario, tipo, '', '', creadorEmail || 'Sistema', ahora, ahora,
   ]);
   clearAgendaCache();
   return id;
