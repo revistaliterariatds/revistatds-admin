@@ -115,7 +115,6 @@ function setup() {
 
 function seedConfig() {
   setConfig('expira_token_dias', '30');
-  setConfig('convocatoria_actual', 'general');
   setConfig('site_base_url', 'https://tramasdelsur.com.ar');
 }
 

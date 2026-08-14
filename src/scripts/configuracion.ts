@@ -27,7 +27,6 @@ const CONFIG_CACHE_KEY = 'tds-config-cache-v1';
 
 function fillForm(config: Record<string, string>) {
   (document.getElementById('config-expira') as HTMLInputElement).value = config.expira_token_dias || '30';
-  (document.getElementById('config-convocatoria') as HTMLSelectElement).value = config.convocatoria_actual || 'general';
   (document.getElementById('config-site') as HTMLInputElement).value = config.site_base_url || '';
   const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion'];
   subjects.forEach((key) => {
@@ -62,7 +61,6 @@ async function submit(event: SubmitEvent) {
   event.preventDefault();
   try {
     await save('expira_token_dias', (document.getElementById('config-expira') as HTMLInputElement).value);
-    await save('convocatoria_actual', (document.getElementById('config-convocatoria') as HTMLSelectElement).value);
     await save('site_base_url', (document.getElementById('config-site') as HTMLInputElement).value);
     const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion'];
     for (const key of subjects) {

@@ -33,6 +33,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
 
 let cuentos: Cuento[] = [];
 let estadoActivo = 'TODOS';
+let convocatoriaActiva = 'TODAS';
 let termino = '';
 let editores: { email: string; nombre: string }[] = [];
 
@@ -119,9 +120,35 @@ function renderPills() {
   });
 }
 
+function renderConvocatoriaPills() {
+  const cont: Record<string, number> = {};
+  cuentos.forEach((c) => { cont[c.convocatoria] = (cont[c.convocatoria] || 0) + 1; });
+
+  const pills = [{ key: 'TODAS', label: 'Todas', n: cuentos.length }];
+  ['general', 'docentes'].forEach((k) => {
+    if (cont[k]) pills.push({ key: k, label: convocatoriaLabel(k), n: cont[k] });
+  });
+
+  const el = document.getElementById('convocatoriaFilters')!;
+  el.innerHTML = pills.map((p) =>
+    `<button type="button" class="pill ${p.key === convocatoriaActiva ? 'active' : ''}" data-conv="${p.key}">
+       ${esc(p.label)} <span class="pill-n">${p.n}</span>
+     </button>`,
+  ).join('');
+
+  el.querySelectorAll('.pill').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      convocatoriaActiva = btn.getAttribute('data-conv') || 'TODAS';
+      renderConvocatoriaPills();
+      renderTable();
+    });
+  });
+}
+
 function visibles(): Cuento[] {
   return cuentos.filter((c) => {
     if (estadoActivo !== 'TODOS' && c.estado !== estadoActivo) return false;
+    if (convocatoriaActiva !== 'TODAS' && c.convocatoria !== convocatoriaActiva) return false;
     if (termino) {
       const t = termino.toLowerCase();
       const hay = (c.titulo + ' ' + c.autor).toLowerCase().includes(t);
@@ -226,6 +253,7 @@ async function cargar() {
   cuentos = data.cuentos;
   if (esGestor && ed.status === 'ok') editores = ed.editores || [];
   renderPills();
+  renderConvocatoriaPills();
   renderTable();
 }
 

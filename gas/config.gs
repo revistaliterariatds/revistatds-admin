@@ -3,7 +3,6 @@
 // Valores por defecto para la hoja Config (no secretos).
 var CONFIG_DEFAULTS = {
   expira_token_dias: '30',
-  convocatoria_actual: 'general',
   site_base_url: 'https://tramasdelsur.com.ar',
   mail_subject_confirmation: 'Recibimos tu envío — {{titulo}}',
   mail_subject_correcciones: 'Correcciones solicitadas — {{titulo}}',
@@ -14,7 +13,7 @@ var CONFIG_DEFAULTS = {
 };
 
 var CONFIG_EDITABLES = [
-  'expira_token_dias', 'convocatoria_actual', 'site_base_url',
+  'expira_token_dias', 'site_base_url',
   'mail_subject_confirmation', 'mail_subject_correcciones', 'mail_subject_revision',
   'mail_subject_consulta', 'mail_subject_version', 'mail_subject_devolucion',
 ];
@@ -86,9 +85,6 @@ function handleConfigSave(idToken, key, value) {
     var days = parseInt(value, 10);
     if (!/^\d+$/.test(value) || days < 1 || days > 365) throw new ApiError('La expiración debe estar entre 1 y 365 días.');
     value = String(days);
-  }
-  if (key === 'convocatoria_actual' && ['general', 'docentes'].indexOf(value) < 0) {
-    throw new ApiError('Convocatoria inválida.');
   }
   if (key === 'site_base_url' && !/^https:\/\//i.test(value)) {
     throw new ApiError('La URL del sitio debe usar HTTPS.');
