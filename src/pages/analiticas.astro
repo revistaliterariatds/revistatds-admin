@@ -1,0 +1,19 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Visitas — Tramas del Sur" description="Analíticas de visitas del sitio público.">
+  <section class="users-page" aria-labelledby="analytics-heading">
+    <header class="board-header">
+      <div><p class="board-eyebrow">Sitio público</p><h1 id="analytics-heading">Visitas</h1></div>
+      <label class="analytics-period">Período <select id="analytics-days"><option value="7">7 días</option><option value="30">30 días</option></select></label>
+    </header>
+    <div id="analytics-alert" class="status-card" hidden></div>
+    <div class="analytics-card"><svg id="visits-chart" class="visits-chart" viewBox="0 0 800 320" role="img" aria-label="Visitas por día"></svg></div>
+    <p id="analytics-summary" class="form-help"></p>
+  </section>
+</Layout>
+
+<script>
+  import '../scripts/analiticas.ts';
+</script>

@@ -11,6 +11,7 @@ function renderNav() {
   document.getElementById('nav-user-role')!.textContent = user.rol;
   (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
   (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
+  (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
   document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
 }
 

@@ -262,6 +262,10 @@ footer {
 .check-row { display: block; margin: 0.6rem 0; font-size: var(--text-sm); color: var(--ink-soft); }
 .check-row input { margin-right: 0.45rem; }
 .form-help { color: var(--ink-muted); font-size: var(--text-sm); margin: -0.5rem 0 1rem; }
+.analytics-period { color: var(--ink-soft); font-size: var(--text-sm); }
+.analytics-period select { margin-left: 0.4rem; padding: 0.45rem; border: 1px solid var(--rule); background: var(--paper-white); }
+.analytics-card { min-height: 320px; padding: var(--space-md); background: var(--paper-white); border: 1px solid var(--rule); overflow-x: auto; }
+.visits-chart { display: block; min-width: 620px; width: 100%; height: auto; }
 #motivo { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; resize: vertical; }
 #motivo:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 

@@ -74,6 +74,11 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/users/save` | idToken + ADMIN | alta/edición de una fila de `Roles` |
 | `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
 | `panel/config/save` | idToken + ADMIN/SUPERVISOR | actualiza un valor permitido de `Config` |
+| `panel/analytics/daily` | idToken + ADMIN/SUPERVISOR | serie de visitas por día desde Cloudflare |
+
+Para analíticas configurar en Script Properties `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_TAG` y `CLOUDFLARE_SITE_TAG`. El token es secreto y no
+debe guardarse en el repositorio ni en la hoja `Config`.
 
 ## Endpoints del autor (POST a `/exec`, con `action` + `token` en el body)
 

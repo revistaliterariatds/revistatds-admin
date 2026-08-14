@@ -47,12 +47,14 @@ function renderNav() {
   const navLogout = document.getElementById('nav-logout');
   const navUsers = document.getElementById('nav-users');
   const navConfig = document.getElementById('nav-config');
+  const navAnalytics = document.getElementById('nav-analytics');
   if (!navUser || !user) return;
   navUser.hidden = false;
   navName.textContent = user.nombre || user.email;
   navRole.textContent = user.rol;
   if (navUsers) navUsers.hidden = !esGestor;
   if (navConfig) navConfig.hidden = !esGestor;
+  if (navAnalytics) navAnalytics.hidden = !esGestor;
   navLogout?.addEventListener('click', () => {
     clearSession();
     window.location.href = '/';

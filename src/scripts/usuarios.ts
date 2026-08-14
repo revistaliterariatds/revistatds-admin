@@ -16,12 +16,14 @@ function renderNav() {
   const role = document.getElementById('nav-user-role');
   const usersLink = document.getElementById('nav-users');
   const configLink = document.getElementById('nav-config');
+  const analyticsLink = document.getElementById('nav-analytics');
   if (!user || !nav || !name || !role) return;
   nav.hidden = false;
   name.textContent = user.nombre || user.email;
   role.textContent = user.rol;
   if (usersLink) usersLink.hidden = !esGestor;
   if (configLink) configLink.hidden = !esGestor;
+  if (analyticsLink) analyticsLink.hidden = !esGestor;
   document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
 }
 
