@@ -99,7 +99,7 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
 
   if (rol) {
     setSession(idToken, { email, rol, nombre: displayName || name || email });
-    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${rol}</span>`);
+    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${safeRole}</span>`);
     setTimeout(() => { window.location.href = '/tablero/'; }, 600);
     return;
   }

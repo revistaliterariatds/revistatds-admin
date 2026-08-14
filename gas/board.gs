@@ -69,7 +69,7 @@ function handleBoardEditors(idToken) {
 // ── autoasignación (EDITOR) ──
 function handleAsignarme(idToken, id) {
   var user = requireInternalUser(idToken);
-  if (ROLES_INTERNOS.indexOf(user.rol) < 0) throw new AuthError('Sin permisos.');
+  if (user.rol !== ROLES.EDITOR) throw new AuthError('Solo EDITOR puede autoasignarse cuentos.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
