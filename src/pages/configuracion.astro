@@ -14,12 +14,12 @@ import Layout from '../layouts/Layout.astro';
       <div class="form-group"><label for="config-site">URL base del sitio</label><input id="config-site" type="url" required /><small>Debe usar HTTPS.</small></div>
       <h2 class="detail-sub">Asuntos de mail</h2>
       <p class="form-help">Variables disponibles: <code>{'{{titulo}}'}</code>.</p>
-      <div class="form-group"><label for="mail-subject-confirmation">Confirmación de envío</label><input id="mail-subject-confirmation" type="text" maxlength="200" required /></div>
-      <div class="form-group"><label for="mail-subject-correcciones">Correcciones solicitadas</label><input id="mail-subject-correcciones" type="text" maxlength="200" required /></div>
-      <div class="form-group"><label for="mail-subject-revision">Revisión terminada</label><input id="mail-subject-revision" type="text" maxlength="200" required /></div>
-      <div class="form-group"><label for="mail-subject-consulta">Consulta al autor</label><input id="mail-subject-consulta" type="text" maxlength="200" required /></div>
-      <div class="form-group"><label for="mail-subject-version">Nueva versión</label><input id="mail-subject-version" type="text" maxlength="200" required /></div>
-      <div class="form-group"><label for="mail-subject-devolucion">Devolución al editor</label><input id="mail-subject-devolucion" type="text" maxlength="200" required /></div>
+      <div class="form-group"><label for="mail-subject-confirmation">Confirmación de envío</label><textarea class="config-template" id="mail-subject-confirmation" rows="2" maxlength="200" required></textarea></div>
+      <div class="form-group"><label for="mail-subject-correcciones">Correcciones solicitadas</label><textarea class="config-template" id="mail-subject-correcciones" rows="2" maxlength="200" required></textarea></div>
+      <div class="form-group"><label for="mail-subject-revision">Revisión terminada</label><textarea class="config-template" id="mail-subject-revision" rows="2" maxlength="200" required></textarea></div>
+      <div class="form-group"><label for="mail-subject-consulta">Consulta al autor</label><textarea class="config-template" id="mail-subject-consulta" rows="2" maxlength="200" required></textarea></div>
+      <div class="form-group"><label for="mail-subject-version">Nueva versión</label><textarea class="config-template" id="mail-subject-version" rows="2" maxlength="200" required></textarea></div>
+      <div class="form-group"><label for="mail-subject-devolucion">Devolución al editor</label><textarea class="config-template" id="mail-subject-devolucion" rows="2" maxlength="200" required></textarea></div>
       <button class="btn-primary" type="submit">Guardar configuración</button>
     </form>
   </section>
