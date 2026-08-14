@@ -24,12 +24,19 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </header>
 
-    <div class="filters" role="group" aria-label="Filtros por estado">
-      <div class="filter-pills" id="estadoFilters"></div>
-    </div>
-
-    <div class="filters" role="group" aria-label="Filtros por convocatoria">
-      <div class="filter-pills" id="convocatoriaFilters"></div>
+    <div class="filter-bar" aria-label="Filtros del tablero">
+      <div class="filter-bar-head">
+        <span class="filter-bar-title">Filtros</span>
+        <button id="btn-limpiar-filtros" class="btn-mini" type="button">Limpiar filtros</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label" id="filter-label-estado">Estado</span>
+        <div class="filter-pills" id="estadoFilters" role="group" aria-labelledby="filter-label-estado"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label" id="filter-label-convocatoria">Convocatoria</span>
+        <div class="filter-pills" id="convocatoriaFilters" role="group" aria-labelledby="filter-label-convocatoria"></div>
+      </div>
     </div>
 
     <div class="board-table-wrap">

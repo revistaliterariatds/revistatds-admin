@@ -412,6 +412,16 @@ function init() {
 
   document.getElementById('btn-refrescar')?.addEventListener('click', cargar);
 
+  document.getElementById('btn-limpiar-filtros')?.addEventListener('click', () => {
+    estadoActivo = 'TODOS';
+    convocatoriaActiva = 'TODAS';
+    termino = '';
+    if (buscador) buscador.value = '';
+    renderPills();
+    renderConvocatoriaPills();
+    renderTable();
+  });
+
   renderNav();
   cargar();
 }
