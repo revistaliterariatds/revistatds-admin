@@ -8,7 +8,7 @@ function handleAnalyticsDaily(idToken, days) {
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
 
   days = parseInt(days || '7', 10);
-  if ([7, 30].indexOf(days) < 0) throw new ApiError('Período inválido.');
+  if ([7, 8].indexOf(days) < 0) throw new ApiError('Este origen permite consultar hasta 8 días.');
 
   var token = getSecret('CLOUDFLARE_API_TOKEN');
   var zoneTag = getSecret('CLOUDFLARE_ZONE_TAG');

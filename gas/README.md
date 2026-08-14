@@ -77,7 +77,9 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/analytics/daily` | idToken + ADMIN/SUPERVISOR | serie de visitas por día desde Cloudflare |
 
 La consulta usa el dataset GraphQL soportado `httpRequestsAdaptiveGroups`,
-filtrado por hostname y agrupado por hora. Configurar en Script Properties
+filtrado por hostname y agrupado por hora. En la zona actual Cloudflare permite
+consultar hasta 8 días; para períodos mayores habrá que implementar snapshots
+diarios propios. Configurar en Script Properties
 `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ZONE_TAG` (el ID de zona del dominio).
 El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`.
 
