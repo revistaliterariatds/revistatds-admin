@@ -19,6 +19,8 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `mail.gs` | Mails con estilo TDS inline |
 | `envio.gs` | Endpoint público `envio` (compatible con el sitio) |
 | `board.gs` | Tablero del panel (lectura) |
+| `users.gs` | Gestión de usuarios y roles |
+| `analytics.gs` | Snapshots diarios y consulta histórica de visitas |
 | `appsscript.json` | Manifest: scopes + webapp (executeAs `USER_DEPLOYING`, access `ANYONE_ANONYMOUS`) |
 
 ## Puesta en marcha (manual, sin clasp)
@@ -30,7 +32,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 3. En **Configuración del proyecto** → activar "Mostrar `appsscript.json`" y pegar
    el manifest (o dejar que se genere y ajustar `webapp`/scopes).
 4. **Ejecutar `setup()` una vez** (autorizar los permisos):
-   - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`;
+    - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config` (la hoja `Analiticas` se crea al primer snapshot);
    - siembra `Config` y los roles iniciales (ADMINISTRADOR + emisor).
 5. **Script Properties** (Configuración del proyecto → Propiedades de secuencia de
    comandos) — agregar:
@@ -70,8 +72,8 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 |---|---|---|
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
-| `panel/users/list` | idToken + ADMIN/SUPERVISOR | `{ status, users: [...], puede_editar }` |
-| `panel/users/save` | idToken + ADMIN | alta/edición de una fila de `Roles` |
+| `panel/users/list` | idToken + ADMIN/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
+| `panel/users/save` | idToken + ADMIN/WEBMASTER | alta/edición de una fila de `Roles` |
 | `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
 | `panel/config/save` | idToken + ADMIN/SUPERVISOR | actualiza un valor permitido de `Config` |
 | `panel/analytics/daily` | idToken + ADMIN/SUPERVISOR | serie de visitas por día desde Cloudflare |
@@ -83,6 +85,7 @@ histórico indefinido mientras exista espacio en Sheets. Ejecutar una vez
 `snapshotAnalyticsLastDays()` para recuperar los días aún disponibles y luego
 `setupAnalyticsTrigger()` para instalar el trigger diario. Configurar en Script Properties
 `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ZONE_TAG` (el ID de zona del dominio).
+El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
 El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`.
 
 ## Endpoints del autor (POST a `/exec`, con `action` + `token` en el body)

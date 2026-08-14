@@ -10,8 +10,9 @@ Panel editorial (SPA estática en **Astro**) para el circuito editorial de
 ## Stack
 
 - **Astro** (static SSG) — sin integraciones, sin framework de UI.
-- **Google Identity Services** (popup) → ID token → API GAS (`Authorization: Bearer`).
+- **Google Identity Services** (popup) → ID token en body → API GAS (evita preflight CORS).
 - Identidad visual **TDS** (tokens copiados de `assets/css/variables.css` del sitio).
+- RBAC: `ADMINISTRADOR`/`WEBMASTER` (gestión completa), `SUPERVISOR` (operación y lectura de Usuarios) y `EDITOR` (solo Tablero y cuentos asignados).
 
 ## Requisitos
 
@@ -50,12 +51,28 @@ GitHub Pages. Dominio custom vía `public/CNAME`.
 src/
 ├── layouts/Layout.astro   ← nav + footer + CSP + fuentes (identidad TDS)
 ├── pages/index.astro      ← login + "hola <email>"
-├── scripts/login.ts       ← GIS popup + decode ID token
+├── pages/tablero.astro     ← tablero editorial y detalle
+├── pages/usuarios.astro    ← usuarios y roles
+├── pages/configuracion.astro ← configuración y asuntos de mail
+├── pages/analiticas.astro  ← visitas y snapshots históricos
+├── scripts/login.ts        ← GIS popup + decode ID token
+├── scripts/tablero.ts      ← filtros, asignaciones y transiciones
+├── scripts/usuarios.ts     ← gestión RBAC de usuarios
+├── scripts/configuracion.ts ← valores operativos y asuntos
+├── scripts/analiticas.ts   ← gráfico SVG de visitas
 └── styles/
     ├── tokens.css         ← design tokens (copia de variables.css del sitio)
     └── global.css
 ```
 
-## Estado
+## Estado verificado
 
-Fase 1 (esqueleto): login + identidad. Ver `revistatds/docs/plan-editorial.md`.
+- Login GIS y expiración automática del ID token.
+- Tablero, filtros, asignación, reasignación y detalle editorial.
+- Flujo de autor: estado, aprobación, rechazo y nuevas versiones.
+- Usuarios, Configuración y analíticas con permisos por rol.
+- Snapshots diarios de visitas en la hoja `Analiticas` e histórico indefinido práctico.
+- Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
+- QA integral y corte productivo todavía pendientes.
+
+Ver el plan completo en `revistatds/docs/plan-editorial.md` y el contrato GAS en `gas/README.md`.
