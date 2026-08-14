@@ -58,13 +58,15 @@ function handleDescargasList(idToken, requestedDays) {
   var porArchivo = {};
   var acciones = { leer: 0, descargar: 0 };
   var total = 0;
+  var totalHistorico = 0;
   for (var i = 1; i < data.length; i++) {
     var ts = data[i][2];
     if (!(ts instanceof Date)) continue;
-    if (cutoff && ts.getTime() < cutoff.getTime()) continue;
     var archivo = String(data[i][0] || '');
     var accion = String(data[i][1] || '');
     if (!archivo) continue;
+    totalHistorico++;
+    if (cutoff && ts.getTime() < cutoff.getTime()) continue;
     porArchivo[archivo] = (porArchivo[archivo] || 0) + 1;
     if (DESCARGAS_ACCIONES.indexOf(accion) >= 0) acciones[accion] = (acciones[accion] || 0) + 1;
     total++;
@@ -73,7 +75,7 @@ function handleDescargasList(idToken, requestedDays) {
     .sort(function (a, b) { return porArchivo[b] - porArchivo[a]; })
     .map(function (k) { return { archivo: k, total: porArchivo[k] }; });
 
-  var result = ok({ total: total, porArchivo: porArchivoArr, acciones: acciones });
+  var result = ok({ total: total, total_historico: totalHistorico, porArchivo: porArchivoArr, acciones: acciones });
   cache.put(cacheKey, JSON.stringify(result), 300);
   return result;
 }

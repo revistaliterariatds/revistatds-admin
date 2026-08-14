@@ -9,6 +9,14 @@ import Layout from '../layouts/Layout.astro';
       <label class="analytics-period">Período <select id="descargas-days"><option value="7">7 días</option><option value="1">Último día completo</option><option value="30">30 días</option><option value="90">90 días</option><option value="365">365 días</option><option value="all">Histórico completo</option></select></label>
     </header>
     <div id="descargas-alert" class="status-card" hidden></div>
+    <div class="analytics-total" aria-label="Contador histórico de descargas">
+      <div class="analytics-total-text">
+        <p class="analytics-total-eyebrow">Contador histórico</p>
+        <h2 class="analytics-total-title">Descargas del sitio</h2>
+        <p class="analytics-total-note">Clics registrados desde que comenzamos a contarlos.</p>
+      </div>
+      <strong id="kpi-historico-descargas" class="analytics-total-number">—</strong>
+    </div>
     <div class="analytics-kpis" aria-label="Resumen de descargas">
       <article class="analytics-kpi"><span>Total del período</span><strong id="kpi-total-descargas">—</strong><small>clics en ediciones</small></article>
       <article class="analytics-kpi"><span>Lecturas</span><strong id="kpi-leer">—</strong><small>abrieron el PDF</small></article>

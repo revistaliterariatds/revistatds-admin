@@ -28,10 +28,11 @@ function esc(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
-function render(rows: Fila[], acciones: Acciones, total: number) {
+function render(rows: Fila[], acciones: Acciones, total: number, totalHistorico: number) {
   document.getElementById('kpi-total-descargas')!.textContent = total.toLocaleString('es-AR');
   document.getElementById('kpi-leer')!.textContent = (acciones?.leer || 0).toLocaleString('es-AR');
   document.getElementById('kpi-descargar')!.textContent = (acciones?.descargar || 0).toLocaleString('es-AR');
+  document.getElementById('kpi-historico-descargas')!.textContent = totalHistorico.toLocaleString('es-AR');
 
   const body = document.getElementById('descargas-body')!;
   const empty = document.getElementById('descargas-empty')!;
@@ -47,7 +48,7 @@ async function load() {
   const days: number | string = selected === 'all' ? 'all' : Number(selected);
   const data = await api('panel/descargas/list', { days });
   if (data.status !== 'ok') { showAlert(data.message || 'No se pudieron cargar las descargas.'); return; }
-  render(data.porArchivo || [], data.acciones || {}, Number(data.total || 0));
+  render(data.porArchivo || [], data.acciones || {}, Number(data.total || 0), Number(data.total_historico || 0));
 }
 
 function init() {
