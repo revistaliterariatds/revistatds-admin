@@ -73,7 +73,7 @@ function saveAnalyticsSnapshot(date, visits) {
 
 function clearAnalyticsCache() {
   var cache = CacheService.getScriptCache();
-  ['7', '30', '90', '365', 'all'].forEach(function (key) { cache.remove('analytics-snapshots:' + key); });
+  ['1', '7', '30', '90', '365', 'all'].forEach(function (key) { cache.remove('analytics-snapshots:' + key); });
 }
 
 // Trigger diario: se ejecuta sobre el día UTC anterior, ya cerrado.
@@ -126,7 +126,7 @@ function handleAnalyticsDaily(idToken, requestedDays) {
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
   var value = String(requestedDays || '7');
   var days = value === 'all' ? 0 : parseInt(value, 10);
-  if (value !== 'all' && [7, 30, 90, 365].indexOf(days) < 0) throw new ApiError('Período inválido.');
+  if (value !== 'all' && [1, 7, 30, 90, 365].indexOf(days) < 0) throw new ApiError('Período inválido.');
 
   var cache = CacheService.getScriptCache();
   var cacheKey = 'analytics-snapshots:' + (value === 'all' ? 'all' : days);
