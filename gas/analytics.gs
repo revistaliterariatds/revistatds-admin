@@ -110,12 +110,16 @@ function snapshotAnalyticsLastDays() {
 function readAnalyticsSnapshots(days) {
   var sheet = analyticsSheet();
   var data = sheet.getDataRange().getValues();
-  var cutoff = days ? new Date(Date.now() - days * 86400000) : null;
+  var now = new Date();
+  var todayKey = analyticsDateKey(now);
+  var cutoffKey = days
+    ? analyticsDateKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days, 0, 0, 0)))
+    : null;
   return data.slice(1).filter(function (row) {
     var key = analyticsCellDate(row[0]);
     if (!key) return false;
-    if (!cutoff) return true;
-    return new Date(key + 'T00:00:00Z').getTime() >= cutoff.getTime();
+    if (key >= todayKey) return false;
+    return !cutoffKey || key >= cutoffKey;
   }).map(function (row) {
     return { date: analyticsCellDate(row[0]), visits: Number(row[1] || 0) };
   }).sort(function (a, b) { return a.date.localeCompare(b.date); });
