@@ -265,7 +265,23 @@ footer {
 .analytics-period { color: var(--ink-soft); font-size: var(--text-sm); }
 .analytics-period select { margin-left: 0.4rem; padding: 0.45rem; border: 1px solid var(--rule); background: var(--paper-white); }
 .analytics-card { min-height: 320px; padding: var(--space-md); background: var(--paper-white); border: 1px solid var(--rule); overflow-x: auto; }
+.analytics-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.analytics-kpi { padding: 1.1rem 1.25rem; background: var(--paper-white); border: 1px solid var(--rule); border-top: 3px solid var(--orange); }
+.analytics-kpi span, .analytics-kpi small { display: block; color: var(--ink-muted); font-size: var(--text-xs); letter-spacing: 0.05em; }
+.analytics-kpi strong { display: block; margin: 0.25rem 0; font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 400; color: var(--ink); }
+.analytics-card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; }
+.analytics-card-head h2 { font-family: 'Playfair Display', serif; font-size: var(--text-lg); font-weight: 400; }
+.analytics-card-head p { color: var(--ink-muted); font-size: var(--text-sm); }
+.analytics-legend { color: var(--ink-muted); font-size: var(--text-xs); }
+.analytics-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 0.3rem; border-radius: 50%; background: var(--orange); }
 .visits-chart { display: block; min-width: 620px; width: 100%; height: auto; }
+.chart-grid { stroke: var(--rule-soft); stroke-width: 1; stroke-dasharray: 3 5; }
+.chart-y-label, .chart-x-label { fill: var(--ink-muted); font-family: Lato, sans-serif; font-size: 12px; }
+.chart-area { fill: url(#visits-fill); }
+.chart-line { fill: none; stroke: var(--orange); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.chart-point { fill: var(--paper-white); stroke: var(--orange); stroke-width: 3; }
+.analytics-empty { min-height: 220px; display: grid; place-items: center; color: var(--ink-muted); font-size: var(--text-sm); }
+@media (max-width: 700px) { .analytics-kpis { grid-template-columns: 1fr; } .analytics-card-head { align-items: flex-start; flex-direction: column; } }
 #motivo { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; resize: vertical; }
 #motivo:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 

@@ -9,7 +9,16 @@ import Layout from '../layouts/Layout.astro';
       <label class="analytics-period">Período <select id="analytics-days"><option value="7">7 días</option><option value="30">30 días</option></select></label>
     </header>
     <div id="analytics-alert" class="status-card" hidden></div>
-    <div class="analytics-card"><svg id="visits-chart" class="visits-chart" viewBox="0 0 800 320" role="img" aria-label="Visitas por día"></svg></div>
+    <div class="analytics-kpis" aria-label="Resumen de visitas">
+      <article class="analytics-kpi"><span>Total del período</span><strong id="kpi-total">—</strong><small>visitas registradas</small></article>
+      <article class="analytics-kpi"><span>Promedio diario</span><strong id="kpi-average">—</strong><small>visitas por día</small></article>
+      <article class="analytics-kpi"><span>Día de mayor tráfico</span><strong id="kpi-peak">—</strong><small id="kpi-peak-date">sin datos</small></article>
+    </div>
+    <div class="analytics-card">
+      <div class="analytics-card-head"><div><h2>Actividad del sitio</h2><p>Visitas estimadas por día</p></div><span class="analytics-legend"><i></i> Visitas</span></div>
+      <svg id="visits-chart" class="visits-chart" viewBox="0 0 920 380" role="img" aria-label="Visitas por día"></svg>
+      <div id="analytics-empty" class="analytics-empty" hidden>No hay datos para el período seleccionado.</div>
+    </div>
     <p id="analytics-summary" class="form-help"></p>
   </section>
 </Layout>
