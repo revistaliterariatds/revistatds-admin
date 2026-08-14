@@ -196,12 +196,16 @@ footer {
   }
 }
 
+@media (max-width: 1080px) {
+  :root { --content-pad: 2rem; }
+  nav { height: auto; min-height: var(--nav-height); }
+  .nav-inner { align-items: center; flex-wrap: wrap; height: auto; min-height: var(--nav-height); padding-top: 0.55rem; padding-bottom: 0.55rem; gap: 0.5rem; }
+  .nav-user { flex-wrap: wrap; justify-content: flex-end; }
+}
+
 @media (max-width: 860px) {
   :root { --content-pad: 1.5rem; }
   .footer-inner { flex-direction: column; text-align: center; }
-  nav { height: auto; min-height: var(--nav-height); }
-  .nav-inner { align-items: center; flex-wrap: wrap; height: auto; min-height: var(--nav-height); padding-top: 0.55rem; padding-bottom: 0.55rem; }
-  .nav-user { flex-wrap: wrap; justify-content: flex-end; }
 }
 
 /* ── TIPOS DE BADGE ── */
@@ -241,7 +245,7 @@ footer {
 .td-titulo strong { display: block; font-weight: 400; color: var(--ink); }
 .td-cat { display: block; color: var(--ink-muted); font-size: var(--text-xs); margin-top: 0.15rem; }
 .td-libre { color: var(--ink-muted); font-style: italic; }
-.col-acciones { white-space: nowrap; }
+.col-acciones { white-space: normal; }
 
 .btn-mini { display: inline-block; padding: 0.3rem 0.7rem; border: 1px solid var(--orange); border-radius: var(--radius-sm); background: transparent; color: var(--orange); font-family: 'Lato', sans-serif; font-size: var(--text-xs); letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; cursor: pointer; }
 .btn-mini:hover { background: var(--orange); color: #fff; }
@@ -335,7 +339,7 @@ footer {
 #motivo:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 
 /* ── Responsive: tabla → tarjetas ── */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .board-table thead { display: none; }
   .board-table, .board-table tbody, .board-table tr, .board-table td { display: block; width: 100%; }
   .board-table tr { border: 1px solid var(--rule); margin-bottom: 0.75rem; background: var(--paper-white); }
