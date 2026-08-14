@@ -15,6 +15,7 @@ interface Cuento {
   url_doc_correccion: string;
   version_actual: string;
   convocatoria: string;
+  edicion: string;
   fecha_recibido: string;
   titular: string;
 }
@@ -34,8 +35,10 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
 let cuentos: Cuento[] = [];
 let estadoActivo = 'TODOS';
 let convocatoriaActiva = 'TODAS';
+let edicionActiva = 'TODAS';
 let termino = '';
 let editores: { email: string; nombre: string }[] = [];
+let ediciones: { numero: string; estado: string }[] = [];
 
 // ── sesión ──
 const user = getUser();
@@ -122,10 +125,31 @@ function renderConvocatoriaSelect() {
   el.value = convocatoriaActiva;
 }
 
+function renderEdicionSelect() {
+  const cont: Record<string, number> = {};
+  cuentos.forEach((c) => {
+    const key = c.edicion ? String(c.edicion) : 'sin-edicion';
+    cont[key] = (cont[key] || 0) + 1;
+  });
+
+  const el = document.getElementById('filtro-edicion') as HTMLSelectElement;
+  const options = [`<option value="TODAS">Todas (${cuentos.length})</option>`];
+  Object.keys(cont).sort().forEach((k) => {
+    const label = k === 'sin-edicion' ? 'Sin edición' : 'Edición ' + k;
+    options.push(`<option value="${k}">${esc(label)} (${cont[k]})</option>`);
+  });
+  el.innerHTML = options.join('');
+  el.value = edicionActiva;
+}
+
 function visibles(): Cuento[] {
   return cuentos.filter((c) => {
     if (estadoActivo !== 'TODOS' && c.estado !== estadoActivo) return false;
     if (convocatoriaActiva !== 'TODAS' && c.convocatoria !== convocatoriaActiva) return false;
+    if (edicionActiva !== 'TODAS') {
+      const key = c.edicion ? String(c.edicion) : 'sin-edicion';
+      if (key !== edicionActiva) return false;
+    }
     if (termino) {
       const t = termino.toLowerCase();
       const hay = (c.titulo + ' ' + c.autor).toLowerCase().includes(t);
@@ -176,6 +200,7 @@ function renderTable() {
       </td>
       <td data-label="Autor">${esc(c.autor)}</td>
       <td data-label="Convocatoria">${convocatoriaLabel(c.convocatoria)}</td>
+      <td data-label="Edición">${c.edicion ? 'Ed. ' + esc(String(c.edicion)) : '<span class="td-libre">—</span>'}</td>
       <td data-label="Titular">${c.titular ? esc(c.titular) : '<span class="td-libre">libre</span>'}</td>
       <td data-label="Recibido">${fmtRelativa(c.fecha_recibido)}</td>
       <td data-label="Acciones" class="col-acciones">${acciones.join(' ')}</td>
@@ -222,15 +247,18 @@ function editorSelect(tipo: 'asignar' | 'reasignar', id: string): string {
 // ── acciones ──
 async function cargar() {
   const edPromise = esGestor ? api('panel/board/editors') : Promise.resolve({ status: 'ok', editores: [] });
-  const [data, ed] = await Promise.all([api('panel/board/list'), edPromise]);
+  const edicionesPromise = esGestor ? api('panel/ediciones/list') : Promise.resolve({ status: 'ok', ediciones: [] });
+  const [data, ed, edicionesData] = await Promise.all([api('panel/board/list'), edPromise, edicionesPromise]);
   if (data.status !== 'ok') {
     alert(data.message || 'No se pudo cargar el tablero.');
     return;
   }
   cuentos = data.cuentos;
   if (esGestor && ed.status === 'ok') editores = ed.editores || [];
+  if (esGestor && edicionesData.status === 'ok') ediciones = edicionesData.ediciones || [];
   renderEstadoSelect();
   renderConvocatoriaSelect();
+  renderEdicionSelect();
   renderTable();
 }
 
@@ -303,6 +331,10 @@ async function abrirDetalle(id: string) {
         ${h.detalle ? `<span class="tl-detalle">${esc(h.detalle)}</span>` : ''}</li>`,
   ).join('');
 
+  const edicionesOpts = ['<option value="">Sin edición</option>']
+    .concat(ediciones.map((e) => `<option value="${esc(e.numero)}"${c.edicion === String(e.numero) ? ' selected' : ''}>Edición ${esc(e.numero)}</option>`))
+    .join('');
+
   content.innerHTML = `
     <h2 class="detail-titulo">${esc(c.titulo)}</h2>
     <div class="detail-badge">${badge(c.estado)}</div>
@@ -313,6 +345,11 @@ async function abrirDetalle(id: string) {
       <div><dt>Versión</dt><dd>${esc(c.version_actual || '1')}</dd></div>
       <div><dt>Titular</dt><dd>${c.titular ? esc(c.titular) : '<em>libre</em>'}</dd></div>
     </dl>
+    ${esGestor ? `
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="cambiar-edicion">Edición de esta publicación</label>
+        <select id="cambiar-edicion" class="filter-select" aria-label="Cambiar la edición de esta publicación">${edicionesOpts}</select>
+      </div>` : ''}
     <h3 class="detail-sub">Historial</h3>
     <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
     <div class="detail-acciones">${acciones.join(' ')}</div>
@@ -324,6 +361,13 @@ async function abrirDetalle(id: string) {
   `;
 
   modal.showModal();
+
+  const edicionSelect = content.querySelector('#cambiar-edicion') as HTMLSelectElement | null;
+  edicionSelect?.addEventListener('change', async () => {
+    const r = await api('panel/board/cambiar-edicion', { id, edicion: edicionSelect.value });
+    if (r.status === 'ok') await abrirDetalle(id);
+    else alert(r.message || 'No se pudo cambiar la edición.');
+  });
 
   content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
     const motivoGroup = document.getElementById('motivoGroup');
@@ -399,15 +443,23 @@ function init() {
     renderTable();
   });
 
+  const filtroEdicion = document.getElementById('filtro-edicion') as HTMLSelectElement;
+  filtroEdicion?.addEventListener('change', () => {
+    edicionActiva = filtroEdicion.value || 'TODAS';
+    renderTable();
+  });
+
   document.getElementById('btn-refrescar')?.addEventListener('click', cargar);
 
   document.getElementById('btn-limpiar-filtros')?.addEventListener('click', () => {
     estadoActivo = 'TODOS';
     convocatoriaActiva = 'TODAS';
+    edicionActiva = 'TODAS';
     termino = '';
     if (buscador) buscador.value = '';
     renderEstadoSelect();
     renderConvocatoriaSelect();
+    renderEdicionSelect();
     renderTable();
   });
 

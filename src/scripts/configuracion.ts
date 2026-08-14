@@ -28,7 +28,7 @@ const CONFIG_CACHE_KEY = 'tds-config-cache-v1';
 function fillForm(config: Record<string, string>) {
   (document.getElementById('config-expira') as HTMLInputElement).value = config.expira_token_dias || '30';
   (document.getElementById('config-site') as HTMLInputElement).value = config.site_base_url || '';
-  const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion'];
+  const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda'];
   subjects.forEach((key) => {
     (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value = config[`mail_subject_${key}`] || '';
   });
@@ -62,7 +62,7 @@ async function submit(event: SubmitEvent) {
   try {
     await save('expira_token_dias', (document.getElementById('config-expira') as HTMLInputElement).value);
     await save('site_base_url', (document.getElementById('config-site') as HTMLInputElement).value);
-    const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion'];
+const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda'];
     for (const key of subjects) {
       await save(`mail_subject_${key}`, (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value);
     }

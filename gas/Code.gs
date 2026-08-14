@@ -47,6 +47,26 @@ function doPost(e) {
       result = handlePublicar(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/board/resolver-rechazo') {
       result = handleResolverRechazo(tokenFrom(data, e), data && data.id, data && data.resolucion);
+    } else if (action === 'panel/board/cambiar-edicion') {
+      result = handleCambiarEdicion(tokenFrom(data, e), data && data.id, data && data.edicion);
+    } else if (action === 'panel/ediciones/list') {
+      result = handleEdicionesList(tokenFrom(data, e));
+    } else if (action === 'panel/ediciones/cerrar') {
+      result = handleCerrarEdicion(tokenFrom(data, e), data && data.numero);
+    } else if (action === 'panel/ediciones/abrir') {
+      result = handleAbrirEdicion(tokenFrom(data, e));
+    } else if (action === 'panel/agenda/list') {
+      result = handleAgendaList(tokenFrom(data, e));
+    } else if (action === 'panel/agenda/detalle') {
+      result = handleAgendaDetalle(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/agenda/crear') {
+      result = handleAgendaCrear(tokenFrom(data, e), data);
+    } else if (action === 'panel/agenda/comentar') {
+      result = handleAgendaComentar(tokenFrom(data, e), data && data.id, data && data.comentario);
+    } else if (action === 'panel/agenda/editar') {
+      result = handleAgendaEditar(tokenFrom(data, e), data && data.id, data);
+    } else if (action === 'panel/agenda/borrar') {
+      result = handleAgendaBorrar(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/users/list') {
       result = handleUsersList(tokenFrom(data, e));
     } else if (action === 'panel/users/save') {

@@ -58,10 +58,12 @@ const { title, description } = Astro.props;
         <div class="nav-user" id="nav-user" hidden>
           <div class="nav-links">
             <a href="/tablero/">Tablero</a>
+            <a href="/agenda/">Agenda</a>
             <a href="/usuarios/" id="nav-users" data-admin-tab hidden>Usuarios</a>
             <a href="/configuracion/" id="nav-config" data-admin-tab hidden>Configuración</a>
             <a href="/analiticas/" id="nav-analytics" data-admin-tab hidden>Visitas</a>
             <a href="/descargas/" id="nav-descargas" data-admin-tab hidden>Descargas</a>
+            <a href="/ediciones/" id="nav-ediciones" data-admin-only-tab hidden>Ediciones</a>
           </div>
           <span id="nav-user-name"></span>
           <span class="badge" id="nav-user-role"></span>
@@ -92,7 +94,9 @@ const { title, description } = Astro.props;
     <script is:inline>
       const sessionUser = (() => { try { return JSON.parse(sessionStorage.getItem('tds_user') || 'null'); } catch { return null; } })();
       const canSeeAdminTabs = ['ADMINISTRADOR', 'WEBMASTER', 'SUPERVISOR'].includes(sessionUser?.rol);
+      const canManageEdiciones = ['ADMINISTRADOR', 'WEBMASTER'].includes(sessionUser?.rol);
       document.querySelectorAll('[data-admin-tab]').forEach((link) => { link.hidden = !canSeeAdminTabs; });
+      document.querySelectorAll('[data-admin-only-tab]').forEach((link) => { link.hidden = !canManageEdiciones; });
       document.querySelectorAll('.nav-links a').forEach((link) => {
         if (link.pathname === window.location.pathname) link.setAttribute('aria-current', 'page');
       });

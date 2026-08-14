@@ -10,12 +10,14 @@ var CONFIG_DEFAULTS = {
   mail_subject_consulta: 'Tu producción está lista para aprobación — {{titulo}}',
   mail_subject_version: 'Nueva versión recibida — {{titulo}}',
   mail_subject_devolucion: 'Cuento devuelto a revisión — {{titulo}}',
+  mail_subject_agenda: 'Nueva cita en la agenda — {{titulo}}',
 };
 
 var CONFIG_EDITABLES = [
   'expira_token_dias', 'site_base_url',
   'mail_subject_confirmation', 'mail_subject_correcciones', 'mail_subject_revision',
   'mail_subject_consulta', 'mail_subject_version', 'mail_subject_devolucion',
+  'mail_subject_agenda',
 ];
 
 function scriptProps() {

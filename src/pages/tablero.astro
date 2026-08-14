@@ -43,6 +43,12 @@ import Layout from '../layouts/Layout.astro';
           <option value="docentes">Docentes</option>
         </select>
       </div>
+      <div class="filter-group">
+        <label class="filter-label" for="filtro-edicion">Edición</label>
+        <select id="filtro-edicion" class="filter-select" aria-label="Filtrar por edición">
+          <option value="TODAS">Todas</option>
+        </select>
+      </div>
     </div>
 
     <div class="board-table-wrap">
@@ -53,6 +59,7 @@ import Layout from '../layouts/Layout.astro';
             <th scope="col">Cuento</th>
             <th scope="col">Autor</th>
             <th scope="col">Convocatoria</th>
+            <th scope="col">Edición</th>
             <th scope="col">Titular</th>
             <th scope="col">Recibido</th>
             <th scope="col" class="col-acciones">Acciones</th>

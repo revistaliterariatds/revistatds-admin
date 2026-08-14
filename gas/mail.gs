@@ -139,3 +139,59 @@ function sendLiberacion(editorEmail, cuento) {
   ].join('');
   sendHtmlMail(editorEmail, subject, html);
 }
+
+// ── Agenda: notificación de nueva cita + link "Agregar a mi calendario" ──
+
+// Link de Google Calendar pre-cargado (Opción A, sin scopes ni eventos reales).
+function agendaCalendarLink(cita) {
+  var text = encodeURIComponent(cita.titulo || 'Cita de agenda');
+  var fecha = String(cita.fecha || '').replace(/-/g, '');
+  var dates;
+  if (cita.hora) {
+    var parts = String(cita.hora).split(':');
+    var mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + 60; // 1 hora de duración
+    var endKey = String(cita.fecha || '');
+    var endMin = mins;
+    if (endMin >= 1440) { endMin -= 1440; endKey = sumarDiasKey(endKey, 1); }
+    var end = endKey.replace(/-/g, '') + 'T' +
+      ('0' + Math.floor(endMin / 60)).slice(-2) + ('0' + (endMin % 60)).slice(-2) + '00';
+    dates = fecha + 'T' + String(cita.hora).replace(':', '') + '00/' + end;
+  } else {
+    dates = fecha + '/' + sumarDiasKey(String(cita.fecha || ''), 1).replace(/-/g, '');
+  }
+  var detalles = (cita.comentario || '');
+  if (cita.meet_link) detalles += '\nReunión: ' + cita.meet_link;
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + text +
+    '&dates=' + dates + '&details=' + encodeURIComponent(detalles);
+}
+
+function sumarDiasKey(key, dias) {
+  var parts = String(key).split('-');
+  var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  d.setDate(d.getDate() + dias);
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function sendAgendaNotificacion(cita) {
+  var emails = getEmailsByRoles(ROLES_INTERNOS);
+  if (emails.length === 0) return;
+  var subject = getMailSubject('mail_subject_agenda', 'Nueva cita en la agenda — {{titulo}}', { titulo: cita.titulo });
+  var fecha = String(cita.fecha || '');
+  var hora = cita.hora ? ' · ' + String(cita.hora) : '';
+  var meetHtml = cita.meet_link
+    ? '  <p style="margin:0 0 24px;"><a href="' + escapeHtml(cita.meet_link) + '" style="color:#d95f1a;">Unirse a la reunión (Meet)</a></p>'
+    : '';
+  var html = [
+    '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+    '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Nueva cita en la agenda</h1>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 8px;"><strong>' + escapeHtml(cita.titulo) + '</strong></p>',
+    '  <p style="font-size:14px;color:#4a443e;margin:0 0 16px;">' + escapeHtml(fecha) + hora + '</p>',
+    cita.comentario ? '<p style="font-size:15px;line-height:1.6;margin:0 0 20px;white-space:pre-wrap;">' + escapeHtml(cita.comentario) + '</p>' : '',
+    '  <p style="margin:0 0 12px;"><a href="' + PANEL_URL + '/agenda/" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Ver agenda</a></p>',
+    '  <p style="margin:0 0 12px;"><a href="' + agendaCalendarLink(cita) + '" style="display:inline-block;border:1px solid #d95f1a;color:#d95f1a;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Agregar a mi calendario</a></p>',
+    meetHtml,
+    '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Redacción</p>',
+    '</div>',
+  ].join('');
+  emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
+}

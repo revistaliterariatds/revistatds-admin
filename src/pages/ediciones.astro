@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Ediciones — Tramas del Sur" description="Ediciones de la revista y ciclo de recepción.">
+  <section class="agenda-page" aria-labelledby="ediciones-heading">
+    <header class="board-header">
+      <div>
+        <p class="board-eyebrow">Administración</p>
+        <h1 id="ediciones-heading">Ediciones</h1>
+        <p class="config-intro">Ciclo de apertura y cierre de recepción. Solo ADMINISTRADOR y WEBMASTER pueden operarlo.</p>
+      </div>
+      <div class="board-tools">
+        <button id="ediciones-refrescar" class="btn-ghost" type="button">Refrescar</button>
+      </div>
+    </header>
+
+    <div id="ediciones-alert" class="status-card" hidden></div>
+
+    <div class="ediciones-list" id="ediciones-list"></div>
+  </section>
+</Layout>
+
+<script>
+  import '../scripts/ediciones.ts';
+</script>

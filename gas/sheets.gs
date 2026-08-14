@@ -6,11 +6,17 @@ var SHEETS = {
     'id', 'titulo', 'autor', 'email_autor', 'edad', 'categoria', 'estado',
     'editor_asignado', 'url_carpeta_drive', 'url_doc_correccion',
     'version_actual', 'token_autor', 'token_expira', 'convocatoria',
-    'fecha_recibido', 'fecha_actualizacion',
+    'fecha_recibido', 'fecha_actualizacion', 'edicion',
   ],
   Historial: ['id_cuento', 'timestamp', 'actor', 'accion', 'detalle'],
   Config: ['clave', 'valor'],
   Descargas: ['archivo', 'accion', 'fecha'],
+  Ediciones: ['numero', 'estado', 'fecha_apertura', 'fecha_cierre'],
+  Agenda: [
+    'id', 'fecha', 'hora', 'titulo', 'comentario', 'tipo', 'meet_link',
+    'edicion', 'creado_por', 'creado_at', 'actualizado_at',
+  ],
+  AgendaComentarios: ['id', 'cita_id', 'autor', 'comentario', 'creado_at'],
 };
 
 function getSpreadsheet() {
