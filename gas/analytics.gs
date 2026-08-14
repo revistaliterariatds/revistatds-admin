@@ -115,14 +115,16 @@ function readAnalyticsSnapshots(days) {
   var cutoffKey = days
     ? analyticsDateKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days, 0, 0, 0)))
     : null;
-  return data.slice(1).filter(function (row) {
+  var byDate = {};
+  data.slice(1).forEach(function (row) {
     var key = analyticsCellDate(row[0]);
-    if (!key) return false;
-    if (key >= todayKey) return false;
-    return !cutoffKey || key >= cutoffKey;
-  }).map(function (row) {
-    return { date: analyticsCellDate(row[0]), visits: Number(row[1] || 0) };
-  }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+    if (!key || key >= todayKey || (cutoffKey && key < cutoffKey)) return;
+    // Evita duplicar filas históricas creadas antes de normalizar fechas.
+    byDate[key] = Number(row[1] || 0);
+  });
+  return Object.keys(byDate).sort().map(function (date) {
+    return { date: date, visits: byDate[date] };
+  });
 }
 
 function handleAnalyticsDaily(idToken, requestedDays) {
