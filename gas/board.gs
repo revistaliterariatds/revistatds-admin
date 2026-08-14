@@ -269,7 +269,7 @@ function handleConsultarAutor(idToken, id) {
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
     try {
-      sendConsultaAutor(c.email_autor, c, token, textoDocCorreccion(c));
+      sendConsultaAutor(c.email_autor, c, token, textoDocCorreccion(c), pdfDocCorreccion(c));
     } catch (e) {
       setCell(sheet, c._rowIndex, 'token_autor', '');
       setCell(sheet, c._rowIndex, 'token_expira', '');

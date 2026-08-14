@@ -111,6 +111,20 @@ function textoDocCorreccion(cuento) {
   try { return DocumentApp.openById(match[1]).getBody().getText(); } catch (e) { return ''; }
 }
 
+// PDF del doc de corrección para adjuntar al mail del autor.
+// El autor nunca recibe links de Drive ni documentos editables:
+// solo el archivo en formato PDF.
+function pdfDocCorreccion(cuento) {
+  if (!cuento.url_doc_correccion) return null;
+  var match = String(cuento.url_doc_correccion).match(/\/d\/([\w-]+)/);
+  if (!match) return null;
+  try {
+    return DriveApp.getFileById(match[1]).getAs('application/pdf');
+  } catch (e) {
+    return null;
+  }
+}
+
 // Intenta extraer texto de un adjunto de texto plano (en la raíz de la carpeta).
 function extractText(folder) {
   var files = folder.getFiles();

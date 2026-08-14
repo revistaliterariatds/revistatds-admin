@@ -89,20 +89,30 @@ function sendRevisionTerminada(adminEmails, cuento, editorNombre) {
   adminEmails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }
 
-function sendConsultaAutor(autorEmail, cuento, token, textoCorregido) {
+function sendConsultaAutor(autorEmail, cuento, token, textoCorregido, pdfBlob) {
   var subject = getMailSubject('mail_subject_consulta', 'Tu producción está lista para aprobación — {{titulo}}', { titulo: cuento.titulo });
+  var versionBlock = pdfBlob
+    ? '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">Adjuntamos el documento con las correcciones del editor en formato PDF.</p>'
+    : '  <div style="background:#ffffff;border:1px solid #cec8bc;padding:18px;margin:0 0 22px;white-space:pre-wrap;font-size:15px;line-height:1.7;">' + escapeHtml(textoCorregido || 'La versión está disponible en el panel editorial.') + '</div>';
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Tu producción está lista</h1>',
     '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">El equipo editorial terminó la revisión de <strong>' + escapeHtml(cuento.titulo) + '</strong>. Revisá la versión y elegí una opción:</p>',
-    '  <div style="background:#ffffff;border:1px solid #cec8bc;padding:18px;margin:0 0 22px;white-space:pre-wrap;font-size:15px;line-height:1.7;">' + escapeHtml(textoCorregido || 'La versión está disponible en el panel editorial.') + '</div>',
+    versionBlock,
     '  <p style="margin:0 0 12px;"><a href="' + autorLink(token, 'approve') + '" style="display:inline-block;background:#4b7f52;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Aprobar versión</a></p>',
     '  <p style="margin:0 0 12px;"><a href="' + autorLink(token, 'edit') + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Modificar versión</a></p>',
     '  <p style="margin:0 0 24px;"><a href="' + autorLink(token, 'reject') + '" style="color:#a53d35;">No aprobar esta versión</a></p>',
     '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>',
     '</div>',
   ].join('');
-  sendHtmlMail(autorEmail, subject, html);
+  var params = {
+    to: autorEmail,
+    subject: subject,
+    htmlBody: html,
+    name: MAIL_FROM_NAME,
+  };
+  if (pdfBlob) params.attachments = [pdfBlob];
+  MailApp.sendEmail(params);
 }
 
 function sendNuevaVersion(editorEmail, cuento) {
