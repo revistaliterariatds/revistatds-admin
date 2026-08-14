@@ -27,6 +27,20 @@ function citaPublica(c) {
   return out;
 }
 
+// Sheets convierte strings "YYYY-MM-DD" y "HH:mm" en valores Date al guardarlos;
+// al leerlos llegan como Date. Se normalizan a string canónico acá (fecha y hora).
+function fmtCelda(valor, patron) {
+  if (valor instanceof Date) return Utilities.formatDate(valor, Session.getScriptTimeZone(), patron);
+  if (valor == null) return '';
+  return String(valor);
+}
+
+function normalizarCita(c) {
+  c.fecha = fmtCelda(c.fecha, 'yyyy-MM-dd');
+  c.hora = fmtCelda(c.hora, 'HH:mm');
+  return c;
+}
+
 function findCitaById(id) {
   var sheet = getSheet('Agenda');
   var idx = headerIndex(sheet);
@@ -35,7 +49,7 @@ function findCitaById(id) {
     if (String(data[i][idx.id]) === String(id)) {
       var c = { _rowIndex: i };
       SHEETS.Agenda.forEach(function (h, j) { c[h] = data[i][j]; });
-      return c;
+      return normalizarCita(c);
     }
   }
   return null;
@@ -86,6 +100,7 @@ function handleAgendaList(idToken) {
   for (var i = 1; i < data.length; i++) {
     var c = citaPublica({});
     SHEETS.Agenda.forEach(function (h, j) { c[h] = data[i][j]; });
+    normalizarCita(c);
     c.comentarios = cont[String(c.id)] || 0;
     c.creado_por_nombre = displayName(c.creado_por);
     citas.push(c);

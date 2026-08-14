@@ -35,7 +35,7 @@ let mesVisible = new Date();
 let diaActivo = '';
 let citaActiva: Cita | null = null;
 
-const AGENDA_CACHE_KEY = 'tds-agenda-cache-v1';
+const AGENDA_CACHE_KEY = 'tds-agenda-cache-v2';
 
 function readCachedCitas(): Cita[] | null {
   try { return JSON.parse(localStorage.getItem(AGENDA_CACHE_KEY) || 'null'); } catch { return null; }
