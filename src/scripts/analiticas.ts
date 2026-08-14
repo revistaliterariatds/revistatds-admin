@@ -91,6 +91,8 @@ function renderChart(data: Visit[]) {
   document.getElementById('analytics-summary')!.textContent = `${data.length} días con datos en el período seleccionado.`;
 }
 
+const ANALYTICS_TOTAL_KEY = 'tds-analytics-total-v1';
+
 function analyticsCacheKey(days: number | string): string {
   return `tds-analytics-cache-${days}`;
 }
@@ -99,9 +101,26 @@ function readCachedChart(days: number | string): Visit[] | null {
   try { return JSON.parse(localStorage.getItem(analyticsCacheKey(days)) || 'null'); } catch { return null; }
 }
 
+function renderTotal(total: number) {
+  document.getElementById('kpi-historico')!.textContent = total.toLocaleString('es-AR');
+}
+
+function readCachedTotal(): number | null {
+  const raw = localStorage.getItem(ANALYTICS_TOTAL_KEY);
+  if (raw == null) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function saveCachedTotal(total: number) {
+  try { localStorage.setItem(ANALYTICS_TOTAL_KEY, String(total)); } catch { /* sin caché local */ }
+}
+
 async function load() {
   const selected = (document.getElementById('analytics-days') as HTMLSelectElement).value;
   const days: number | string = selected === 'all' ? 'all' : Number(selected);
+  const cachedTotal = readCachedTotal();
+  if (cachedTotal !== null) renderTotal(cachedTotal);
   const cached = readCachedChart(days);
   if (cached) renderChart(cached);
   const data = await api('panel/analytics/daily', { days });
@@ -109,6 +128,7 @@ async function load() {
   const daily = data.daily || [];
   renderChart(daily);
   try { localStorage.setItem(analyticsCacheKey(days), JSON.stringify(daily)); } catch { /* sin caché local */ }
+  if (typeof data.total_historico === 'number') { renderTotal(data.total_historico); saveCachedTotal(data.total_historico); }
 }
 
 function init() {

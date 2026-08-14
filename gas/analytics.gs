@@ -91,6 +91,16 @@ function saveAnalyticsSnapshot(date, visits) {
 function clearAnalyticsCache() {
   var cache = CacheService.getScriptCache();
   ['1', '7', '30', '90', '365', 'all'].forEach(function (key) { cache.remove('analytics-snapshots:' + key); });
+  cache.remove('analytics-total');
+}
+
+function totalHistoricoVisitas() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('analytics-total');
+  if (cached) return parseInt(cached, 10);
+  var total = readAnalyticsSnapshots(0).reduce(function (sum, item) { return sum + item.visits; }, 0);
+  cache.put('analytics-total', String(total), CF_CACHE_SECONDS);
+  return total;
 }
 
 // Trigger diario: se ejecuta sobre el día UTC anterior, ya cerrado.
@@ -152,8 +162,12 @@ function handleAnalyticsDaily(idToken, requestedDays) {
   var cache = CacheService.getScriptCache();
   var cacheKey = 'analytics-snapshots:' + (value === 'all' ? 'all' : days);
   var cached = cache.get(cacheKey);
-  if (cached) return ok({ days: value === 'all' ? 'all' : days, daily: JSON.parse(cached), cached: true });
-  var daily = readAnalyticsSnapshots(days);
-  cache.put(cacheKey, JSON.stringify(daily), CF_CACHE_SECONDS);
-  return ok({ days: value === 'all' ? 'all' : days, daily: daily, cached: false });
+  var daily = cached ? JSON.parse(cached) : readAnalyticsSnapshots(days);
+  if (!cached) cache.put(cacheKey, JSON.stringify(daily), CF_CACHE_SECONDS);
+  return ok({
+    days: value === 'all' ? 'all' : days,
+    daily: daily,
+    total_historico: totalHistoricoVisitas(),
+    cached: !!cached,
+  });
 }

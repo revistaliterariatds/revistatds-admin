@@ -9,6 +9,14 @@ import Layout from '../layouts/Layout.astro';
       <label class="analytics-period">Período <select id="analytics-days"><option value="7">7 días</option><option value="1">Último día completo</option><option value="30">30 días</option><option value="90">90 días</option><option value="365">365 días</option><option value="all">Histórico completo</option></select></label>
     </header>
     <div id="analytics-alert" class="status-card" hidden></div>
+    <div class="analytics-total" aria-label="Contador histórico de visitas">
+      <div class="analytics-total-text">
+        <p class="analytics-total-eyebrow">Contador histórico</p>
+        <h2 class="analytics-total-title">Visitas del sitio</h2>
+        <p class="analytics-total-note">Visitas registradas desde que comenzamos a contarlas con nuestros snapshots diarios.</p>
+      </div>
+      <strong id="kpi-historico" class="analytics-total-number">—</strong>
+    </div>
     <div class="analytics-kpis" aria-label="Resumen de visitas">
       <article class="analytics-kpi"><span>Total del período</span><strong id="kpi-total">—</strong><small>visitas registradas</small></article>
       <article class="analytics-kpi"><span>Promedio diario</span><strong id="kpi-average">—</strong><small>visitas por día</small></article>
