@@ -128,6 +128,7 @@ function handleAutorEdit(token, archivos) {
 
     // Guardar la nueva versión en la carpeta del cuento.
     var version = parseInt(c.version_actual || '1', 10) + 1;
+    var estadoAnterior = c.estado;
     var folder = getCuentoFolder(c);
     var subfolder = getOrCreateFolder(folder, 'v' + version);
     saveFiles(subfolder, archivosArr);
@@ -145,8 +146,12 @@ function handleAutorEdit(token, archivos) {
     addHistory(c.id, 'AUTOR', 'NUEVA_VERSION', 'El autor subió la versión ' + version + '.');
     clearBoardCache();
     if (c.editor_asignado) {
-      try { sendNuevaVersion(c.editor_asignado, c); }
-      catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la nueva versión de "' + c.titulo + '".'); }
+      try {
+        // Desde CONSULTA_AUTOR el autor pide modificar: aviso a editor + ADMIN/SUPERVISOR
+        // para que se contacten y definan. Desde CORRECCIONES_SOLICITADAS solo al editor.
+        if (estadoAnterior === ESTADOS.CONSULTA_AUTOR) sendSolicitudModificacion(c);
+        else sendNuevaVersion(c.editor_asignado, c);
+      } catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al equipo sobre la nueva versión de "' + c.titulo + '".'); }
     }
     return ok({ message: 'Versión recibida. El editor la revisará.', version: String(version), estado: ESTADOS.EN_REVISION });
   } finally {
