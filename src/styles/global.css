@@ -199,7 +199,8 @@ footer {
 @media (max-width: 860px) {
   :root { --content-pad: 1.5rem; }
   .footer-inner { flex-direction: column; text-align: center; }
-  .nav-inner { align-items: flex-start; flex-wrap: wrap; height: auto; min-height: var(--nav-height); padding-top: 0.55rem; padding-bottom: 0.55rem; }
+  nav { height: auto; min-height: var(--nav-height); }
+  .nav-inner { align-items: center; flex-wrap: wrap; height: auto; min-height: var(--nav-height); padding-top: 0.55rem; padding-bottom: 0.55rem; }
   .nav-user { flex-wrap: wrap; justify-content: flex-end; }
 }
 
@@ -323,7 +324,13 @@ footer {
 .analytics-empty { min-height: 220px; display: grid; place-items: center; color: var(--ink-muted); font-size: var(--text-sm); }
 .analytics-summary { margin: 1rem 0 0; padding: 0.8rem 1.1rem; border-left: 3px solid var(--orange); background: var(--paper-warm); color: var(--ink); font-size: var(--text-sm); font-weight: 500; letter-spacing: 0.01em; line-height: 1.5; }
 @media (max-width: 700px) { .analytics-total { align-items: flex-start; flex-direction: column; } .analytics-total-number { font-size: 2.4rem; } .analytics-kpis { grid-template-columns: 1fr; } .analytics-card-head { align-items: flex-start; flex-direction: column; } }
-@media (max-width: 620px) { .nav-inner { gap: 0.5rem; } .nav-user { width: 100%; justify-content: space-between; } .nav-links { order: 3; width: 100%; justify-content: stretch; overflow-x: auto; } .nav-links a { flex: 1 0 auto; justify-content: center; } }
+@media (max-width: 620px) {
+  .nav-inner { gap: 0.5rem; }
+  .nav-user { width: 100%; justify-content: flex-start; gap: 0.5rem; }
+  .nav-user #nav-logout { margin-left: auto; }
+  .nav-links { order: 3; width: 100%; justify-content: stretch; overflow-x: auto; }
+  .nav-links a { flex: 1 0 auto; justify-content: center; }
+}
 #motivo { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; resize: vertical; }
 #motivo:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 
@@ -421,3 +428,35 @@ footer {
 .edicion-datos { color: var(--ink-muted); font-size: var(--text-sm); }
 .edicion-estado { display: inline-block; margin-left: 0.5rem; }
 .edicion-acciones { display: flex; gap: 0.75rem; }
+
+/* ── FORMULARIOS DEL PANEL (usuarios, configuración) ── */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 620px) { .form-row { grid-template-columns: 1fr; } }
+
+.form-group label { display: block; color: var(--ink-soft); font-size: var(--text-sm); margin-bottom: 0.4rem; }
+
+.form-group input:not([type="checkbox"]):not([type="radio"]),
+.form-group select:not(.filter-select),
+.user-form input:not([type="checkbox"]):not([type="radio"]),
+.user-form select {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper-white);
+  color: var(--ink);
+  font-family: 'Lato', sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.user-form input:focus,
+.user-form select:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--orange);
+}
+
+.user-form .form-group { margin-bottom: 1rem; }
