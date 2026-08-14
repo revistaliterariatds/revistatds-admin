@@ -248,7 +248,7 @@ footer {
 .board-empty { padding: var(--space-lg); text-align: center; color: var(--ink-muted); border: 1px dashed var(--rule); border-radius: var(--radius-md); }
 
 /* ── DETALLE (dialog) ── */
-.detail-modal { border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 0; max-width: 640px; width: 92%; background: var(--paper); }
+.detail-modal { border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 0; max-width: 640px; width: 92%; background: var(--paper); margin: auto; }
 .detail-modal::backdrop { background: rgba(30, 26, 23, 0.45); }
 .detail-inner { padding: var(--space-md); position: relative; }
 .detail-close { position: absolute; top: 0.75rem; right: 0.75rem; border: none; background: transparent; font-size: 1.6rem; line-height: 1; color: var(--ink-muted); cursor: pointer; }

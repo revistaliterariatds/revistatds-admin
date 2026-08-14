@@ -348,7 +348,11 @@ async function abrirDetalle(id: string) {
     const texto = (document.getElementById('cita-nuevo-comentario') as HTMLTextAreaElement).value.trim();
     if (!texto) return;
     const r = await api('panel/agenda/comentar', { id: c.id, comentario: texto });
-    if (r.status === 'ok') { clearCachedCitas(); await abrirDetalle(c.id); }
+    if (r.status === 'ok') {
+      modal.close();
+      clearCachedCitas();
+      await recargar();
+    }
     else showAlert(r.message || 'No se pudo comentar.', true);
   });
 }
