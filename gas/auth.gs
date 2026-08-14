@@ -5,6 +5,15 @@ function AuthError(message) {
   this.message = message;
 }
 
+// Clave de caché ligada al token (no reutilizable entre tokens distintos).
+function tokenCacheKey(idToken) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, idToken, Utilities.Charset.UTF_8);
+  return 'tok:' + digest.map(function (b) {
+    var byte = b < 0 ? b + 256 : b;
+    return ('0' + byte.toString(16)).slice(-2);
+  }).join('');
+}
+
 function decodeJwtPayload(token) {
   try {
     var parts = String(token).split('.');
@@ -25,7 +34,7 @@ function validateIdToken(idToken) {
   if (payload.exp && payload.exp * 1000 < Date.now()) throw new AuthError('Token expirado.');
 
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'tok:' + (payload.sub || payload.email);
+  var cacheKey = tokenCacheKey(idToken);
   var cached = cache.get(cacheKey);
   if (cached) return JSON.parse(cached);
 

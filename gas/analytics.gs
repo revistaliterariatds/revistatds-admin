@@ -3,6 +3,7 @@
 var CF_GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
 var CF_CACHE_SECONDS = 600;
 var ANALYTICS_HEADERS = ['date', 'visits', 'source', 'updated_at'];
+var ANALYTICS_TZ = 'America/Argentina/Buenos_Aires';
 
 function analyticsSheet() {
   var ss = getSpreadsheet();
@@ -17,7 +18,22 @@ function analyticsSheet() {
 }
 
 function analyticsDateKey(date) {
-  return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
+  return Utilities.formatDate(date, ANALYTICS_TZ, 'yyyy-MM-dd');
+}
+
+// Diferencia local↔UTC en minutos para la instancia dada (Argentina sin DST, robusto igual).
+function analyticsTzOffsetMinutes(date) {
+  var local = Utilities.formatDate(date, ANALYTICS_TZ, 'yyyy-MM-dd HH:mm:ss');
+  var asUtc = new Date(local.replace(' ', 'T') + 'Z');
+  return (asUtc.getTime() - date.getTime()) / 60000;
+}
+
+// Ventana UTC que cubre el día calendario local (desde medianoche local).
+function cloudflareDayWindow(date) {
+  var parts = analyticsDateKey(date).split('-').map(Number);
+  var offset = analyticsTzOffsetMinutes(date);
+  var start = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]) - offset * 60000);
+  return { start: start, end: new Date(start.getTime() + 86400000 - 1) };
 }
 
 function analyticsCellDate(value) {
@@ -35,8 +51,9 @@ function cloudflareConfig() {
 }
 
 function fetchCloudflareDay(date, config) {
-  var start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0));
-  var end = new Date(start.getTime() + 86400000 - 1);
+  var window = cloudflareDayWindow(date);
+  var start = window.start;
+  var end = window.end;
   var query = 'query DailyVisits($zoneTag: String!, $startDate: Time!, $endDate: Time!, $host: String!) {'
     + ' viewer { zones(filter: { zoneTag: $zoneTag }) {'
     + ' httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $startDate, datetime_leq: $endDate, clientRequestHTTPHost: $host, requestSource: "eyeball" })'
@@ -112,9 +129,7 @@ function readAnalyticsSnapshots(days) {
   var data = sheet.getDataRange().getValues();
   var now = new Date();
   var todayKey = analyticsDateKey(now);
-  var cutoffKey = days
-    ? analyticsDateKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days, 0, 0, 0)))
-    : null;
+  var cutoffKey = days ? analyticsDateKey(new Date(now.getTime() - days * 86400000)) : null;
   var byDate = {};
   data.slice(1).forEach(function (row) {
     var key = analyticsCellDate(row[0]);

@@ -2,12 +2,23 @@
 // assets/js/enviar.js y assets/js/enviar-docentes.js (POST JSON, text/plain).
 // Hallazgo H2: `categoria` no viene del formulario → nace "Sin clasificar".
 
+var ENVIO_RATE_LIMIT = 50;
+
 function handleEnvio(data) {
   data = data || {};
 
   var email = String(data.email || '').trim();
   if (!email) return err('Falta el email del autor.');
   if (!isValidEmail(email)) return err('Email del autor inválido.');
+
+  // Límite anti-abuso por email en ventana de 6 horas (cache script).
+  var cache = CacheService.getScriptCache();
+  var rateKey = 'envio:' + email.toLowerCase();
+  var envios = parseInt(cache.get(rateKey) || '0', 10);
+  if (envios >= ENVIO_RATE_LIMIT) {
+    return err('Se superó el límite temporal de envíos para este email. Intentá más tarde.');
+  }
+  cache.put(rateKey, String(envios + 1), 21600);
 
   var esMenor = String(data.edad || '') === '13 a 17';
   var emailAutor = email;
