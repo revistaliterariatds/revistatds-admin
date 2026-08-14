@@ -52,9 +52,9 @@ function doPost(e) {
     } else if (action === 'panel/ediciones/list') {
       result = handleEdicionesList(tokenFrom(data, e));
     } else if (action === 'panel/ediciones/cerrar') {
-      result = handleCerrarEdicion(tokenFrom(data, e), data && data.numero);
+      result = handleCerrarEdicion(tokenFrom(data, e), data && data.numero, data && data.fecha_cierre);
     } else if (action === 'panel/ediciones/abrir') {
-      result = handleAbrirEdicion(tokenFrom(data, e));
+      result = handleAbrirEdicion(tokenFrom(data, e), data && data.fecha_apertura);
     } else if (action === 'panel/agenda/list') {
       result = handleAgendaList(tokenFrom(data, e));
     } else if (action === 'panel/agenda/detalle') {

@@ -35,12 +35,33 @@ function listarEdiciones() {
     out.push({
       numero: String(data[i][idx.numero]),
       estado: String(data[i][idx.estado] || ''),
-      fecha_apertura: data[i][idx.fecha_apertura] == null ? '' : String(data[i][idx.fecha_apertura]),
-      fecha_cierre: data[i][idx.fecha_cierre] == null ? '' : String(data[i][idx.fecha_cierre]),
+      fecha_apertura: fmtCelda(data[i][idx.fecha_apertura], 'yyyy-MM-dd'),
+      fecha_cierre: fmtCelda(data[i][idx.fecha_cierre], 'yyyy-MM-dd'),
     });
   }
   out.sort(function (a, b) { return Number(a.numero) - Number(b.numero); });
   return out;
+}
+
+// Valida que la fecha elegida sea una fecha calendario real (YYYY-MM-DD).
+function validarFechaInput(valor) {
+  var s = String(valor == null ? '' : valor).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  var p = s.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  if (d.getFullYear() !== Number(p[0]) || d.getMonth() + 1 !== Number(p[1]) || d.getDate() !== Number(p[2])) return '';
+  return s;
+}
+
+// Dos rangos se superponen si comparten al menos un día.
+// Fin vacío = abierta (sin límite).
+function rangoSeSuperpone(inicio1, fin1, inicio2, fin2) {
+  var i1 = inicio1 || '';
+  var f1 = fin1 || '9999-12-31';
+  var i2 = inicio2 || '';
+  var f2 = fin2 || '9999-12-31';
+  if (!i1 || !i2) return true;
+  return i1 <= f2 && i2 <= f1;
 }
 
 function existeEdicion(numero) {
@@ -63,10 +84,13 @@ function handleEdicionesList(idToken) {
   return result;
 }
 
-// ── cerrar edición N (ADMIN/WEBMASTER) ──
-function handleCerrarEdicion(idToken, numero) {
+// ── cerrar edición N con fecha elegida (ADMIN/WEBMASTER) ──
+function handleCerrarEdicion(idToken, numero, fechaCierre) {
   var user = requireInternalUser(idToken);
   if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede gestionar ediciones.');
+
+  var fecha = validarFechaInput(fechaCierre);
+  if (!fecha) throw new ApiError('Ingresá una fecha de cierre válida.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -76,62 +100,71 @@ function handleCerrarEdicion(idToken, numero) {
     ediciones.forEach(function (e) { if (e.numero === String(numero)) ed = e; });
     if (!ed) throw new ApiError('Edición no encontrada.');
     if (ed.estado !== 'abierta') throw new ApiError('La edición ' + ed.numero + ' no está abierta.');
+    if (ed.fecha_apertura && fecha < ed.fecha_apertura) {
+      throw new ApiError('La fecha de cierre no puede ser anterior a la apertura (' + ed.fecha_apertura + ').');
+    }
+    ediciones.forEach(function (f) {
+      if (f.numero === ed.numero) return;
+      if (rangoSeSuperpone(ed.fecha_apertura, fecha, f.fecha_apertura, f.fecha_cierre)) {
+        throw new ApiError('La fecha de cierre se superpone con la edición ' + f.numero + '.');
+      }
+    });
 
-    var fechaCierre = hoyKey();
     var sheet = getSheet('Ediciones');
     var row = findRowIndex(sheet, 'numero', ed.numero);
     setCell(sheet, row, 'estado', 'cerrada');
-    setCell(sheet, row, 'fecha_cierre', fechaCierre);
+    setCell(sheet, row, 'fecha_cierre', fecha);
     clearEdicionesCache();
     clearAgendaCache();
 
     crearCitaAutomatica(
-      fechaCierre,
+      fecha,
       'Cierre de recepción — Edición ' + ed.numero,
-      'La recepción de la edición ' + ed.numero + ' cerró el ' + fechaCierre + '.',
+      'La recepción de la edición ' + ed.numero + ' cerró el ' + fecha + '.',
       'cierre_edicion',
       user.email
     );
 
-    return ok({ message: 'Edición ' + ed.numero + ' cerrada.', estado: 'cerrada', fecha_cierre: fechaCierre });
+    return ok({ message: 'Edición ' + ed.numero + ' cerrada.', estado: 'cerrada', fecha_cierre: fecha });
   } finally {
     lock.releaseLock();
   }
 }
 
-// ── abrir edición N+1 (ADMIN/WEBMASTER) ──
-// Reglas: la última edición debe tener fecha_cierre y solo se puede abrir
-// desde el día calendario siguiente a esa fecha.
-function handleAbrirEdicion(idToken) {
+// ── abrir nueva edición con fecha elegida (ADMIN/WEBMASTER) ──
+// La nueva edición nace sin fecha de cierre (se define al cerrarla).
+// Regla: la fecha de apertura no puede superponerse con ninguna edición existente
+// (por eso la anterior debe estar cerrada y con cierre anterior a esa fecha).
+function handleAbrirEdicion(idToken, fechaApertura) {
   var user = requireInternalUser(idToken);
   if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede gestionar ediciones.');
+
+  var fecha = validarFechaInput(fechaApertura);
+  if (!fecha) throw new ApiError('Ingresá una fecha de apertura válida.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var ediciones = listarEdiciones();
-    var abiertas = ediciones.filter(function (e) { return e.estado === 'abierta'; });
-    if (abiertas.length > 0) {
-      throw new ApiError('La edición ' + abiertas[0].numero + ' sigue abierta. Cerrala antes de abrir una nueva.');
-    }
-    var ultima = ediciones[ediciones.length - 1];
-    if (!ultima || !ultima.fecha_cierre) {
-      throw new ApiError('No hay una edición cerrada con fecha de cierre. Cerra la edición actual primero.');
-    }
-    if (hoyKey() <= ultima.fecha_cierre) {
-      throw new ApiError('La nueva edición recién puede abrirse desde el día siguiente calendario a la fecha de cierre (' + ultima.fecha_cierre + ').');
-    }
+    ediciones.forEach(function (f) {
+      if (rangoSeSuperpone(fecha, '', f.fecha_apertura, f.fecha_cierre)) {
+        throw new ApiError('La fecha de apertura se superpone con la edición ' + f.numero +
+          (f.fecha_cierre ? '' : ' (que sigue abierta, sin fecha de cierre)') + '.');
+      }
+    });
 
-    var numeroNuevo = (Number(ultima.numero) || 0) + 1;
-    var fechaApertura = hoyKey();
-    getSheet('Ediciones').appendRow([String(numeroNuevo), 'abierta', fechaApertura, '']);
+    var numeroNuevo = 1;
+    if (ediciones.length > 0) {
+      numeroNuevo = (Number(ediciones[ediciones.length - 1].numero) || 0) + 1;
+    }
+    getSheet('Ediciones').appendRow([String(numeroNuevo), 'abierta', fecha, '']);
     clearEdicionesCache();
     clearAgendaCache();
 
     crearCitaAutomatica(
-      fechaApertura,
+      fecha,
       'Apertura de recepción — Edición ' + numeroNuevo,
-      'La recepción de la edición ' + numeroNuevo + ' abrió el ' + fechaApertura + '.',
+      'La recepción de la edición ' + numeroNuevo + ' abrió el ' + fecha + '.',
       'evento',
       user.email
     );

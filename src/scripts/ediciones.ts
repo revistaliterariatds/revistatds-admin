@@ -1,4 +1,5 @@
 // ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (ADMIN/WEBMASTER).
+// Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
 import { api, clearSession, getUser, getIdToken } from './api';
 
@@ -13,7 +14,6 @@ const user = getUser();
 const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER';
 
 let ediciones: Edicion[] = [];
-let actual = '';
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');
@@ -51,6 +51,11 @@ function fmtFecha(key: string): string {
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function hoyInput(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function renderLista() {
   const lista = document.getElementById('ediciones-list')!;
   if (ediciones.length === 0) {
@@ -76,26 +81,85 @@ function renderLista() {
     </div>`;
   }).join('');
 
-  const ultima = ediciones[ediciones.length - 1];
-  const ultimaCerrada = ultima && ultima.estado === 'cerrada' && !!ultima.fecha_cierre;
   const botonAbrir = `
     <div class="edicion-card">
       <div>
         <span class="edicion-numero">Abrir nueva edición</span>
-        <div class="edicion-datos">Requisito: la edición actual debe estar cerrada y debe ser al menos el día siguiente calendario a su fecha de cierre.</div>
+        <div class="edicion-datos">Elegís la fecha de apertura. La nueva edición queda sin fecha de cierre, que se define al cerrarla.</div>
       </div>
       <div class="edicion-acciones">
-        <button type="button" class="btn-enviar" data-accion="abrir" ${ultimaCerrada && !actual ? '' : 'disabled title="La edición actual aún no está cerrada (o el día de cierre es hoy)."'}>Abrir edición</button>
+        <button type="button" class="btn-enviar" data-accion="abrir">Abrir edición</button>
       </div>
     </div>`;
 
   lista.innerHTML = botonAbrir + items;
 
   lista.querySelectorAll('[data-accion="cerrar"]').forEach((btn) => {
-    btn.addEventListener('click', () => cerrar((btn as HTMLElement).dataset.numero || ''));
+    btn.addEventListener('click', () => abrirDialogoCerrar((btn as HTMLElement).dataset.numero || ''));
   });
   lista.querySelectorAll('[data-accion="abrir"]').forEach((btn) => {
-    btn.addEventListener('click', () => abrir());
+    btn.addEventListener('click', () => abrirDialogoAbrir());
+  });
+}
+
+// ── diálogo: elegir fecha y confirmar ──
+function abrirDialogoCerrar(numero: string) {
+  const modal = document.getElementById('edicionModal') as HTMLDialogElement;
+  const content = document.getElementById('edicionModalContent')!;
+  const ed = ediciones.find((e) => e.numero === numero);
+  content.innerHTML = `
+    <h2 class="detail-titulo">Cerrar edición ${esc(numero)}</h2>
+    <p class="config-intro">Elegí la fecha de cierre de la recepción.</p>
+    <form id="edicion-form" class="cita-form">
+      <div class="form-group">
+        <label for="edicion-fecha">Fecha de cierre</label>
+        <input id="edicion-fecha" type="date" required value="${hoyInput()}" ${ed?.fecha_apertura ? `min="${esc(ed.fecha_apertura)}"` : ''} />
+      </div>
+      <div class="detail-acciones">
+        <button type="submit" class="btn-enviar">Cerrar edición</button>
+        <button type="button" class="btn-ghost" id="edicion-cancelar">Cancelar</button>
+      </div>
+    </form>`;
+  modal.showModal();
+  bindFormulario(modal, async (fecha) => {
+    const data = await api('panel/ediciones/cerrar', { numero, fecha_cierre: fecha });
+    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición cerrada.'); await cargar(); }
+    else showAlert(data.message || 'No se pudo cerrar.', true);
+  });
+}
+
+function abrirDialogoAbrir() {
+  const modal = document.getElementById('edicionModal') as HTMLDialogElement;
+  const content = document.getElementById('edicionModalContent')!;
+  content.innerHTML = `
+    <h2 class="detail-titulo">Abrir nueva edición</h2>
+    <p class="config-intro">Elegí la fecha de apertura. La edición queda sin fecha de cierre (la definís al cerrarla).</p>
+    <form id="edicion-form" class="cita-form">
+      <div class="form-group">
+        <label for="edicion-fecha">Fecha de apertura</label>
+        <input id="edicion-fecha" type="date" required value="${hoyInput()}" />
+      </div>
+      <div class="detail-acciones">
+        <button type="submit" class="btn-enviar">Abrir edición</button>
+        <button type="button" class="btn-ghost" id="edicion-cancelar">Cancelar</button>
+      </div>
+    </form>`;
+  modal.showModal();
+  bindFormulario(modal, async (fecha) => {
+    const data = await api('panel/ediciones/abrir', { fecha_apertura: fecha });
+    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición abierta.'); await cargar(); }
+    else showAlert(data.message || 'No se pudo abrir.', true);
+  });
+}
+
+function bindFormulario(modal: HTMLDialogElement, onConfirm: (fecha: string) => Promise<void>) {
+  const content = document.getElementById('edicionModalContent')!;
+  content.querySelector('#edicion-cancelar')?.addEventListener('click', () => modal.close());
+  content.querySelector('#edicion-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
+    if (!fecha) { showAlert('Elegí una fecha.', true); return; }
+    await onConfirm(fecha);
   });
 }
 
@@ -104,26 +168,15 @@ async function cargar() {
   const data = await api('panel/ediciones/list');
   if (data.status !== 'ok') { showAlert(data.message || 'No se pudo cargar.', true); return; }
   ediciones = data.ediciones || [];
-  actual = data.actual || '';
   renderLista();
-}
-
-async function cerrar(numero: string) {
-  if (!confirm(`¿Cerrar la recepción de la edición ${numero}? Se registrará la fecha de cierre de hoy.`)) return;
-  const data = await api('panel/ediciones/cerrar', { numero });
-  if (data.status === 'ok') { showAlert(data.message || 'Edición cerrada.'); await cargar(); }
-  else showAlert(data.message || 'No se pudo cerrar.', true);
-}
-
-async function abrir() {
-  const data = await api('panel/ediciones/abrir');
-  if (data.status === 'ok') { showAlert(data.message || 'Edición abierta.'); await cargar(); }
-  else showAlert(data.message || 'No se pudo abrir.', true);
 }
 
 function init() {
   if (!user || !getIdToken() || !esAdmin) { window.location.replace('/tablero/'); return; }
   renderNav();
+  document.getElementById('btn-cerrar-edicion-modal')?.addEventListener('click', () => {
+    (document.getElementById('edicionModal') as HTMLDialogElement).close();
+  });
   document.getElementById('ediciones-refrescar')?.addEventListener('click', cargar);
   cargar();
 }

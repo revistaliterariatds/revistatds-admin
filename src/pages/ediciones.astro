@@ -19,6 +19,14 @@ import Layout from '../layouts/Layout.astro';
 
     <div class="ediciones-list" id="ediciones-list"></div>
   </section>
+
+  <!-- Modal para elegir fecha (apertura / cierre) -->
+  <dialog id="edicionModal" class="detail-modal">
+    <div class="detail-inner">
+      <button id="btn-cerrar-edicion-modal" class="detail-close" type="button" aria-label="Cerrar">×</button>
+      <div id="edicionModalContent"></div>
+    </div>
+  </dialog>
 </Layout>
 
 <script>
