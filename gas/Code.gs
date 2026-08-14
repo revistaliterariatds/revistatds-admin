@@ -115,6 +115,19 @@ function seedConfig() {
   setConfig('site_base_url', 'https://tramasdelsur.com.ar');
 }
 
+// Mantiene el runtime caliente para evitar el cold start de Apps Script.
+function keepAlive() {
+  CacheService.getScriptCache().put('keepalive', String(Date.now()), 300);
+}
+
+// Ejecutar una vez: trigger cada 5 minutos a keepAlive (idempotente).
+function setupKeepAliveTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === 'keepAlive') ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger('keepAlive').timeBased().everyMinutes(5).create();
+}
+
 function seedRoles() {
   var sheet = getSheet('Roles');
   if (sheet.getLastRow() > 1) return; // ya sembrado

@@ -89,6 +89,7 @@ function handleAutorApprove(token) {
     setEstado(c, ESTADOS.APROBADO);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'APROBADO', 'El autor aprobó la versión.');
+    clearBoardCache();
     return ok({ message: 'Aprobado. ¡Gracias!', estado: ESTADOS.APROBADO });
   } finally {
     lock.releaseLock();
@@ -107,6 +108,7 @@ function handleAutorReject(token, motivo) {
     setEstado(c, ESTADOS.RECHAZADO_POR_AUTOR);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'NO_APROBADO', (motivo || '') ? 'Motivo: ' + motivo : 'Sin motivo.');
+    clearBoardCache();
     return ok({ message: 'Recibido. El equipo editorial lo revisará.', estado: ESTADOS.RECHAZADO_POR_AUTOR });
   } finally {
     lock.releaseLock();
@@ -141,6 +143,7 @@ function handleAutorEdit(token, archivos) {
     setEstado(c, ESTADOS.EN_REVISION);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'NUEVA_VERSION', 'El autor subió la versión ' + version + '.');
+    clearBoardCache();
     if (c.editor_asignado) {
       try { sendNuevaVersion(c.editor_asignado, c); }
       catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la nueva versión de "' + c.titulo + '".'); }

@@ -91,12 +91,24 @@ function renderChart(data: Visit[]) {
   document.getElementById('analytics-summary')!.textContent = `${data.length} días con datos en el período seleccionado.`;
 }
 
+function analyticsCacheKey(days: number | string): string {
+  return `tds-analytics-cache-${days}`;
+}
+
+function readCachedChart(days: number | string): Visit[] | null {
+  try { return JSON.parse(localStorage.getItem(analyticsCacheKey(days)) || 'null'); } catch { return null; }
+}
+
 async function load() {
   const selected = (document.getElementById('analytics-days') as HTMLSelectElement).value;
   const days: number | string = selected === 'all' ? 'all' : Number(selected);
+  const cached = readCachedChart(days);
+  if (cached) renderChart(cached);
   const data = await api('panel/analytics/daily', { days });
-  if (data.status !== 'ok') { showAlert(data.message || 'No se pudieron cargar las analíticas.'); return; }
-  renderChart(data.daily || []);
+  if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudieron cargar las analíticas.'); return; }
+  const daily = data.daily || [];
+  renderChart(daily);
+  try { localStorage.setItem(analyticsCacheKey(days), JSON.stringify(daily)); } catch { /* sin caché local */ }
 }
 
 function init() {

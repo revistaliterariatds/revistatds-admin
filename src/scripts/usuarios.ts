@@ -61,13 +61,27 @@ function editar(index: number | null) {
   (document.getElementById('user-active') as HTMLInputElement).checked = u.activo;
 }
 
+const USERS_CACHE_KEY = 'tds-users-cache-v1';
+
+function readCachedUsers(): { users: UsuarioPanel[]; puede_editar: boolean } | null {
+  try { return JSON.parse(localStorage.getItem(USERS_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
 async function cargar() {
+  const cached = readCachedUsers();
+  if (cached) {
+    usuarios = cached.users;
+    puedeEditar = cached.puede_editar;
+    document.getElementById('btn-nuevo-usuario')!.hidden = !puedeEditar;
+    renderUsers();
+  }
   const data = await api('panel/users/list');
   if (data.status !== 'ok') { alertUser(data.message || 'No se pudieron cargar los usuarios.', true); return; }
   usuarios = data.users || [];
   puedeEditar = data.puede_editar === true;
   document.getElementById('btn-nuevo-usuario')!.hidden = !puedeEditar;
   renderUsers();
+  try { localStorage.setItem(USERS_CACHE_KEY, JSON.stringify({ users: usuarios, puede_editar: puedeEditar })); } catch { /* sin caché local */ }
 }
 
 async function guardar(event: SubmitEvent) {
@@ -81,6 +95,7 @@ async function guardar(event: SubmitEvent) {
     activo: (document.getElementById('user-active') as HTMLInputElement).checked,
   });
   if (data.status !== 'ok') { alertUser(data.message || 'No se pudo guardar.', true); return; }
+  try { localStorage.removeItem(USERS_CACHE_KEY); } catch { /* sin caché local */ }
   (document.getElementById('user-form') as HTMLFormElement).hidden = true;
   alertUser(data.message || 'Usuario guardado.');
   await cargar();

@@ -22,10 +22,9 @@ function showAlert(message: string, error = false) {
   el.textContent = message;
 }
 
-async function load() {
-  const data = await api('panel/config/list');
-  if (data.status !== 'ok') { showAlert(data.message || 'No se pudo cargar la configuración.', true); return; }
-  const config = data.config || {};
+const CONFIG_CACHE_KEY = 'tds-config-cache-v1';
+
+function fillForm(config: Record<string, string>) {
   (document.getElementById('config-expira') as HTMLInputElement).value = config.expira_token_dias || '30';
   (document.getElementById('config-convocatoria') as HTMLSelectElement).value = config.convocatoria_actual || 'general';
   (document.getElementById('config-site') as HTMLInputElement).value = config.site_base_url || '';
@@ -34,6 +33,23 @@ async function load() {
     (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value = config[`mail_subject_${key}`] || '';
   });
   (document.getElementById('config-form') as HTMLFormElement).hidden = false;
+}
+
+function readCachedConfig(): Record<string, string> | null {
+  try { return JSON.parse(localStorage.getItem(CONFIG_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
+async function load() {
+  const cached = readCachedConfig();
+  if (cached) fillForm(cached);
+  const data = await api('panel/config/list');
+  if (data.status !== 'ok') {
+    if (!cached) showAlert(data.message || 'No se pudo cargar la configuración.', true);
+    return;
+  }
+  const config = data.config || {};
+  try { localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config)); } catch { /* sin caché local */ }
+  fillForm(config);
 }
 
 async function save(key: string, value: string) {
@@ -51,6 +67,7 @@ async function submit(event: SubmitEvent) {
     for (const key of subjects) {
       await save(`mail_subject_${key}`, (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value);
     }
+    try { localStorage.removeItem(CONFIG_CACHE_KEY); } catch { /* sin caché local */ }
     showAlert('Configuración guardada.');
   } catch (error) { showAlert(error instanceof Error ? error.message : 'No se pudo guardar.', true); }
 }

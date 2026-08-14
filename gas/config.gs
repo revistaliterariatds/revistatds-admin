@@ -66,9 +66,14 @@ function getMailSubject(key, fallback, variables) {
 function handleConfigList(idToken) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('config-list');
+  if (cached) return JSON.parse(cached);
   var values = {};
   CONFIG_EDITABLES.forEach(function (key) { values[key] = getConfig(key); });
-  return ok({ config: values });
+  var result = ok({ config: values });
+  cache.put('config-list', JSON.stringify(result), 600);
+  return result;
 }
 
 function handleConfigSave(idToken, key, value) {
@@ -92,6 +97,7 @@ function handleConfigSave(idToken, key, value) {
     throw new ApiError('El asunto debe tener entre 1 y 200 caracteres.');
   }
   setConfig(key, value);
+  CacheService.getScriptCache().remove('config-list');
   return ok({ message: 'Configuración guardada.', key: key, value: value });
 }
 

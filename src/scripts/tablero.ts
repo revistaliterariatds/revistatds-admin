@@ -215,16 +215,14 @@ function editorSelect(tipo: 'asignar' | 'reasignar', id: string): string {
 
 // ── acciones ──
 async function cargar() {
-  const data = await api('panel/board/list');
+  const edPromise = esGestor ? api('panel/board/editors') : Promise.resolve({ status: 'ok', editores: [] });
+  const [data, ed] = await Promise.all([api('panel/board/list'), edPromise]);
   if (data.status !== 'ok') {
     alert(data.message || 'No se pudo cargar el tablero.');
     return;
   }
   cuentos = data.cuentos;
-  if (esGestor) {
-    const ed = await api('panel/board/editors');
-    if (ed.status === 'ok') editores = ed.editores || [];
-  }
+  if (esGestor && ed.status === 'ok') editores = ed.editores || [];
   renderPills();
   renderTable();
 }

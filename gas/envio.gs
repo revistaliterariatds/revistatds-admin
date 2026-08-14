@@ -64,6 +64,7 @@ function handleEnvio(data) {
   ]);
 
   addHistory(id, 'AUTOR', 'ENVIO_RECIBIDO', 'Alta desde formulario (' + convocatoria + ')');
+  clearBoardCache();
 
   var siteBase = getConfig('site_base_url');
   var seguimientoUrl = siteBase + '/autor/?token=' + token;

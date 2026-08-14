@@ -10,9 +10,17 @@ function cuentoPublico(c) {
   return out;
 }
 
+function clearBoardCache() {
+  CacheService.getScriptCache().remove('board-list');
+}
+
 // ── tablero completo (lectura) ──
 function handleBoardList(idToken) {
   var user = requireInternalUser(idToken);
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('board-list');
+  if (cached) return JSON.parse(cached);
+
   var sheet = getSheet('Tablero');
   var data = sheet.getDataRange().getValues();
   var rows = [];
@@ -21,7 +29,9 @@ function handleBoardList(idToken) {
     SHEETS.Tablero.forEach(function (h, j) { row[h] = data[i][j]; });
     rows.push(cuentoPublico(row));
   }
-  return ok({ cuentos: rows, yo: { email: user.email, rol: user.rol } });
+  var result = ok({ cuentos: rows, yo: { email: user.email, rol: user.rol } });
+  cache.put('board-list', JSON.stringify(result), 30);
+  return result;
 }
 
 // ── detalle de un cuento + historial ──
@@ -41,6 +51,7 @@ function asignarCuento(c, editorEmail, actor) {
   setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
   setEstado(c, ESTADOS.EN_REVISION);
   addHistory(c.id, actor, 'ASIGNADO', 'Asignado a ' + displayName(editorEmail));
+  clearBoardCache();
   try { sendAsignacion(editorEmail, c, docUrl); } catch (e) { /* el mail no bloquea la asignación */ }
   return docUrl;
 }
@@ -136,6 +147,7 @@ function handleDesasignar(idToken, id) {
       setEstado(c, ESTADOS.RECIBIDO);
     }
     addHistory(c.id, displayName(user.email), 'DESASIGNADO', 'Liberado ' + displayName(editorAnterior));
+    clearBoardCache();
     sendLiberacion(editorAnterior, c);
 
     return ok({ message: 'Cuento desasignado.', estado: c.estado });
@@ -161,6 +173,7 @@ function handleReasignar(idToken, id, editorEmail) {
     var anterior = c.editor_asignado;
     setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', editorEmail);
     addHistory(c.id, displayName(user.email), 'REASIGNADO', 'De ' + displayName(anterior) + ' a ' + displayName(editorEmail));
+    clearBoardCache();
     // Notifica al nuevo editor con el Doc existente (no se recrea).
     try { sendAsignacion(editorEmail, c, c.url_doc_correccion); } catch (e) { /* el mail no bloquea la reasignación */ }
 
@@ -200,6 +213,7 @@ function handlePedirCorrecciones(idToken, id, motivo) {
 
     setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
     addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', motivo || '');
+    clearBoardCache();
 
     return ok({ message: 'Se pidieron correcciones al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });
   } finally {
@@ -222,6 +236,7 @@ function handleRevisionTerminada(idToken, id) {
 
     setEstado(c, ESTADOS.ESPERANDO_APROBACION);
     addHistory(c.id, displayName(user.email), 'REVISION_TERMINADA', 'El editor terminó la revisión.');
+    clearBoardCache();
 
     var admins = getEmailsByRoles(ROLES_GESTORES);
     if (admins.length === 0) admins = [getSecret('ADMIN_EMAIL')].filter(Boolean);
@@ -263,6 +278,7 @@ function handleConsultarAutor(idToken, id) {
 
     setEstado(c, ESTADOS.CONSULTA_AUTOR);
     addHistory(c.id, displayName(user.email), 'CONSULTA_AUTOR', 'Se envió la versión al autor para aprobación.');
+    clearBoardCache();
     return ok({ message: 'La versión fue enviada al autor.', estado: ESTADOS.CONSULTA_AUTOR });
   } finally {
     lock.releaseLock();
@@ -283,6 +299,7 @@ function handlePublicar(idToken, id) {
 
     setEstado(c, ESTADOS.PUBLICADO);
     addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La versión aprobada fue marcada como publicada.');
+    clearBoardCache();
     notifyTeam('Publicado', displayName(user.email) + ' publicó "' + c.titulo + '"');
     return ok({ message: 'Cuento marcado como publicado.', estado: ESTADOS.PUBLICADO });
   } finally {
@@ -311,6 +328,7 @@ function handleResolverRechazo(idToken, id, resolucion) {
     setEstado(c, nuevoEstado);
     addHistory(c.id, displayName(user.email), resolucion === 'devolver' ? 'DEVUELTO_A_EDITOR' : 'DESCARTADO',
       resolucion === 'devolver' ? 'El equipo devolvió el cuento al editor.' : 'El equipo descartó el cuento.');
+    clearBoardCache();
     if (resolucion === 'devolver' && c.editor_asignado) {
       try { sendDevolucionEditor(c.editor_asignado, c); }
       catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la devolución de "' + c.titulo + '".'); }
