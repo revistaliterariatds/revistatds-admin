@@ -34,13 +34,14 @@ function handleBoardDetail(idToken, id) {
 
 // ── asignación compartida (auto o manual) ──
 function asignarCuento(c, editorEmail, actor) {
+  // El Doc se crea primero: si falla (scope), no se asigna nada.
+  var docUrl = createDocCorreccion(c, editorEmail);
   var sheet = getSheet('Tablero');
   setCell(sheet, c._rowIndex, 'editor_asignado', editorEmail);
+  setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
   setEstado(c, ESTADOS.EN_REVISION);
   addHistory(c.id, actor, 'ASIGNADO', 'Asignado a ' + displayName(editorEmail));
-  var docUrl = createDocCorreccion(c, editorEmail);
-  setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);
-  sendAsignacion(editorEmail, c, docUrl);
+  try { sendAsignacion(editorEmail, c, docUrl); } catch (e) { /* el mail no bloquea la asignación */ }
   return docUrl;
 }
 
@@ -175,17 +176,23 @@ function handlePedirCorrecciones(idToken, id, motivo) {
     }
     if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('El cuento no está en revisión.');
 
-    setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
-
-    // Token fresco para que el autor suba la versión.
+    // Token fresco + expiración (guardamos antes para que el link del mail valga).
     var token = Utilities.getUuid();
     var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
     var sheet = getSheet('Tablero');
     setCell(sheet, c._rowIndex, 'token_autor', token);
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
+    // El mail es crítico: si falla, revertimos el token y NO cambiamos el estado.
+    try {
+      sendPedirCorrecciones(c.email_autor, c, token);
+    } catch (e) {
+      setCell(sheet, c._rowIndex, 'token_autor', '');
+      throw new ApiError('No se pudo enviar el mail al autor: ' + (e.message || e));
+    }
+
+    setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
     addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', motivo || '');
-    sendPedirCorrecciones(c.email_autor, c, token);
 
     return ok({ message: 'Se pidieron correcciones al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });
   } finally {
