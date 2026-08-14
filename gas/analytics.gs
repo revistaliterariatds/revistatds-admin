@@ -1,59 +1,124 @@
-// analytics.gs — Cloudflare Web Analytics para ADMIN/SUPERVISOR.
+// analytics.gs — snapshots diarios de visitas para ADMIN/SUPERVISOR.
 
 var CF_GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
 var CF_CACHE_SECONDS = 600;
+var ANALYTICS_HEADERS = ['date', 'visits', 'source', 'updated_at'];
 
-function handleAnalyticsDaily(idToken, days) {
-  var user = requireInternalUser(idToken);
-  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+function analyticsSheet() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName('Analiticas');
+  if (!sheet) {
+    sheet = ss.insertSheet('Analiticas');
+    sheet.appendRow(ANALYTICS_HEADERS);
+  } else if (sheet.getLastRow() === 0) {
+    sheet.appendRow(ANALYTICS_HEADERS);
+  }
+  return sheet;
+}
 
-  days = parseInt(days || '7', 10);
-  if ([7, 8].indexOf(days) < 0) throw new ApiError('Este origen permite consultar hasta 8 días.');
+function analyticsDateKey(date) {
+  return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd');
+}
 
+function cloudflareConfig() {
   var token = getSecret('CLOUDFLARE_API_TOKEN');
   var zoneTag = getSecret('CLOUDFLARE_ZONE_TAG');
-  if (!token || !zoneTag) {
-    throw new ApiError('Analíticas no configuradas: faltan CLOUDFLARE_API_TOKEN o CLOUDFLARE_ZONE_TAG.');
-  }
-
-  var end = new Date();
-  var endCacheDate = Utilities.formatDate(end, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  var cache = CacheService.getScriptCache();
-  var cacheKey = 'analytics:' + days + ':' + endCacheDate;
-  var cached = cache.get(cacheKey);
-  if (cached) return ok({ days: days, daily: JSON.parse(cached), cached: true });
-
+  if (!token || !zoneTag) throw new ApiError('Analíticas no configuradas: faltan CLOUDFLARE_API_TOKEN o CLOUDFLARE_ZONE_TAG.');
   var host = String(getConfig('site_base_url') || 'https://tramasdelsur.com.ar').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  return { token: token, zoneTag: zoneTag, host: host };
+}
+
+function fetchCloudflareDay(date, config) {
+  var start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0));
+  var end = new Date(start.getTime() + 86400000 - 1);
   var query = 'query DailyVisits($zoneTag: String!, $startDate: Time!, $endDate: Time!, $host: String!) {'
     + ' viewer { zones(filter: { zoneTag: $zoneTag }) {'
     + ' httpRequestsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $startDate, datetime_leq: $endDate, clientRequestHTTPHost: $host, requestSource: "eyeball" })'
     + ' { sum { visits } dimensions { datetimeHour } } } } }';
-  var byDate = {};
-  // Esta zona limita GraphQL a ventanas de un día como máximo.
-  for (var offset = 0; offset < days; offset++) {
-    var day = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - offset, 0, 0, 0));
-    var nextDay = new Date(day.getTime() + 86400000 - 1);
-    var response = UrlFetchApp.fetch(CF_GRAPHQL_URL, {
-      method: 'post',
-      contentType: 'application/json',
-      headers: { Authorization: 'Bearer ' + token },
-      payload: JSON.stringify({ query: query, variables: { zoneTag: zoneTag, startDate: day.toISOString(), endDate: nextDay.toISOString(), host: host } }),
-      muteHttpExceptions: true,
-    });
-    if (response.getResponseCode() !== 200) throw new ApiError('Cloudflare devolvió HTTP ' + response.getResponseCode() + '.');
-
-    var body = JSON.parse(response.getContentText());
-    if (body.errors && body.errors.length) throw new ApiError('Cloudflare: ' + body.errors[0].message);
-    var zone = (((body.data || {}).viewer || {}).zones || [])[0];
-    var groups = zone ? zone.httpRequestsAdaptiveGroups || [] : [];
-    groups.forEach(function (group) {
-      var date = String(group.dimensions.datetimeHour || '').slice(0, 10);
-      if (date) byDate[date] = (byDate[date] || 0) + Number((group.sum || {}).visits || 0);
-    });
-  }
-  var daily = Object.keys(byDate).sort().map(function (date) {
-    return { date: date, visits: byDate[date] };
+  var response = UrlFetchApp.fetch(CF_GRAPHQL_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + config.token },
+    payload: JSON.stringify({ query: query, variables: { zoneTag: config.zoneTag, startDate: start.toISOString(), endDate: end.toISOString(), host: config.host } }),
+    muteHttpExceptions: true,
   });
+  if (response.getResponseCode() !== 200) throw new ApiError('Cloudflare devolvió HTTP ' + response.getResponseCode() + '.');
+  var body = JSON.parse(response.getContentText());
+  if (body.errors && body.errors.length) throw new ApiError('Cloudflare: ' + body.errors[0].message);
+  var zone = (((body.data || {}).viewer || {}).zones || [])[0];
+  var groups = zone ? zone.httpRequestsAdaptiveGroups || [] : [];
+  return groups.reduce(function (total, group) { return total + Number((group.sum || {}).visits || 0); }, 0);
+}
+
+function saveAnalyticsSnapshot(date, visits) {
+  var sheet = analyticsSheet();
+  var key = analyticsDateKey(date);
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === key) {
+      sheet.getRange(i + 1, 2, 1, 3).setValues([[visits, 'cloudflare-http', new Date()]]);
+      return;
+    }
+  }
+  sheet.appendRow([key, visits, 'cloudflare-http', new Date()]);
+}
+
+// Trigger diario: se ejecuta sobre el día UTC anterior, ya cerrado.
+function snapshotAnalyticsYesterday() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var date = new Date(Date.now() - 86400000);
+    saveAnalyticsSnapshot(date, fetchCloudflareDay(date, cloudflareConfig()));
+  } finally { lock.releaseLock(); }
+}
+
+// Ejecutar una vez para instalar el trigger diario. Es idempotente.
+function setupAnalyticsTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === 'snapshotAnalyticsYesterday') ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger('snapshotAnalyticsYesterday').timeBased().everyDays(1).atHour(3).create();
+}
+
+// Ejecutar una vez después de instalarlo para recuperar hasta los 7 días aún disponibles.
+function snapshotAnalyticsLastDays() {
+  var config = cloudflareConfig();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    for (var offset = 1; offset <= 7; offset++) {
+      var date = new Date(Date.now() - offset * 86400000);
+      saveAnalyticsSnapshot(date, fetchCloudflareDay(date, config));
+    }
+  } finally { lock.releaseLock(); }
+}
+
+function readAnalyticsSnapshots(days) {
+  var sheet = analyticsSheet();
+  var data = sheet.getDataRange().getValues();
+  var cutoff = days ? new Date(Date.now() - days * 86400000) : null;
+  return data.slice(1).filter(function (row) {
+    if (!row[0]) return false;
+    if (!cutoff) return true;
+    return new Date(String(row[0] + 'T00:00:00Z')).getTime() >= cutoff.getTime();
+  }).map(function (row) {
+    return { date: String(row[0]).slice(0, 10), visits: Number(row[1] || 0) };
+  }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+}
+
+function handleAnalyticsDaily(idToken, requestedDays) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  var value = String(requestedDays || '7');
+  var days = value === 'all' ? 0 : parseInt(value, 10);
+  if (value !== 'all' && [7, 30, 90, 365].indexOf(days) < 0) throw new ApiError('Período inválido.');
+
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'analytics-snapshots:' + (value === 'all' ? 'all' : days);
+  var cached = cache.get(cacheKey);
+  if (cached) return ok({ days: value === 'all' ? 'all' : days, daily: JSON.parse(cached), cached: true });
+  var daily = readAnalyticsSnapshots(days);
   cache.put(cacheKey, JSON.stringify(daily), CF_CACHE_SECONDS);
-  return ok({ days: days, daily: daily, cached: false });
+  return ok({ days: value === 'all' ? 'all' : days, daily: daily, cached: false });
 }

@@ -92,7 +92,8 @@ function renderChart(data: Visit[]) {
 }
 
 async function load() {
-  const days = Number((document.getElementById('analytics-days') as HTMLSelectElement).value);
+  const selected = (document.getElementById('analytics-days') as HTMLSelectElement).value;
+  const days: number | string = selected === 'all' ? 'all' : Number(selected);
   const data = await api('panel/analytics/daily', { days });
   if (data.status !== 'ok') { showAlert(data.message || 'No se pudieron cargar las analíticas.'); return; }
   renderChart(data.daily || []);
