@@ -29,9 +29,12 @@ function sendConfirmation(destinatario, nombre, titulo, seguimientoUrl) {
 
 var PANEL_URL = 'https://redaccion.tramasdelsur.com.ar';
 
+function siteBase() {
+  return getConfig('site_base_url') || 'https://tramasdelsur.com.ar';
+}
+
 function autorLink(token, accion) {
-  var base = getConfig('site_base_url') || 'https://tramasdelsur.com.ar';
-  var link = base + '/autor/?token=' + token;
+  var link = siteBase() + '/autor/?token=' + token;
   if (accion) link += '&accion=' + accion;
   return link;
 }
@@ -106,6 +109,8 @@ function sendConsultaAutor(autorEmail, cuento, token, textoCorregido, pdfBlob) {
     boton('#4b7f52', autorLink(token, 'approve'), 'Aprobar versión'),
     boton('#d95f1a', autorLink(token, 'edit'), 'Modificar versión'),
     boton('#a53d35', autorLink(token, 'reject'), 'No aprobar esta versión'),
+    '  <p style="font-size:14px;line-height:1.6;margin:20px 0 12px;color:#4a443e;">En caso de que quieras <strong>modificar</strong> la producción editada, deberás enviar un <strong>nuevo archivo</strong>. Podés hacerlo de dos maneras: haciendo clic en el botón <strong>Modificar versión</strong> (arriba) y subiendo tu nuevo archivo desde el enlace, o enviando una nueva producción mediante el formulario de envío de la página:</p>',
+    '  <p style="margin:0 0 24px;"><a href="' + siteBase() + '/enviar.html" style="display:block;width:100%;text-align:center;border:1px solid #d95f1a;color:#d95f1a;padding:14px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;font-family:Lato,Arial,sans-serif;box-sizing:border-box;">Enviar una nueva producción</a></p>',
     '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>',
     '</div>',
   ].join('');
