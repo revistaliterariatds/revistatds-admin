@@ -3,6 +3,7 @@ import { api, clearSession, getIdToken, getUser } from './api';
 const user = getUser();
 const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 type Visit = { date: string; visits: number };
+let lastDaily: Visit[] = [];
 
 function renderNav() {
   const nav = document.getElementById('nav-user');
@@ -36,6 +37,7 @@ function formatDate(value: string, withYear = false) {
 
 function renderChart(data: Visit[]) {
   const svg = document.getElementById('visits-chart')!;
+  lastDaily = data;
   svg.replaceChildren();
   const empty = document.getElementById('analytics-empty')!;
   empty.hidden = data.length > 0;
@@ -47,8 +49,18 @@ function renderChart(data: Visit[]) {
     return;
   }
 
-  const width = 920; const height = 380;
-  const left = 62; const right = 24; const top = 24; const bottom = 58;
+  const card = svg.parentElement as HTMLElement;
+  const cardStyle = window.getComputedStyle(card);
+  const pad = parseFloat(cardStyle.paddingLeft) + parseFloat(cardStyle.paddingRight);
+  const available = Math.max(260, card.clientWidth - pad);
+  const narrow = available < 600;
+  const width = narrow ? available : 920;
+  const height = narrow ? 240 : 380;
+  const left = narrow ? 42 : 62;
+  const right = narrow ? 14 : 24;
+  const top = 18;
+  const bottom = narrow ? 38 : 58;
+  svg.setAttribute('viewBox', `0 0 ${Math.round(width)} ${Math.round(height)}`);
   const plotWidth = width - left - right; const plotHeight = height - top - bottom;
   const max = Math.max(1, ...data.map((item) => item.visits));
   const scaleMax = Math.max(5, Math.ceil(max / 5) * 5);
@@ -78,7 +90,8 @@ function renderChart(data: Visit[]) {
     const circle = svgElement('circle', { cx: String(x(index)), cy: String(y(item.visits)), r: '4', class: 'chart-point' });
     const title = svgElement('title', {}); title.textContent = `${formatDate(item.date, true)}: ${item.visits} visitas`;
     circle.appendChild(title); svg.appendChild(circle);
-    if (data.length <= 7 || index === 0 || index === data.length - 1 || index % 5 === 0) {
+    const labelEvery = data.length <= 7 ? 1 : Math.ceil(data.length / (narrow ? 5 : 8));
+    if (index === 0 || index === data.length - 1 || index % labelEvery === 0) {
       const label = svgElement('text', { x: String(x(index)), y: String(height - 20), class: 'chart-x-label', 'text-anchor': 'middle' });
       label.textContent = formatDate(item.date); svg.appendChild(label);
     }
@@ -136,6 +149,7 @@ function init() {
   if (!user || !getIdToken() || !esGestor) { window.location.replace('/tablero/'); return; }
   renderNav();
   document.getElementById('analytics-days')?.addEventListener('change', load);
+  window.addEventListener('resize', () => { if (lastDaily.length) renderChart(lastDaily); });
   load();
 }
 
