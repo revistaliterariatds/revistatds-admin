@@ -49,6 +49,11 @@ function esGestor(user) {
   return ROLES_GESTORES.indexOf(user.rol) >= 0;
 }
 
+function esEditorActivo(email) {
+  var u = resolveUser(email);
+  return !!u && u.rol === ROLES.EDITOR && u.activo;
+}
+
 // ── listado de editores activos (para el dropdown "Asignar a…") ──
 function handleBoardEditors(idToken) {
   var user = requireInternalUser(idToken);
@@ -93,6 +98,7 @@ function handleAsignar(idToken, id, editorEmail) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
   if (!editorEmail) throw new ApiError('Falta el editor.');
+  if (!esEditorActivo(editorEmail)) throw new ApiError('El destino debe ser un EDITOR activo.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -143,6 +149,7 @@ function handleReasignar(idToken, id, editorEmail) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
   if (!editorEmail) throw new ApiError('Falta el editor.');
+  if (!esEditorActivo(editorEmail)) throw new ApiError('El destino debe ser un EDITOR activo.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -155,7 +162,7 @@ function handleReasignar(idToken, id, editorEmail) {
     setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', editorEmail);
     addHistory(c.id, displayName(user.email), 'REASIGNADO', 'De ' + displayName(anterior) + ' a ' + displayName(editorEmail));
     // Notifica al nuevo editor con el Doc existente (no se recrea).
-    sendAsignacion(editorEmail, c, c.url_doc_correccion);
+    try { sendAsignacion(editorEmail, c, c.url_doc_correccion); } catch (e) { /* el mail no bloquea la reasignación */ }
 
     return ok({ message: 'Cuento reasignado.', estado: c.estado });
   } finally {
