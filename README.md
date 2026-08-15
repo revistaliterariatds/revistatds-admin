@@ -12,7 +12,7 @@ Panel editorial (SPA estática en **Astro**) para el circuito editorial de
 - **Astro** (static SSG) — sin integraciones, sin framework de UI.
 - **Google Identity Services** (popup) → ID token en body → API GAS (evita preflight CORS).
 - Identidad visual **TDS** (tokens copiados de `assets/css/variables.css` del sitio).
-- RBAC: `ADMINISTRADOR`/`WEBMASTER` (gestión completa), `SUPERVISOR` (operación y lectura de Usuarios) y `EDITOR` (solo Tablero y cuentos asignados).
+- RBAC: `ADMINISTRADOR`/`WEBMASTER` (gestión completa, incl. cambio de estado de cualquier publicación), `SUPERVISOR` (operación y lectura de Usuarios, puede aprobar) y `EDITOR` (tablero desde `PRESELECCIONADO`, autoasignación y cuentos asignados).
 
 ## Requisitos
 
@@ -71,6 +71,15 @@ src/
     └── global.css
 ```
 
+## Tablero y flujo editorial
+
+- **Estados** (en orden): `RECIBIDO` → `PRESELECCIONADO` → `EN_REVISIÓN` → `CORRECCIONES_SOLICITADAS` → `ESPERANDO_APROBACIÓN` → `CONSULTA_AUTOR` / `APROBADO` → `PUBLICADO` (+ `RECHAZADO_POR_AUTOR`, `DESCARTADO`).
+- **Visibilidad por rol**: `RECIBIDO` (bandeja de entrada) solo lo ven ADMIN/WEBMASTER/SUPERVISOR. El EDITOR ve desde `PRESELECCIONADO` y **se autoasigna desde ahí**.
+- **Acceso al documento**: todo usuario logueado ve el botón **"Doc"** en cada fila desde el primer momento (apunta al doc de corrección; si aún no existe, a la carpeta con el original).
+- **Aprobar**: ADMIN/WEBMASTER/SUPERVISOR pueden pasar `ESPERANDO_APROBACIÓN` → `APROBADO` directamente (botón "Aprobar" junto a "Consultar al autor").
+- **Control administrativo**: ADMIN/WEBMASTER pueden **cambiar el estado de cualquier publicación en cualquier momento** desde el detalle (selector "Cambiar estado").
+- El backend filtra `RECIBIDO` para el editor y valida que la autoasignación sea solo desde `PRESELECCIONADO`; `desasignar` devuelve la publicación a `PRESELECCIONADO`.
+
 ## Rendimiento
 
 - Keep-warm de Apps Script: trigger cada 5 min (`keepAlive` + `setupKeepAliveTrigger`) para evitar el cold start.
@@ -79,12 +88,12 @@ src/
 
 ## Medición de descargas
 
-El sitio público registra clics en los PDF de ediciones (`descarga`, público). El panel muestra totales por edición con desglose "leer"/"descargar" y filtro por período. Los datos son append-only en la hoja `Descargas` y crecen históricamente desde su activación.
+El sitio público registra clics en los PDF de ediciones (`descarga`, público). El panel muestra totales por edición con desglose "leer"/"descargar", filtro por período y **contador histórico** (clics desde la activación, como en Visitas). Los datos son append-only en la hoja `Descargas` y crecen históricamente.
 
 ## Agenda
 
 - Pestaña visible para todos los logueados: calendario mensual (lun–dom), hoy resaltado, **varias citas por día** (contador + tooltip con creador y nº de comentarios) y "próximas citas".
-- Tipos con color (`reunion` · `cierre_edicion` · `evento` · `otro`), Meet manual (link + acceso a `meet.google.com/home`), hilo de comentarios por cita.
+- Tipos con color (`reunion` · `cierre_edicion` · `evento` · `otro`), Meet manual (link + acceso a `meet.google.com/home`), **horario con inicio y fin** (`hora` / `hora_fin`, ambos opcionales), hilo de comentarios por cita.
 - Permisos: **ver/crear/comentar** todos los logueados; **editar/borrar** ADMIN/WEBMASTER.
 - Mail al crear (checkbox "Notificar por mail"): a todos los roles activos, con botones **"Ver agenda"** y **"Agregar a mi calendario"** (Google Calendar `action=TEMPLATE`, con horario o día completo) y link de Meet.
 - Caché: `CacheService` 30 s + `localStorage` (`tds-agenda-cache-v2`) con render instantáneo e invalidación en cada mutación.
@@ -113,10 +122,11 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Flujo de autor: estado, aprobación, rechazo y nuevas versiones.
 - Usuarios, Configuración, Visitas y Descargas con permisos por rol.
 - Snapshots diarios de visitas en la hoja `Analiticas` e histórico indefinido práctico.
-- Contador histórico de visitas y medición de descargas de ediciones.
-- Agenda (citas, comentarios, Meet, mails, caché local) y ciclo de Ediciones (fechas elegibles sin solapamiento, auto-citas).
+- Contador histórico de visitas y medición de descargas de ediciones (con contador histórico).
+- Agenda (citas, comentarios, Meet, horarios con inicio/fin, mails, caché local) y ciclo de Ediciones (fechas elegibles sin solapamiento, auto-citas).
+- Tablero: estado `PRESELECCIONADO` con visibilidad por rol, botón "Doc" para todos, aprobar desde "En aprobación" y cambio de estado administrativo.
 - Mail de aprobación con PDF adjunto y botones de un solo uso; aviso al equipo cuando el autor pide modificar.
 - Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
-- QA integral y corte productivo todavía pendientes.
+- QA automatizado ejecutado (17/17 PASS contra producción, sin login) — ver log en `revistatds/docs/plan-editorial.md`.
 
 Ver el plan completo en `revistatds/docs/plan-editorial.md` y el contrato GAS en `gas/README.md`.
