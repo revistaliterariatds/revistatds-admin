@@ -147,7 +147,7 @@ function handleAutorEdit(token, archivos) {
     clearBoardCache();
     if (c.editor_asignado) {
       try {
-        // Desde CONSULTA_AUTOR el autor pide modificar: aviso a editor + ADMIN/SUPERVISOR
+        // Desde CONSULTA_AUTOR el autor pide modificar: aviso a editor + COORDINADOR/SUPERVISOR
         // para que se contacten y definan. Desde CORRECCIONES_SOLICITADAS solo al editor.
         if (estadoAnterior === ESTADOS.CONSULTA_AUTOR) sendSolicitudModificacion(c);
         else sendNuevaVersion(c.editor_asignado, c);

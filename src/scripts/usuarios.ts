@@ -2,7 +2,7 @@ import { api, clearSession, getIdToken, getUser } from './api';
 
 interface UsuarioPanel { email: string; rol: string; nombre: string; alias: string; usar_alias_notif: boolean; activo: boolean; }
 const user = getUser();
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
+const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 let puedeEditar = false;
 let usuarios: UsuarioPanel[] = [];
 

@@ -93,8 +93,8 @@ const { title, description } = Astro.props;
 
     <script is:inline>
       const sessionUser = (() => { try { return JSON.parse(sessionStorage.getItem('tds_user') || 'null'); } catch { return null; } })();
-      const canSeeAdminTabs = ['ADMINISTRADOR', 'WEBMASTER', 'SUPERVISOR'].includes(sessionUser?.rol);
-      const canManageEdiciones = ['ADMINISTRADOR', 'WEBMASTER'].includes(sessionUser?.rol);
+      const canSeeAdminTabs = ['COORDINADOR', 'WEBMASTER', 'SUPERVISOR'].includes(sessionUser?.rol);
+      const canManageEdiciones = ['COORDINADOR', 'WEBMASTER'].includes(sessionUser?.rol);
       document.querySelectorAll('[data-admin-tab]').forEach((link) => { link.hidden = !canSeeAdminTabs; });
       document.querySelectorAll('[data-admin-only-tab]').forEach((link) => { link.hidden = !canManageEdiciones; });
       document.querySelectorAll('.nav-links a').forEach((link) => {

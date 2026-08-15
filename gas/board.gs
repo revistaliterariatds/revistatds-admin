@@ -36,7 +36,7 @@ function handleBoardList(idToken) {
     cache.put('board-list', JSON.stringify(rows), 30);
   }
 
-  // Visibilidad por rol: RECIBIDO solo lo ven ADMIN/WEBMASTER/SUPERVISOR.
+  // Visibilidad por rol: RECIBIDO solo lo ven COORDINADOR/WEBMASTER/SUPERVISOR.
   // El EDITOR ve desde PRESELECCIONADO en adelante.
   if (user.rol === ROLES.EDITOR) {
     rows = rows.filter(function (r) { return r.estado !== ESTADOS.RECIBIDO; });
@@ -116,7 +116,7 @@ function handleAsignarme(idToken, id) {
   }
 }
 
-// ── asignar (ADMIN/SUPERVISOR) ──
+// ── asignar (COORDINADOR/SUPERVISOR) ──
 function handleAsignar(idToken, id, editorEmail) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -141,7 +141,7 @@ function handleAsignar(idToken, id, editorEmail) {
   }
 }
 
-// ── desasignar (ADMIN/SUPERVISOR) ──
+// ── desasignar (COORDINADOR/SUPERVISOR) ──
 function handleDesasignar(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -169,7 +169,7 @@ function handleDesasignar(idToken, id) {
   }
 }
 
-// ── reasignar (ADMIN/SUPERVISOR) ──
+// ── reasignar (COORDINADOR/SUPERVISOR) ──
 function handleReasignar(idToken, id, editorEmail) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -298,7 +298,7 @@ function handleConsultarAutor(idToken, id) {
   }
 }
 
-// ── publicación (ADMIN/SUPERVISOR) ──
+// ── publicación (COORDINADOR/SUPERVISOR) ──
 function handlePublicar(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -320,7 +320,7 @@ function handlePublicar(idToken, id) {
   }
 }
 
-// ── resolución de rechazo del autor (ADMIN/SUPERVISOR) ──
+// ── resolución de rechazo del autor (COORDINADOR/SUPERVISOR) ──
 function handleResolverRechazo(idToken, id, resolucion) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -352,7 +352,7 @@ function handleResolverRechazo(idToken, id, resolucion) {
   }
 }
 
-// ── aprobar directamente (ADMIN/SUPERVISOR) desde ESPERANDO_APROBACIÓN ──
+// ── aprobar directamente (COORDINADOR/SUPERVISOR) desde ESPERANDO_APROBACIÓN ──
 function handleAprobar(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -375,10 +375,10 @@ function handleAprobar(idToken, id) {
   }
 }
 
-// ── cambiar estado arbitrario (ADMIN/WEBMASTER, en cualquier momento) ──
+// ── cambiar estado arbitrario (COORDINADOR/WEBMASTER, en cualquier momento) ──
 function handleCambiarEstado(idToken, id, nuevoEstado) {
   var user = requireInternalUser(idToken);
-  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede cambiar estados.');
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede cambiar estados.');
 
   var estado = String(nuevoEstado || '').trim();
   var estadosValidos = Object.keys(ESTADOS).map(function (k) { return ESTADOS[k]; });

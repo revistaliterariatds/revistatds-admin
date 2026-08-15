@@ -28,8 +28,8 @@ const TIPOS: Record<string, { label: string; color: string }> = {
 };
 
 const user = getUser();
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER';
+const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
+const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let citas: Cita[] = [];
 let mesVisible = new Date();

@@ -43,8 +43,8 @@ let ediciones: { numero: string; estado: string }[] = [];
 
 // ── sesión ──
 const user = getUser();
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER';
+const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
+const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');

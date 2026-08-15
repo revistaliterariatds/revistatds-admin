@@ -12,7 +12,7 @@ Panel editorial (SPA estática en **Astro**) para el circuito editorial de
 - **Astro** (static SSG) — sin integraciones, sin framework de UI.
 - **Google Identity Services** (popup) → ID token en body → API GAS (evita preflight CORS).
 - Identidad visual **TDS** (tokens copiados de `assets/css/variables.css` del sitio).
-- RBAC: `ADMINISTRADOR`/`WEBMASTER` (gestión completa, incl. cambio de estado de cualquier publicación), `SUPERVISOR` (operación y lectura de Usuarios, puede aprobar) y `EDITOR` (tablero desde `PRESELECCIONADO`, autoasignación y cuentos asignados).
+- RBAC: `COORDINADOR`/`WEBMASTER` (gestión completa, incl. cambio de estado de cualquier publicación), `SUPERVISOR` (operación y lectura de Usuarios, puede aprobar) y `EDITOR` (tablero desde `PRESELECCIONADO`, autoasignación y cuentos asignados).
 
 ## Requisitos
 
@@ -74,10 +74,10 @@ src/
 ## Tablero y flujo editorial
 
 - **Estados** (en orden): `RECIBIDO` → `PRESELECCIONADO` → `EN_REVISIÓN` → `CORRECCIONES_SOLICITADAS` → `ESPERANDO_APROBACIÓN` → `CONSULTA_AUTOR` / `APROBADO` → `PUBLICADO` (+ `RECHAZADO_POR_AUTOR`, `DESCARTADO`).
-- **Visibilidad por rol**: `RECIBIDO` (bandeja de entrada) solo lo ven ADMIN/WEBMASTER/SUPERVISOR. El EDITOR ve desde `PRESELECCIONADO` y **se autoasigna desde ahí**.
+- **Visibilidad por rol**: `RECIBIDO` (bandeja de entrada) solo lo ven COORDINADOR/WEBMASTER/SUPERVISOR. El EDITOR ve desde `PRESELECCIONADO` y **se autoasigna desde ahí**.
 - **Acceso al documento**: todo usuario logueado ve el botón **"Doc"** en cada fila desde el primer momento (apunta al doc de corrección; si aún no existe, a la carpeta con el original).
-- **Aprobar**: ADMIN/WEBMASTER/SUPERVISOR pueden pasar `ESPERANDO_APROBACIÓN` → `APROBADO` directamente (botón "Aprobar" junto a "Consultar al autor").
-- **Control administrativo**: ADMIN/WEBMASTER pueden **cambiar el estado de cualquier publicación en cualquier momento** desde el detalle (selector "Cambiar estado").
+- **Aprobar**: COORDINADOR/WEBMASTER/SUPERVISOR pueden pasar `ESPERANDO_APROBACIÓN` → `APROBADO` directamente (botón "Aprobar" junto a "Consultar al autor").
+- **Control administrativo**: COORDINADOR/WEBMASTER pueden **cambiar el estado de cualquier publicación en cualquier momento** desde el detalle (selector "Cambiar estado").
 - El backend filtra `RECIBIDO` para el editor y valida que la autoasignación sea solo desde `PRESELECCIONADO`; `desasignar` devuelve la publicación a `PRESELECCIONADO`.
 
 ## Rendimiento
@@ -94,7 +94,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 
 - Pestaña visible para todos los logueados: calendario mensual (lun–dom), hoy resaltado, **varias citas por día** (contador + tooltip con creador y nº de comentarios) y "próximas citas".
 - Tipos con color (`reunion` · `cierre_edicion` · `evento` · `otro`), Meet manual (link + acceso a `meet.google.com/home`), **horario con inicio y fin** (`hora` / `hora_fin`, ambos opcionales), hilo de comentarios por cita.
-- Permisos: **ver/crear/comentar** todos los logueados; **editar/borrar** ADMIN/WEBMASTER.
+- Permisos: **ver/crear/comentar** todos los logueados; **editar/borrar** COORDINADOR/WEBMASTER.
 - Mail al crear (checkbox "Notificar por mail"): a todos los roles activos, con botones **"Ver agenda"** y **"Agregar a mi calendario"** (Google Calendar `action=TEMPLATE`, con horario o día completo) y link de Meet.
 - Caché: `CacheService` 30 s + `localStorage` (`tds-agenda-cache-v2`) con render instantáneo e invalidación en cada mutación.
 - Auto-citas al **cerrar/abrir ediciones** (tipo `cierre_edicion`/`evento`, sin mail).
@@ -103,8 +103,8 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 ## Ediciones
 
 - Ciclo de recepción: hoja `Ediciones` (`numero · estado · fecha_apertura · fecha_cierre`) + columna `edicion` en `Tablero` (etiqueta de cada envío).
-- **Abrir** (ADMIN/WEBMASTER): fecha de apertura elegida; la nueva edición nace **sin fecha de cierre** (se define al cerrar). **Cerrar**: fecha de cierre elegida. Validación de **no solapamiento** entre ediciones (compartir días), solo una abierta a la vez, `numero` = último+1.
-- **Reasignar edición** de un envío: ADMIN/WEBMASTER/SUPERVISOR desde el tablero.
+- **Abrir** (COORDINADOR/WEBMASTER): fecha de apertura elegida; la nueva edición nace **sin fecha de cierre** (se define al cerrar). **Cerrar**: fecha de cierre elegida. Validación de **no solapamiento** entre ediciones (compartir días), solo una abierta a la vez, `numero` = último+1.
+- **Reasignar edición** de un envío: COORDINADOR/WEBMASTER/SUPERVISOR desde el tablero.
 - Migración idempotente `migrateEdiciones()` (crea hoja, agrega columna `edicion` y siembra edición inicial 3) — ejecutable una sola vez.
 
 ## Mail de aprobación al autor
@@ -112,7 +112,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Adjunta el **documento de corrección del editor en PDF** (el autor nunca recibe links de Drive ni docs editables; fallback al texto en el cuerpo si no hay doc).
 - Tres **botones iguales con colores TDS** (Aprobar verde / Modificar naranja / No aprobar rojo), de **un solo uso** (el token se consume con la primera acción).
 - Explica que modificar requiere enviar un **nuevo archivo**: adjuntándolo **respondiendo el correo**, o como **nueva producción** con botón directo al formulario (`enviar.html`).
-- Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + ADMIN/WEBMASTER/SUPERVISOR** reciben aviso de que el autor solicita modificar su cuento.
+- Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + COORDINADOR/WEBMASTER/SUPERVISOR** reciben aviso de que el autor solicita modificar su cuento.
 - La página del autor (`/autor/`) muestra un **popup de confirmación** del resultado (aprobada / rechazo aceptado + invitación / versión recibida).
 
 ## Estado verificado

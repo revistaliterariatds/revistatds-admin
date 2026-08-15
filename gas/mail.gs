@@ -125,7 +125,7 @@ function sendConsultaAutor(autorEmail, cuento, token, textoCorregido, pdfBlob) {
 }
 
 // Aviso al equipo cuando el autor pide modificar su cuento (subió una nueva
-// versión desde CONSULTA_AUTOR): editor asignado + ADMINISTRADOR/WEBMASTER/SUPERVISOR.
+// versión desde CONSULTA_AUTOR): editor asignado + COORDINADOR/WEBMASTER/SUPERVISOR.
 function sendSolicitudModificacion(cuento) {
   var destinatarios = [];
   if (cuento.editor_asignado) destinatarios.push(String(cuento.editor_asignado));

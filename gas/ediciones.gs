@@ -1,6 +1,6 @@
 // ediciones.gs — Ediciones de la revista: ciclo abrir/cerrar con reglas de fecha
-// y reasignación de la edición de cada envío. Cerrar/abrir = ADMIN/WEBMASTER;
-// reasignar por publicación = ADMIN/WEBMASTER/SUPERVISOR.
+// y reasignación de la edición de cada envío. Cerrar/abrir = COORDINADOR/WEBMASTER;
+// reasignar por publicación = COORDINADOR/WEBMASTER/SUPERVISOR.
 // Al cerrar/abrir se crea una cita automática en la Agenda.
 
 var EDICION_INICIAL = 3; // edición que estaba abierta al migrar al nuevo sistema
@@ -84,10 +84,10 @@ function handleEdicionesList(idToken) {
   return result;
 }
 
-// ── cerrar edición N con fecha elegida (ADMIN/WEBMASTER) ──
+// ── cerrar edición N con fecha elegida (COORDINADOR/WEBMASTER) ──
 function handleCerrarEdicion(idToken, numero, fechaCierre) {
   var user = requireInternalUser(idToken);
-  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede gestionar ediciones.');
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede gestionar ediciones.');
 
   var fecha = validarFechaInput(fechaCierre);
   if (!fecha) throw new ApiError('Ingresá una fecha de cierre válida.');
@@ -131,13 +131,13 @@ function handleCerrarEdicion(idToken, numero, fechaCierre) {
   }
 }
 
-// ── abrir nueva edición con fecha elegida (ADMIN/WEBMASTER) ──
+// ── abrir nueva edición con fecha elegida (COORDINADOR/WEBMASTER) ──
 // La nueva edición nace sin fecha de cierre (se define al cerrarla).
 // Regla: la fecha de apertura no puede superponerse con ninguna edición existente
 // (por eso la anterior debe estar cerrada y con cierre anterior a esa fecha).
 function handleAbrirEdicion(idToken, fechaApertura) {
   var user = requireInternalUser(idToken);
-  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede gestionar ediciones.');
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede gestionar ediciones.');
 
   var fecha = validarFechaInput(fechaApertura);
   if (!fecha) throw new ApiError('Ingresá una fecha de apertura válida.');
@@ -175,7 +175,7 @@ function handleAbrirEdicion(idToken, fechaApertura) {
   }
 }
 
-// ── reasignar la edición de una publicación (ADMIN/WEBMASTER/SUPERVISOR) ──
+// ── reasignar la edición de una publicación (COORDINADOR/WEBMASTER/SUPERVISOR) ──
 function handleCambiarEdicion(idToken, id, edicion) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');

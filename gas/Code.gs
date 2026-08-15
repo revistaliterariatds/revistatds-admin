@@ -162,8 +162,8 @@ function seedRoles() {
   var admin = getSecret('ADMIN_EMAIL') || 'revistatramasdelsur@gmail.com';
   var emitter = getSecret('EMITTER_EMAIL') || 'revistaliterariatds@gmail.com';
 
-  sheet.appendRow([admin, ROLES.ADMINISTRADOR, '', '', 'FALSE', 'TRUE']);
+  sheet.appendRow([admin, ROLES.COORDINADOR, '', '', 'FALSE', 'TRUE']);
   if (emitter && String(emitter).toLowerCase() !== String(admin).toLowerCase()) {
-    sheet.appendRow([emitter, ROLES.ADMINISTRADOR, '', '', 'FALSE', 'TRUE']);
+    sheet.appendRow([emitter, ROLES.COORDINADOR, '', '', 'FALSE', 'TRUE']);
   }
 }

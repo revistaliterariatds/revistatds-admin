@@ -1,7 +1,7 @@
 import { api, clearSession, getIdToken, getUser } from './api';
 
 const user = getUser();
-const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
+const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 type Fila = { archivo: string; total: number };
 type Acciones = { leer: number; descargar: number };
 

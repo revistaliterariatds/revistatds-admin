@@ -1,4 +1,4 @@
-// users.gs — gestión de Roles (ADMIN modifica, SUPERVISOR solo lee).
+// users.gs — gestión de Roles (COORDINADOR modifica, SUPERVISOR solo lee).
 
 function handleUsersList(idToken) {
   var user = requireInternalUser(idToken);
@@ -23,14 +23,14 @@ function handleUsersList(idToken) {
       activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
     });
   }
-  var result = ok({ users: users, puede_editar: user.rol === ROLES.ADMINISTRADOR || user.rol === ROLES.WEBMASTER });
+  var result = ok({ users: users, puede_editar: user.rol === ROLES.COORDINADOR || user.rol === ROLES.WEBMASTER });
   cache.put('users-list', JSON.stringify(result), 60);
   return result;
 }
 
 function handleUserSave(idToken, payload) {
   var actor = requireInternalUser(idToken);
-  if (actor.rol !== ROLES.ADMINISTRADOR && actor.rol !== ROLES.WEBMASTER) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede modificar usuarios.');
+  if (actor.rol !== ROLES.COORDINADOR && actor.rol !== ROLES.WEBMASTER) throw new AuthError('Solo COORDINADOR o WEBMASTER puede modificar usuarios.');
   payload = payload || {};
 
   var email = String(payload.email || '').trim().toLowerCase();
@@ -57,4 +57,24 @@ function handleUserSave(idToken, payload) {
   else sheet.getRange(row + 1, 1, 1, values.length).setValues([values]);
   CacheService.getScriptCache().remove('users-list');
   return ok({ message: row < 0 ? 'Usuario agregado.' : 'Usuario actualizado.' });
+}
+
+// Migración única: renombra el rol ADMINISTRADOR → COORDINADOR en la hoja Roles.
+// Ejecutar una vez desde el editor de Apps Script (Run migrateRoles). Idempotente.
+function migrateRoles() {
+  var sheet = getSheet('Roles');
+  var idx = headerIndex(sheet);
+  if (idx.rol === undefined) throw new ApiError('Columna "rol" no encontrada en Roles.');
+
+  var data = sheet.getDataRange().getValues();
+  var updated = 0;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idx.rol]).toUpperCase() === 'ADMINISTRADOR') {
+      sheet.getRange(i + 1, idx.rol + 1).setValue(ROLES.COORDINADOR);
+      updated++;
+    }
+  }
+  CacheService.getScriptCache().remove('users-list');
+  Logger.log('migrateRoles: ' + updated + ' fila(s) renombrada(s) a COORDINADOR.');
+  return 'OK (' + updated + ' fila(s) actualizada(s))';
 }

@@ -1,4 +1,4 @@
-// analytics.gs — snapshots diarios de visitas para ADMIN/SUPERVISOR.
+// analytics.gs — snapshots diarios de visitas para COORDINADOR/SUPERVISOR.
 
 var CF_GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
 var CF_CACHE_SECONDS = 600;

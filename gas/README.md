@@ -36,7 +36,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
    el manifest (o dejar que se genere y ajustar `webapp`/scopes).
 4. **Ejecutar `setup()` una vez** (autorizar los permisos):
     - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`, `Agenda`, `AgendaComentarios`, `Ediciones` (la hoja `Analiticas` se crea al primer snapshot);
-   - siembra `Config` y los roles iniciales (ADMINISTRADOR + emisor).
+   - siembra `Config` y los roles iniciales (COORDINADOR + emisor).
 5. **Script Properties** (Configuración del proyecto → Propiedades de secuencia de
    comandos) — agregar:
    - `OAUTH_CLIENT_ID`: el OAuth Client ID (tipo Web) de Google Cloud (obligatorio para `auth.gs`).
@@ -76,24 +76,24 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
 | `panel/board/aprobar` | idToken + gestor | pasa `ESPERANDO_APROBACIÓN` → `APROBADO` |
-| `panel/board/cambiar-estado` | idToken + ADMIN/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
+| `panel/board/cambiar-estado` | idToken + COORDINADOR/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío |
-| `panel/ediciones/list` | idToken + ADMIN/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
-| `panel/ediciones/abrir` | idToken + ADMIN/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
-| `panel/ediciones/cerrar` | idToken + ADMIN/WEBMASTER | cierra edición con `fecha_cierre` elegida |
+| `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
+| `panel/ediciones/abrir` | idToken + COORDINADOR/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
+| `panel/ediciones/cerrar` | idToken + COORDINADOR/WEBMASTER | cierra edición con `fecha_cierre` elegida |
 | `panel/agenda/list` | idToken | citas del mes (fecha/hora y `hora_fin` normalizadas, contador de comentarios) |
 | `panel/agenda/detalle` | idToken | cita + hilo de comentarios |
 | `panel/agenda/crear` | idToken | crea cita (con `notificar` opcional → mail a roles activos) |
 | `panel/agenda/comentar` | idToken | agrega comentario al hilo |
-| `panel/agenda/editar` | idToken + ADMIN/WEBMASTER | edita cita |
-| `panel/agenda/borrar` | idToken + ADMIN/WEBMASTER | borra cita y sus comentarios |
-| `panel/users/list` | idToken + ADMIN/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
-| `panel/users/save` | idToken + ADMIN/WEBMASTER | alta/edición de una fila de `Roles` |
-| `panel/config/list` | idToken + ADMIN/SUPERVISOR | valores no secretos de `Config` |
-| `panel/config/save` | idToken + ADMIN/SUPERVISOR | actualiza un valor permitido de `Config` |
-| `panel/analytics/daily` | idToken + ADMIN/SUPERVISOR | serie de visitas por día desde Cloudflare |
+| `panel/agenda/editar` | idToken + COORDINADOR/WEBMASTER | edita cita |
+| `panel/agenda/borrar` | idToken + COORDINADOR/WEBMASTER | borra cita y sus comentarios |
+| `panel/users/list` | idToken + COORDINADOR/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
+| `panel/users/save` | idToken + COORDINADOR/WEBMASTER | alta/edición de una fila de `Roles` |
+| `panel/config/list` | idToken + COORDINADOR/SUPERVISOR | valores no secretos de `Config` |
+| `panel/config/save` | idToken + COORDINADOR/SUPERVISOR | actualiza un valor permitido de `Config` |
+| `panel/analytics/daily` | idToken + COORDINADOR/SUPERVISOR | serie de visitas por día desde Cloudflare |
 | `descarga` | pública (anónima) | registra un clic de leer/descargar una edición PDF |
-| `panel/descargas/list` | idToken + ADMIN/WEBMASTER/SUPERVISOR | totales y desglose por edición |
+| `panel/descargas/list` | idToken + COORDINADOR/WEBMASTER/SUPERVISOR | totales y desglose por edición |
 
 La consulta usa el dataset GraphQL soportado `httpRequestsAdaptiveGroups`,
 filtrado por hostname y agrupado por hora. `snapshotAnalyticsYesterday()` guarda
@@ -116,7 +116,7 @@ El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
 ## Descargas de ediciones
 
 - `descarga` (público): registra `{ archivo, accion (leer|descargar) }` en la hoja `Descargas`.
-- `panel/descargas/list`: totales por edición y desglose por acción (ADMIN/WEBMASTER/SUPERVISOR).
+- `panel/descargas/list`: totales por edición y desglose por acción (COORDINADOR/WEBMASTER/SUPERVISOR).
 - El sitio público agrega un tracker aditivo en `assets/js/app.js` que no interfiere con el circuito de envíos.
 El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`.
 
@@ -132,7 +132,7 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 ### Mails del autor
 
 - **Consulta de aprobación**: adjunta el **doc de corrección en PDF** (`pdfDocCorreccion`), sin links de Drive ni docs editables (fallback: texto en el cuerpo). Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
-- **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + ADMINISTRADOR/WEBMASTER/SUPERVISOR** para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
+- **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/WEBMASTER/SUPERVISOR** para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
 - **Pedir correcciones**: link de un solo uso para subir versión.
 - **Confirmación de recibido**: primer link de seguimiento (token).
 

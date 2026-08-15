@@ -38,7 +38,7 @@ function handleDescarga(data) {
   return ok({ message: 'ok' });
 }
 
-// Listado para el panel (ADMIN/WEBMASTER/SUPERVISOR).
+// Listado para el panel (COORDINADOR/WEBMASTER/SUPERVISOR).
 function handleDescargasList(idToken, requestedDays) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');

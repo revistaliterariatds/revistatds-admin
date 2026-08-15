@@ -1,5 +1,5 @@
 // agenda.gs — Agenda del panel: citas por día + hilo de comentarios.
-// Permisos: ver/crear/comentar = todos los internos; editar/borrar = ADMIN/WEBMASTER.
+// Permisos: ver/crear/comentar = todos los internos; editar/borrar = COORDINADOR/WEBMASTER.
 
 var TIPOS_AGENDA = {
   reunion: { label: 'Reunión' },
@@ -9,7 +9,7 @@ var TIPOS_AGENDA = {
 };
 
 function esAdmin(user) {
-  return user.rol === ROLES.ADMINISTRADOR || user.rol === ROLES.WEBMASTER;
+  return user.rol === ROLES.COORDINADOR || user.rol === ROLES.WEBMASTER;
 }
 
 function hoyKey() {
@@ -183,10 +183,10 @@ function handleAgendaComentar(idToken, id, comentario) {
   return ok({ message: 'Comentario agregado.' });
 }
 
-// ── editar cita (ADMIN/WEBMASTER) ──
+// ── editar cita (COORDINADOR/WEBMASTER) ──
 function handleAgendaEditar(idToken, id, payload) {
   var user = requireInternalUser(idToken);
-  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede editar citas.');
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede editar citas.');
   migrarAgendaHoraFin();
   var c = findCitaById(id);
   if (!c) throw new ApiError('Cita no encontrada.');
@@ -206,10 +206,10 @@ function handleAgendaEditar(idToken, id, payload) {
   return ok({ message: 'Cita actualizada.' });
 }
 
-// ── borrar cita (ADMIN/WEBMASTER) — elimina también sus comentarios ──
+// ── borrar cita (COORDINADOR/WEBMASTER) — elimina también sus comentarios ──
 function handleAgendaBorrar(idToken, id) {
   var user = requireInternalUser(idToken);
-  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede borrar citas.');
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede borrar citas.');
   var c = findCitaById(id);
   if (!c) throw new ApiError('Cita no encontrada.');
 

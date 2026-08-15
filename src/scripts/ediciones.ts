@@ -1,4 +1,4 @@
-// ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (ADMIN/WEBMASTER).
+// ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (COORDINADOR/WEBMASTER).
 // Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
 import { api, clearSession, getUser, getIdToken } from './api';
@@ -11,14 +11,14 @@ interface Edicion {
 }
 
 const user = getUser();
-const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER';
+const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let ediciones: Edicion[] = [];
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');
   if (!navUser || !user) return;
-  const esGestor = user.rol === 'ADMINISTRADOR' || user.rol === 'WEBMASTER' || user.rol === 'SUPERVISOR';
+  const esGestor = user.rol === 'COORDINADOR' || user.rol === 'WEBMASTER' || user.rol === 'SUPERVISOR';
   navUser.hidden = false;
   document.getElementById('nav-user-name')!.textContent = user.nombre || user.email;
   document.getElementById('nav-user-role')!.textContent = user.rol;
