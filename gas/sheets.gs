@@ -41,6 +41,7 @@ function ensureSchema() {
     }
   });
   migrarAgendaHoraFin();
+  ensureTableroSchema();
 }
 
 // Migración idempotente: agrega la columna 'hora_fin' (después de 'hora') a la
@@ -55,6 +56,24 @@ function migrarAgendaHoraFin() {
   if (horaIdx < 0) return; // sin columna 'hora' no hay nada que migrar
   sheet.insertColumnAfter(horaIdx + 1); // insertColumnAfter es 1-based
   sheet.getRange(1, horaIdx + 2).setValue('hora_fin');
+}
+
+// Migración idempotente: agrega al final de la hoja Tablero las columnas de
+// SHEETS.Tablero que falten. Evita errores de "columna demasiado pequeña" al
+// escribir en columnas agregadas con el tiempo (url_doc_correccion, edicion…).
+function ensureTableroSchema() {
+  var sheet = getSheet('Tablero');
+  if (!sheet) return;
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) { sheet.appendRow(SHEETS.Tablero); return; }
+  var idx = headerIndex(sheet);
+  var col = lastCol + 1;
+  SHEETS.Tablero.forEach(function (h) {
+    if (idx[h] === undefined) {
+      sheet.getRange(1, col).setValue(h);
+      col++;
+    }
+  });
 }
 
 // Devuelve {index, columns} donde index es un mapa nombre->índice de columna.
@@ -78,5 +97,16 @@ function findRowIndex(sheet, colName, value) {
 
 function setCell(sheet, rowIndex, colName, value) {
   var idx = headerIndex(sheet);
+  if (idx[colName] === undefined) throw new Error('Columna no encontrada en la hoja: ' + colName);
   sheet.getRange(rowIndex + 1, idx[colName] + 1).setValue(value);
+}
+
+// Construye una fila en el orden REAL de columnas de la hoja a partir de un
+// mapa {nombreColumna: valor}. Útil para appendRow sin depender del orden de
+// SHEETS (robusto si una columna fue agregada al final por migración).
+function filaSegunHeader(sheet, headers, valores) {
+  var idx = headerIndex(sheet);
+  var fila = [];
+  headers.forEach(function (h) { fila[idx[h]] = valores[h]; });
+  return fila;
 }

@@ -11,7 +11,7 @@ function findCuento(colName, value) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][idx[colName]]) === String(value)) {
       var row = { _rowIndex: i };
-      SHEETS.Tablero.forEach(function (h, j) { row[h] = data[i][j]; });
+      SHEETS.Tablero.forEach(function (h) { row[h] = data[i][idx[h]]; });
       return row;
     }
   }

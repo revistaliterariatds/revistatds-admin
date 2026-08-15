@@ -74,7 +74,9 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `action` en body | Auth | Devuelve |
 |---|---|---|
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
-| `panel/board/list` | idToken | `{ status, cuentos: [...] }` |
+| `panel/board/list` | idToken | `{ status, cuentos: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
+| `panel/board/aprobar` | idToken + gestor | pasa `ESPERANDO_APROBACIÓN` → `APROBADO` |
+| `panel/board/cambiar-estado` | idToken + ADMIN/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío |
 | `panel/ediciones/list` | idToken + ADMIN/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + ADMIN/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |

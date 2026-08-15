@@ -22,6 +22,7 @@ interface Cuento {
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
   'RECIBIDO': { label: 'Recibido', color: 'grey' },
+  'PRESELECCIONADO': { label: 'Preseleccionado', color: 'blue' },
   'EN_REVISIÓN': { label: 'En revisión', color: 'orange' },
   'CORRECCIONES_SOLICITADAS': { label: 'Correcciones', color: 'orange' },
   'ESPERANDO_APROBACIÓN': { label: 'En aprobación', color: 'orange' },
@@ -43,6 +44,7 @@ let ediciones: { numero: string; estado: string }[] = [];
 // ── sesión ──
 const user = getUser();
 const esGestor = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
+const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'WEBMASTER';
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');
@@ -104,6 +106,7 @@ function renderEstadoSelect() {
   const el = document.getElementById('filtro-estado') as HTMLSelectElement;
   const options = [`<option value="TODOS">Todos los estados (${cuentos.length})</option>`];
   Object.keys(ESTADOS).forEach((k) => {
+    if (!esGestor && k === 'RECIBIDO') return; // RECIBIDO solo lo ve admin/supervisor
     const n = cont[k] || 0;
     options.push(`<option value="${k}">${esc(ESTADOS[k].label)} (${n})</option>`);
   });
@@ -174,22 +177,24 @@ function renderTable() {
 
   body.innerHTML = lista.map((c) => {
     const libre = !c.editor_asignado;
-    const soyTitular = c.editor_asignado === user?.email;
-    const puedoAsignarme = user?.rol === 'EDITOR' && libre && c.estado === 'RECIBIDO';
+    const puedoAsignarme = user?.rol === 'EDITOR' && libre && c.estado === 'PRESELECCIONADO';
 
     const acciones: string[] = [];
     if (puedoAsignarme) {
       acciones.push(`<button type="button" class="btn-mini" data-accion="asignarme" data-id="${esc(c.id)}">Asignarme</button>`);
     }
-    if (esGestor && libre && c.estado === 'RECIBIDO') {
+    if (esGestor && libre && c.estado === 'PRESELECCIONADO') {
       acciones.push(editorSelect('asignar', c.id));
     }
     if (esGestor && !libre) {
       acciones.push(editorSelect('reasignar', c.id));
       acciones.push(`<button type="button" class="btn-mini" data-accion="desasignar" data-id="${esc(c.id)}">Desasignar</button>`);
     }
-    if (c.url_doc_correccion && (soyTitular || esGestor)) {
-      acciones.push(`<a class="btn-mini" href="${esc(c.url_doc_correccion)}" target="_blank" rel="noopener noreferrer">Doc</a>`);
+    // Acceso al Doc para todo usuario logueado, desde el primer momento:
+    // apunta al doc de corrección si existe, si no a la carpeta del original.
+    const docHref = c.url_doc_correccion || c.url_carpeta_drive;
+    if (docHref) {
+      acciones.push(`<a class="btn-mini" href="${esc(docHref)}" target="_blank" rel="noopener noreferrer">Doc</a>`);
     }
 
     return `<tr class="board-row" data-id="${esc(c.id)}">
@@ -264,30 +269,27 @@ async function cargar() {
 
 async function asignarme(id: string) {
   const data = await api('panel/board/asignarme', { id });
-  if (data.status === 'ok') {
-    await cargar();
-  } else {
-    alert(data.message || 'No se pudo asignar.');
-  }
+  if (data.status !== 'ok') alert(data.message || 'No se pudo asignar.');
+  await cargar(); // refrescar siempre: el backend puede haber asignado antes de un aviso fallido
 }
 
 async function asignar(id: string, editorEmail: string) {
   const data = await api('panel/board/asignar', { id, editorEmail });
-  if (data.status === 'ok') await cargar();
-  else alert(data.message || 'No se pudo asignar.');
+  if (data.status !== 'ok') alert(data.message || 'No se pudo asignar.');
+  await cargar();
 }
 
 async function reasignar(id: string, editorEmail: string) {
   const data = await api('panel/board/reasignar', { id, editorEmail });
-  if (data.status === 'ok') await cargar();
-  else alert(data.message || 'No se pudo reasignar.');
+  if (data.status !== 'ok') alert(data.message || 'No se pudo reasignar.');
+  await cargar();
 }
 
 async function desasignar(id: string) {
   if (!confirm('¿Desasignar este cuento?')) return;
   const data = await api('panel/board/desasignar', { id });
-  if (data.status === 'ok') await cargar();
-  else alert(data.message || 'No se pudo desasignar.');
+  if (data.status !== 'ok') alert(data.message || 'No se pudo desasignar.');
+  await cargar();
 }
 
 // ── detalle ──
@@ -310,6 +312,7 @@ async function abrirDetalle(id: string) {
   }
   if (esGestor && c.estado === 'ESPERANDO_APROBACIÓN') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="consultar">Consultar al autor</button>`);
+    acciones.push(`<button type="button" class="btn-enviar btn-enviar-solid" data-detalle-accion="aprobar">Aprobar</button>`);
   }
   if (esGestor && c.estado === 'APROBADO') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="publicar">Marcar publicado</button>`);
@@ -349,6 +352,14 @@ async function abrirDetalle(id: string) {
       <div class="form-group" style="margin-bottom:1rem;">
         <label for="cambiar-edicion">Edición de esta publicación</label>
         <select id="cambiar-edicion" class="filter-select" aria-label="Cambiar la edición de esta publicación">${edicionesOpts}</select>
+      </div>` : ''}
+    ${esAdmin ? `
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="cambiar-estado">Cambiar estado (administración)</label>
+        <select id="cambiar-estado" class="filter-select" aria-label="Cambiar el estado de esta publicación">
+          ${Object.keys(ESTADOS).map((k) => `<option value="${k}"${c.estado === k ? ' selected' : ''}>${esc(ESTADOS[k].label)}</option>`).join('')}
+        </select>
+        <button type="button" class="btn-mini" id="btn-cambiar-estado" style="margin-top:0.5rem;">Aplicar estado</button>
       </div>` : ''}
     <h3 class="detail-sub">Historial</h3>
     <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
@@ -397,6 +408,23 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/board/publicar', { id });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo publicar.');
+  });
+
+  content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Aprobar este cuento?')) return;
+    const r = await api('panel/board/aprobar', { id });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo aprobar.');
+  });
+
+  const estadoSelect = content.querySelector('#cambiar-estado') as HTMLSelectElement | null;
+  content.querySelector('#btn-cambiar-estado')?.addEventListener('click', async () => {
+    const estado = estadoSelect?.value;
+    if (!estado) return;
+    if (!confirm('¿Cambiar el estado de esta publicación a "' + estado + '"?')) return;
+    const r = await api('panel/board/cambiar-estado', { id, estado });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo cambiar el estado.');
   });
 
   content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {

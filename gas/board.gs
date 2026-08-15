@@ -17,21 +17,32 @@ function clearBoardCache() {
 // ── tablero completo (lectura) ──
 function handleBoardList(idToken) {
   var user = requireInternalUser(idToken);
+  ensureTableroSchema();
   var cache = CacheService.getScriptCache();
+  var rows = null;
   var cached = cache.get('board-list');
-  if (cached) return JSON.parse(cached);
-
-  var sheet = getSheet('Tablero');
-  var data = sheet.getDataRange().getValues();
-  var rows = [];
-  for (var i = 1; i < data.length; i++) {
-    var row = { _rowIndex: i };
-    SHEETS.Tablero.forEach(function (h, j) { row[h] = data[i][j]; });
-    rows.push(cuentoPublico(row));
+  if (cached) {
+    rows = JSON.parse(cached);
+  } else {
+    var sheet = getSheet('Tablero');
+    var idx = headerIndex(sheet);
+    var data = sheet.getDataRange().getValues();
+    rows = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = { _rowIndex: i };
+      SHEETS.Tablero.forEach(function (h) { row[h] = data[i][idx[h]]; });
+      rows.push(cuentoPublico(row));
+    }
+    cache.put('board-list', JSON.stringify(rows), 30);
   }
-  var result = ok({ cuentos: rows, yo: { email: user.email, rol: user.rol } });
-  cache.put('board-list', JSON.stringify(result), 30);
-  return result;
+
+  // Visibilidad por rol: RECIBIDO solo lo ven ADMIN/WEBMASTER/SUPERVISOR.
+  // El EDITOR ve desde PRESELECCIONADO en adelante.
+  if (user.rol === ROLES.EDITOR) {
+    rows = rows.filter(function (r) { return r.estado !== ESTADOS.RECIBIDO; });
+  }
+
+  return ok({ cuentos: rows, yo: { email: user.email, rol: user.rol } });
 }
 
 // ── detalle de un cuento + historial ──
@@ -86,6 +97,7 @@ function handleBoardEditors(idToken) {
 function handleAsignarme(idToken, id) {
   var user = requireInternalUser(idToken);
   if (user.rol !== ROLES.EDITOR) throw new AuthError('Solo EDITOR puede autoasignarse cuentos.');
+  ensureTableroSchema();
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -93,10 +105,10 @@ function handleAsignarme(idToken, id) {
     var c = findCuentoById(id);
     if (!c) throw new ApiError('Cuento no encontrado.');
     if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
-    if (c.estado !== ESTADOS.RECIBIDO) throw new ApiError('Solo cuentos RECIBIDO pueden autoasignarse.');
+    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo cuentos PRESELECCIONADO pueden autoasignarse.');
 
     var docUrl = asignarCuento(c, user.email, displayName(user.email));
-    notifyTeam('Asignado', displayName(user.email) + ' se asignó "' + c.titulo + '"');
+    try { notifyTeam('Asignado', displayName(user.email) + ' se asignó "' + c.titulo + '"'); } catch (e) { /* el aviso no bloquea la asignación */ }
 
     return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
   } finally {
@@ -110,6 +122,7 @@ function handleAsignar(idToken, id, editorEmail) {
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
   if (!editorEmail) throw new ApiError('Falta el editor.');
   if (!esEditorActivo(editorEmail)) throw new ApiError('El destino debe ser un EDITOR activo.');
+  ensureTableroSchema();
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -117,10 +130,10 @@ function handleAsignar(idToken, id, editorEmail) {
     var c = findCuentoById(id);
     if (!c) throw new ApiError('Cuento no encontrado.');
     if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
-    if (c.estado !== ESTADOS.RECIBIDO) throw new ApiError('Solo cuentos RECIBIDO pueden asignarse.');
+    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo cuentos PRESELECCIONADO pueden asignarse.');
 
     var docUrl = asignarCuento(c, editorEmail, displayName(user.email));
-    notifyTeam('Asignado', displayName(user.email) + ' asignó "' + c.titulo + '" a ' + displayName(editorEmail));
+    try { notifyTeam('Asignado', displayName(user.email) + ' asignó "' + c.titulo + '" a ' + displayName(editorEmail)); } catch (e) { /* el aviso no bloquea la asignación */ }
 
     return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
   } finally {
@@ -142,9 +155,9 @@ function handleDesasignar(idToken, id) {
 
     var editorAnterior = c.editor_asignado;
     setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', '');
-    // Vuelve a RECIBIDO salvo en CONSULTA_AUTOR / RECHAZADO_POR_AUTOR.
+    // Vuelve a PRESELECCIONADO salvo en CONSULTA_AUTOR / RECHAZADO_POR_AUTOR.
     if (c.estado !== ESTADOS.CONSULTA_AUTOR && c.estado !== ESTADOS.RECHAZADO_POR_AUTOR) {
-      setEstado(c, ESTADOS.RECIBIDO);
+      setEstado(c, ESTADOS.PRESELECCIONADO);
     }
     addHistory(c.id, displayName(user.email), 'DESASIGNADO', 'Liberado ' + displayName(editorAnterior));
     clearBoardCache();
@@ -334,6 +347,52 @@ function handleResolverRechazo(idToken, id, resolucion) {
       catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la devolución de "' + c.titulo + '".'); }
     }
     return ok({ message: resolucion === 'devolver' ? 'Cuento devuelto al editor.' : 'Cuento descartado.', estado: nuevoEstado });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── aprobar directamente (ADMIN/SUPERVISOR) desde ESPERANDO_APROBACIÓN ──
+function handleAprobar(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    if (c.estado !== ESTADOS.ESPERANDO_APROBACION) {
+      throw new ApiError('Solo se puede aprobar una revisión terminada.');
+    }
+    setEstado(c, ESTADOS.APROBADO);
+    addHistory(c.id, displayName(user.email), 'APROBADO', 'Aprobado directamente por el equipo.');
+    clearBoardCache();
+    notifyTeam('Aprobado', displayName(user.email) + ' aprobó "' + c.titulo + '"');
+    return ok({ message: 'Cuento aprobado.', estado: ESTADOS.APROBADO });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── cambiar estado arbitrario (ADMIN/WEBMASTER, en cualquier momento) ──
+function handleCambiarEstado(idToken, id, nuevoEstado) {
+  var user = requireInternalUser(idToken);
+  if (!esAdmin(user)) throw new AuthError('Solo ADMINISTRADOR o WEBMASTER puede cambiar estados.');
+
+  var estado = String(nuevoEstado || '').trim();
+  var estadosValidos = Object.keys(ESTADOS).map(function (k) { return ESTADOS[k]; });
+  if (estadosValidos.indexOf(estado) < 0) throw new ApiError('Estado inválido.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+    setEstado(c, estado);
+    addHistory(c.id, displayName(user.email), 'ESTADO_CAMBIADO', 'El equipo cambió el estado a ' + estado + '.');
+    clearBoardCache();
+    return ok({ message: 'Estado actualizado.', estado: estado });
   } finally {
     lock.releaseLock();
   }

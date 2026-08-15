@@ -45,6 +45,10 @@ function doPost(e) {
       result = handleConsultarAutor(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/board/publicar') {
       result = handlePublicar(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/aprobar') {
+      result = handleAprobar(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/board/cambiar-estado') {
+      result = handleCambiarEstado(tokenFrom(data, e), data && data.id, data && data.estado);
     } else if (action === 'panel/board/resolver-rechazo') {
       result = handleResolverRechazo(tokenFrom(data, e), data && data.id, data && data.resolucion);
     } else if (action === 'panel/board/cambiar-edicion') {

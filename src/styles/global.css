@@ -214,6 +214,7 @@ footer {
 .badge-orange { background: var(--orange-soft); color: var(--orange-deep); }
 .badge-green  { background: var(--success-bg); color: var(--success); }
 .badge-red    { background: var(--error-bg);   color: var(--error); }
+.badge-blue   { background: #e7eef7; color: #33557a; }
 
 /* ── TABLERO ── */
 .board { max-width: var(--content-max); margin: 0 auto; padding: var(--space-lg) var(--content-pad) var(--space-xl); }

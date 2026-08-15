@@ -44,25 +44,25 @@ function handleEnvio(data) {
   saveFiles(folder, archivosValidados);
 
   var now = new Date();
-  getSheet('Tablero').appendRow([
-    id,              // id
-    titulo,          // titulo
-    autor,           // autor
-    emailAutor,      // email_autor
-    data.edad || '', // edad
-    CATEGORIA_DEFAULT, // categoria (H2)
-    ESTADOS.RECIBIDO,  // estado
-    '',              // editor_asignado
-    folder.getUrl(), // url_carpeta_drive
-    '',              // url_doc_correccion
-    '1',             // version_actual
-    token,           // token_autor
-    tokenExpira,     // token_expira
-    convocatoria,    // convocatoria
-    now,             // fecha_recibido
-    now,             // fecha_actualizacion
-    edicionActual(), // edicion (vacío si no hay edición abierta)
-  ]);
+  getSheet('Tablero').appendRow(filaSegunHeader(getSheet('Tablero'), SHEETS.Tablero, {
+    id: id,
+    titulo: titulo,
+    autor: autor,
+    email_autor: emailAutor,
+    edad: data.edad || '',
+    categoria: CATEGORIA_DEFAULT, // H2
+    estado: ESTADOS.RECIBIDO,
+    editor_asignado: '',
+    url_carpeta_drive: folder.getUrl(),
+    url_doc_correccion: '',
+    version_actual: '1',
+    token_autor: token,
+    token_expira: tokenExpira,
+    convocatoria: convocatoria,
+    fecha_recibido: now,
+    fecha_actualizacion: now,
+    edicion: edicionActual(), // vacío si no hay edición abierta
+  }));
 
   addHistory(id, 'AUTOR', 'ENVIO_RECIBIDO', 'Alta desde formulario (' + convocatoria + ')');
   clearBoardCache();
