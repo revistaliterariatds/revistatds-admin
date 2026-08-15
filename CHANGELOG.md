@@ -12,3 +12,6 @@ y versionado semántico (SemVer).
 - Layout base con CSP y fuentes (Playfair Display + Lato).
 - Página de login con Google Identity Services (popup) y "hola `<email>`".
 - Pipeline de deploy a GitHub Pages (`.github/workflows/deploy.yml`) + `CNAME`.
+
+### Changed
+- Rol `ADMINISTRADOR` renombrado a `COORDINADOR` (backend `gas/` + frontend `src/`), con migración idempotente `migrateRoles()` en `users.gs`. `WEBMASTER` conserva acceso total idéntico.

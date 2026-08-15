@@ -126,6 +126,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Agenda (citas, comentarios, Meet, horarios con inicio/fin, mails, caché local) y ciclo de Ediciones (fechas elegibles sin solapamiento, auto-citas).
 - Tablero: estado `PRESELECCIONADO` con visibilidad por rol, botón "Doc" para todos, aprobar desde "En aprobación" y cambio de estado administrativo.
 - Mail de aprobación con PDF adjunto y botones de un solo uso; aviso al equipo cuando el autor pide modificar.
+- Rol `ADMINISTRADOR` renombrado a `COORDINADOR` (migración `migrateRoles()`); `WEBMASTER` con acceso total idéntico.
 - Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
 - QA automatizado ejecutado (17/17 PASS contra producción, sin login) — ver log en `revistatds/docs/plan-editorial.md`.
 
