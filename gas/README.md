@@ -33,7 +33,10 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
    pegando el contenido (los nombres de archivo no importan para la ejecución:
    Apps Script comparte el scope global entre archivos).
 3. En **Configuración del proyecto** → activar "Mostrar `appsscript.json`" y pegar
-   el manifest (o dejar que se genere y ajustar `webapp`/scopes).
+   el manifest (o dejar que se genere y ajustar `webapp`/scopes). **Importante**:
+   el manifest habilita el **Advanced Drive Service** (`enabledAdvancedServices`,
+   Drive API v2) para convertir Word/ODT/RTF/TXT a PDF en "Consultar al autor".
+   Hay que **habilitarlo también en el editor** (Servicios → Drive API).
 4. **Ejecutar `setup()` una vez** (autorizar los permisos):
     - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`, `Agenda`, `AgendaComentarios`, `Ediciones` (la hoja `Analiticas` se crea al primer snapshot);
    - siembra `Config` y los roles iniciales (COORDINADOR + emisor).
@@ -135,7 +138,7 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 
 ### Mails del autor
 
-- **Consulta de aprobación**: adjunta el **doc de corrección en PDF** (`pdfDocCorreccion`), sin links de Drive ni docs editables (fallback: texto en el cuerpo). Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
+- **Consulta de aprobación**: el coordinador **elige el archivo** de la carpeta del cuento (selector `panel/board/archivos`); el backend lo convierte a **PDF** (`convertirAPdf`: PDF → tal cual, Google nativo → `getAs`, Word/ODT/RTF/TXT → Advanced Drive Service, imágenes → tal cual) y lo adjunta, sin links de Drive ni docs editables. Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
 - **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/SUPERVISOR** (sin WEBMASTER) para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
 - **Pedir correcciones**: link de un solo uso para subir versión.
 - **Confirmación de recibido**: primer link de seguimiento (token).

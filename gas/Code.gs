@@ -42,7 +42,7 @@ function doPost(e) {
     } else if (action === 'panel/board/revision-terminada') {
       result = handleRevisionTerminada(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/board/consultar-autor') {
-      result = handleConsultarAutor(tokenFrom(data, e), data && data.id);
+      result = handleConsultarAutor(tokenFrom(data, e), data && data.id, data && data.fileId);
     } else if (action === 'panel/board/publicar') {
       result = handlePublicar(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/board/aprobar') {

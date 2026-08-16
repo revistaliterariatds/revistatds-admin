@@ -111,7 +111,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 
 ## Mail de aprobación al autor
 
-- Adjunta el **documento de corrección del editor en PDF** (el autor nunca recibe links de Drive ni docs editables; fallback al texto en el cuerpo si no hay doc).
+- Al "Consultar al autor", el coordinador **elige el archivo** de la carpeta del cuento; el sistema lo convierte a **PDF** y lo adjunta (el autor nunca recibe links de Drive ni docs editables).
 - Tres **botones iguales con colores TDS** (Aprobar verde / Modificar naranja / No aprobar rojo), de **un solo uso** (el token se consume con la primera acción).
 - Explica que modificar requiere enviar un **nuevo archivo**: adjuntándolo **respondiendo el correo**, o como **nueva producción** con botón directo al formulario (`enviar.html`).
 - Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + COORDINADOR/SUPERVISOR** reciben aviso de que el autor solicita modificar su cuento (WEBMASTER no recibe mails).

@@ -386,6 +386,15 @@ async function abrirDetalle(id: string) {
           <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-publicable">Cancelar</button>
         </div>
       </div>` : ''}
+    ${esGestor ? `
+      <div class="form-group" id="consultaGroup" hidden>
+        <label for="consulta-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
+        <select id="consulta-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
+        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+          <button type="button" class="btn-mini" id="btn-confirmar-consulta">Enviar al autor</button>
+          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-consulta">Cancelar</button>
+        </div>
+      </div>` : ''}
   `;
 
   modal.showModal();
@@ -414,10 +423,31 @@ async function abrirDetalle(id: string) {
   });
 
   content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Enviar esta versión al autor para aprobación?')) return;
-    const r = await api('panel/board/consultar-autor', { id });
+    const group = document.getElementById('consultaGroup');
+    const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
+    if (!group || !select) return;
+    const r = await api('panel/board/archivos', { id });
+    if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
+    const archivos = r.archivos || [];
+    if (!archivos.length) { alert('No hay archivos en la carpeta de este cuento.'); return; }
+    select.innerHTML = archivos
+      .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
+      .join('');
+    group.hidden = false;
+  });
+
+  content.querySelector('#btn-confirmar-consulta')?.addEventListener('click', async () => {
+    const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
+    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
+    if (!confirm('¿Enviar este archivo (como PDF) al autor para aprobación?')) return;
+    const r = await api('panel/board/consultar-autor', { id, fileId: select.value });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo consultar al autor.');
+  });
+
+  content.querySelector('#btn-cancelar-consulta')?.addEventListener('click', () => {
+    const group = document.getElementById('consultaGroup');
+    if (group) group.hidden = true;
   });
 
   content.querySelector('[data-detalle-accion="publicar"]')?.addEventListener('click', async () => {

@@ -222,6 +222,54 @@ function pdfDocCorreccion(cuento) {
   }
 }
 
+// Convierte un archivo de Drive a PDF para adjuntar al mail. PDF → tal cual;
+// Google nativo → getAs('application/pdf'); Word/ODT/RTF/TXT → Advanced Drive
+// Service (copiar a Google Doc + exportar PDF); imágenes/otros → tal cual.
+function convertirAPdf(fileId) {
+  var file = DriveApp.getFileById(fileId);
+  var mime = file.getMimeType();
+  var nombreBase = file.getName().replace(/\.[^.]+$/, '');
+  var blob = null;
+
+  if (mime === 'application/pdf') {
+    blob = file.getBlob();
+  } else if (mime.indexOf('application/vnd.google-apps.') === 0) {
+    blob = file.getAs('application/pdf');
+  } else if ([
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.oasis.opendocument.text',
+    'application/rtf',
+    'text/plain',
+  ].indexOf(mime) >= 0) {
+    blob = convertirADocYPdf(file);
+  }
+
+  if (!blob) {
+    // Imagen u otro formato: se adjunta tal cual (sin conversión).
+    blob = file.getBlob();
+    blob.setName(file.getName());
+    return blob;
+  }
+
+  blob.setName(nombreBase + '.pdf');
+  return blob;
+}
+
+// Word/ODT/RTF/TXT → Google Doc (Advanced Drive Service) → PDF.
+function convertirADocYPdf(file) {
+  if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.copy && Drive.Files.export) {
+    try {
+      var converted = Drive.Files.copy({}, file.getId(), { convert: true });
+      var pdf = Drive.Files.export(converted.id, 'application/pdf');
+      try { Drive.Files.remove(converted.id); } catch (e) { /* ignorar */ }
+      if (pdf) return pdf;
+    } catch (e) { /* fallback abajo */ }
+  }
+  var as = file.getAs('application/pdf');
+  if (as) return as;
+  throw new ApiError('No se pudo convertir a PDF: ' + file.getName() + '.');
+}
+
 // Intenta extraer texto de un adjunto de texto plano (en la raíz de la carpeta).
 function extractText(folder) {
   var files = folder.getFiles();

@@ -262,9 +262,10 @@ function handleRevisionTerminada(idToken, id) {
 }
 
 // ── enviar la versión corregida a aprobación del autor ──
-function handleConsultarAutor(idToken, id) {
+function handleConsultarAutor(idToken, id, fileId) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  if (!fileId) throw new ApiError('Elegí el archivo a adjuntar al autor.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -275,6 +276,13 @@ function handleConsultarAutor(idToken, id) {
       throw new ApiError('Solo se puede consultar al autor una revisión terminada.');
     }
 
+    // El archivo elegido debe pertenecer a la carpeta del cuento.
+    var pertenece = listarArchivosCuento(c).some(function (a) { return a.fileId === String(fileId); });
+    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de este cuento.');
+
+    // Se convierte a PDF antes de generar el token: si falla, no queda nada a medias.
+    var pdfBlob = convertirAPdf(String(fileId));
+
     var token = Utilities.getUuid();
     var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
     var sheet = getSheet('Tablero');
@@ -282,7 +290,7 @@ function handleConsultarAutor(idToken, id) {
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
     try {
-      sendConsultaAutor(c.email_autor, c, token, textoDocCorreccion(c), pdfDocCorreccion(c));
+      sendConsultaAutor(c.email_autor, c, token, textoDocCorreccion(c), pdfBlob);
     } catch (e) {
       setCell(sheet, c._rowIndex, 'token_autor', '');
       setCell(sheet, c._rowIndex, 'token_expira', '');
