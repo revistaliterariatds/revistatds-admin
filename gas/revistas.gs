@@ -248,12 +248,64 @@ function handleSubirRevistaFinal(idToken, payload) {
   dispatchearPublicarEdicion({ num: sesion.num, titulo: sesion.titulo, pdf_url: pdfUrl, portada_url: portadaUrl });
 
   CacheService.getScriptCache().remove(sesionSubidaKey(user.email));
+  agendarAvisoEdicion(sesion.num, sesion.titulo);
 
   return {
     status: 'ok',
-    message: 'Edición ' + sesion.titulo + ' en proceso de publicación. Aparecerá en el sitio en ~1 minuto.',
+    message: 'Edición ' + sesion.titulo + ' en proceso de publicación. Aparecerá en el sitio en ~1 minuto y avisamos al equipo por mail en ~2.',
     num: sesion.num,
   };
+}
+
+// ── aviso al equipo editorial (2 minutos después de publicar) ──
+// Se agenda con un trigger de una sola ejecución; los datos del aviso viven en
+// Script Properties (los triggers no reciben argumentos). Si el envío falla,
+// se re-agenda en 3 minutos conservando el aviso pendiente.
+
+var AVISO_EDICION_KEY = 'aviso-edicion-pendiente';
+
+function agendarAvisoEdicion(num, titulo) {
+  PropertiesService.getScriptProperties().setProperty(AVISO_EDICION_KEY, JSON.stringify({ num: num, titulo: titulo }));
+  ScriptApp.newTrigger('enviarAvisoEdicionPublicada').timeBased().after(2 * 60 * 1000).create();
+}
+
+function enviarAvisoEdicionPublicada() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(AVISO_EDICION_KEY);
+  if (!raw) return; // nada pendiente (o ya enviado)
+  var pendiente = JSON.parse(raw);
+
+  try {
+    var emails = getEmailsByRoles(ROLES_NOTIF_INTERNOS);
+    if (emails.length === 0) return;
+    var sitio = siteBase();
+    var pdfUrl = REVISTAS_BASE_URL + 'rtds' + pendiente.num + '.pdf';
+    var subject = 'Nueva edición de Tramas del Sur: ' + pendiente.titulo + ' — a leer y difundir';
+    var html = [
+      '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+      '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Nueva edición: ' + escapeHtml(pendiente.titulo) + '</h1>',
+      '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">Ya está publicada la edición <strong>' + escapeHtml(pendiente.titulo) + '</strong> de Tramas del Sur. Te invitamos a leerla y a difundirla: compartila con tus contactos, en tus redes y en tu comunidad.</p>',
+      '  <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Cada mano que la acerque a más lectores hace crecer la revista. ¡Gracias por ser parte!</p>',
+      '  <p style="margin:0 0 12px;"><a href="' + sitio + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Leer la nueva edición</a></p>',
+      '  <p style="margin:0 0 24px;"><a href="' + pdfUrl + '" style="display:inline-block;border:1px solid #d95f1a;color:#d95f1a;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Descargar el PDF</a></p>',
+      '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>',
+      '</div>',
+    ].join('');
+    emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
+    props.deleteProperty(AVISO_EDICION_KEY);
+  } catch (err) {
+    // reintenta en 3 minutos, conservando el aviso pendiente
+    ScriptApp.newTrigger('enviarAvisoEdicionPublicada').timeBased().after(3 * 60 * 1000).create();
+    return;
+  }
+
+  // limpieza: elimina triggers sobrantes de este handler
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'enviarAvisoEdicionPublicada') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
 }
 
 // Dispara el workflow "publicar-edicion" del repo de la revista.
