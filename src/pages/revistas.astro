@@ -15,6 +15,38 @@ import Layout from '../layouts/Layout.astro';
     <p class="config-intro" style="margin-bottom:1rem;">
       Todas las ediciones publicadas de la revista, tal como aparecen en el sitio. Cuando se suba una edición nueva, aparece sola acá.
     </p>
+
+    <section id="revista-subir" class="config-section" hidden aria-labelledby="revista-subir-heading">
+      <h2 class="config-section-title" id="revista-subir-heading">Subir nueva edición</h2>
+      <p class="config-intro">
+        Subí el PDF de la edición (y la portada opcional). Se publica sola en el sitio y aparece en la grilla en ~1 minuto.
+        PDF hasta 12&nbsp;MB, portada hasta 4&nbsp;MB.
+      </p>
+      <form id="revista-subir-form" class="config-form">
+        <div class="config-settings-grid">
+          <div class="form-group">
+            <label for="revista-pdf">PDF de la edición *</label>
+            <input id="revista-pdf" type="file" accept="application/pdf" required />
+          </div>
+          <div class="form-group">
+            <label for="revista-portada">Portada (opcional)</label>
+            <input id="revista-portada" type="file" accept="image/*" />
+          </div>
+          <div class="form-group">
+            <label for="revista-titulo">Título (opcional)</label>
+            <input id="revista-titulo" type="text" placeholder="N° 5" />
+          </div>
+          <div class="form-group">
+            <label for="revista-num">Número (opcional, auto: último + 1)</label>
+            <input id="revista-num" type="number" min="1" step="1" placeholder="5" />
+          </div>
+        </div>
+        <div class="config-actions">
+          <button type="submit" class="btn-enviar">Subir y publicar edición</button>
+        </div>
+      </form>
+    </section>
+
     <div class="revistas-grid" id="revistas-grid" aria-busy="true"></div>
     <div class="board-empty" id="revistas-empty" hidden>No hay ediciones publicadas todavía.</div>
   </section>
