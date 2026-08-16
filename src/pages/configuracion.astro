@@ -14,6 +14,8 @@ import Layout from '../layouts/Layout.astro';
         <div class="config-settings-grid">
           <div class="form-group"><label for="config-expira">Duración de links de autor <span>(días)</span></label><input id="config-expira" type="number" min="1" max="365" required /><small>Entre 1 y 365 días.</small></div>
 
+          <div class="form-group"><label for="config-recordatorio-dias">Recordatorio a editores: umbral de inactividad <span>(días)</span></label><input id="config-recordatorio-dias" type="number" min="1" max="30" required /><small>Se avisa al editor si una producción en revisión no se toca hace este tiempo (lunes 09:00).</small></div>
+
           <div class="form-group config-field-wide"><label for="config-site">URL base del sitio</label><input id="config-site" type="url" required /><small>Debe usar HTTPS.</small></div>
         </div>
       </section>
@@ -29,6 +31,25 @@ import Layout from '../layouts/Layout.astro';
           <div class="config-template-field"><label for="mail-subject-version">Nueva versión</label><textarea class="config-template" id="mail-subject-version" rows="3" maxlength="200" required></textarea></div>
           <div class="config-template-field"><label for="mail-subject-devolucion">Devolución al editor</label><textarea class="config-template" id="mail-subject-devolucion" rows="3" maxlength="200" required></textarea></div>
           <div class="config-template-field"><label for="mail-subject-agenda">Nueva cita en la agenda</label><textarea class="config-template" id="mail-subject-agenda" rows="3" maxlength="200" required></textarea></div>
+          <div class="config-template-field"><label for="mail-subject-recordatorio">Recordatorio a editores</label><textarea class="config-template" id="mail-subject-recordatorio" rows="3" maxlength="200" required></textarea><small>Variables: <code>{'{{cantidad}}'}</code></small></div>
+          <div class="config-template-field"><label for="mail-subject-digest">Digest semanal</label><textarea class="config-template" id="mail-subject-digest" rows="3" maxlength="200" required></textarea><small>Variables: <code>{'{{fecha}}'}</code></small></div>
+          <div class="config-template-field"><label for="mail-subject-token_vencido">Token vencido</label><textarea class="config-template" id="mail-subject-token_vencido" rows="3" maxlength="200" required></textarea><small>Variables: <code>{'{{cantidad}}'}</code></small></div>
+        </div>
+      </section>
+
+      <section class="config-section">
+        <div class="config-section-head"><div><p class="config-kicker">Correspondencia</p><h2>Cuerpos de mail (texto interior)</h2><p class="config-section-copy">Solo el texto: el diseño del correo queda fijo. Variables según cada caso.</p></div><span class="config-mark">03</span></div>
+        <div class="template-hint">Variables disponibles: <code>{'{{titulo}}'}</code> <code>{'{{autor}}'}</code> <code>{'{{editor}}'}</code> <code>{'{{version}}'}</code> <code>{'{{cantidad}}'}</code><span>Se reemplazan automáticamente al enviar.</span></div>
+        <div class="config-template-grid">
+          <div class="config-template-field config-template-wide"><label for="mail-body-confirmation">Confirmación de envío</label><textarea class="config-template" id="mail-body-confirmation" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-correcciones">Correcciones solicitadas</label><textarea class="config-template" id="mail-body-correcciones" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-revision">Revisión terminada</label><textarea class="config-template" id="mail-body-revision" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-consulta">Consulta al autor</label><textarea class="config-template" id="mail-body-consulta" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-version">Nueva versión</label><textarea class="config-template" id="mail-body-version" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-devolucion">Devolución al editor</label><textarea class="config-template" id="mail-body-devolucion" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-recordatorio">Recordatorio a editores</label><textarea class="config-template" id="mail-body-recordatorio" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-digest">Digest semanal</label><textarea class="config-template" id="mail-body-digest" rows="3" maxlength="2000" required></textarea></div>
+          <div class="config-template-field config-template-wide"><label for="mail-body-token_vencido">Token vencido</label><textarea class="config-template" id="mail-body-token_vencido" rows="3" maxlength="2000" required></textarea></div>
         </div>
       </section>
 

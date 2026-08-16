@@ -3,6 +3,7 @@
 // Valores por defecto para la hoja Config (no secretos).
 var CONFIG_DEFAULTS = {
   expira_token_dias: '30',
+  recordatorio_editores_dias: '3',
   site_base_url: 'https://tramasdelsur.com.ar',
   mail_subject_confirmation: 'Recibimos tu envío — {{titulo}}',
   mail_subject_correcciones: 'Correcciones solicitadas — {{titulo}}',
@@ -11,13 +12,30 @@ var CONFIG_DEFAULTS = {
   mail_subject_version: 'Nueva versión recibida — {{titulo}}',
   mail_subject_devolucion: 'Producción devuelta a revisión — {{titulo}}',
   mail_subject_agenda: 'Nueva cita en la agenda — {{titulo}}',
+  mail_subject_recordatorio: 'Producciones pendientes de revisión — {{cantidad}}',
+  mail_subject_digest: 'Digest semanal del tablero — {{fecha}}',
+  mail_subject_token_vencido: 'Tokens de autor vencidos — {{cantidad}}',
+  // Cuerpos interiores (Opción A): solo el texto, el wrapper TDS queda en código.
+  mail_body_confirmation: 'Gracias por enviarnos {{titulo}}. Ya está en nuestra bandeja y el equipo de redacción lo revisará.',
+  mail_body_correcciones: 'El equipo editorial te pidió correcciones sobre {{titulo}}. Subí tu nueva versión desde este enlace (personal, no lo compartas):',
+  mail_body_revision: '{{editor}} terminó la revisión. Queda en ESPERANDO_APROBACIÓN.',
+  mail_body_consulta: 'El equipo editorial terminó la revisión de {{titulo}}. Revisá la versión y elegí una opción (este enlace es de un solo uso):',
+  mail_body_version: '{{titulo}} tiene una nueva versión ({{version}}).',
+  mail_body_devolucion: '{{titulo}} fue devuelto por el equipo luego de la respuesta del autor.',
+  mail_body_recordatorio: 'Tenés {{cantidad}} producción/es pendientes de revisión en el tablero:',
+  mail_body_digest: 'Resumen semanal del circuito editorial:',
+  mail_body_token_vencido: 'Hay {{cantidad}} token/s de autor vencidos que requieren reenvío:',
 };
 
 var CONFIG_EDITABLES = [
-  'expira_token_dias', 'site_base_url',
+  'expira_token_dias', 'recordatorio_editores_dias', 'site_base_url',
   'mail_subject_confirmation', 'mail_subject_correcciones', 'mail_subject_revision',
   'mail_subject_consulta', 'mail_subject_version', 'mail_subject_devolucion',
-  'mail_subject_agenda',
+  'mail_subject_agenda', 'mail_subject_recordatorio', 'mail_subject_digest',
+  'mail_subject_token_vencido',
+  'mail_body_confirmation', 'mail_body_correcciones', 'mail_body_revision',
+  'mail_body_consulta', 'mail_body_version', 'mail_body_devolucion',
+  'mail_body_recordatorio', 'mail_body_digest', 'mail_body_token_vencido',
 ];
 
 function scriptProps() {
@@ -64,6 +82,15 @@ function getMailSubject(key, fallback, variables) {
   return subject.slice(0, 200);
 }
 
+// Cuerpo interior configurable (Opción A): solo el texto, sin wrapper HTML.
+function getMailBody(key, fallback, variables) {
+  var body = getConfig(key) || fallback;
+  Object.keys(variables || {}).forEach(function (name) {
+    body = body.replace(new RegExp('\\{\\{' + name + '\\}\\}', 'g'), String(variables[name] || ''));
+  });
+  return body;
+}
+
 function handleConfigList(idToken) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -88,11 +115,19 @@ function handleConfigSave(idToken, key, value) {
     if (!/^\d+$/.test(value) || days < 1 || days > 365) throw new ApiError('La expiración debe estar entre 1 y 365 días.');
     value = String(days);
   }
+  if (key === 'recordatorio_editores_dias') {
+    var dias = parseInt(value, 10);
+    if (!/^\d+$/.test(value) || dias < 1 || dias > 30) throw new ApiError('El umbral de recordatorio debe estar entre 1 y 30 días.');
+    value = String(dias);
+  }
   if (key === 'site_base_url' && !/^https:\/\//i.test(value)) {
     throw new ApiError('La URL del sitio debe usar HTTPS.');
   }
   if (key.indexOf('mail_subject_') === 0 && (!value || value.length > 200)) {
     throw new ApiError('El asunto debe tener entre 1 y 200 caracteres.');
+  }
+  if (key.indexOf('mail_body_') === 0 && (!value || value.length > 2000)) {
+    throw new ApiError('El cuerpo debe tener entre 1 y 2000 caracteres.');
   }
   setConfig(key, value);
   CacheService.getScriptCache().remove('config-list');

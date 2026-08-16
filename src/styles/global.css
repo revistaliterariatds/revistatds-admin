@@ -300,9 +300,10 @@ footer {
 .config-template-field { padding: 0.9rem; border: 1px solid var(--rule-soft); background: var(--paper-warm); }
 .config-template-field label { display: block; margin-bottom: 0.45rem; font-size: var(--text-xs); letter-spacing: 0.07em; text-transform: uppercase; }
 .config-template { min-height: 5rem; width: 100%; resize: vertical; line-height: 1.5; background: var(--paper-white); }
+.config-template-wide { grid-column: span 2; }
 .config-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.25rem 0; }
 .config-actions p { color: var(--ink-muted); font-size: var(--text-xs); }
-@media (max-width: 700px) { .config-settings-grid, .config-template-grid { grid-template-columns: 1fr; } .config-field-wide { grid-column: auto; } .config-section { padding: 1.1rem; } .config-actions { align-items: flex-start; flex-direction: column-reverse; } }
+@media (max-width: 700px) { .config-settings-grid, .config-template-grid { grid-template-columns: 1fr; } .config-field-wide, .config-template-wide { grid-column: auto; } .config-section { padding: 1.1rem; } .config-actions { align-items: flex-start; flex-direction: column-reverse; } }
 .analytics-period { color: var(--ink-soft); font-size: var(--text-sm); }
 .analytics-period select { margin-left: 0.4rem; padding: 0.45rem; border: 1px solid var(--rule); background: var(--paper-white); }
 .analytics-card { min-height: 320px; padding: var(--space-md); background: var(--paper-white); border: 1px solid var(--rule); }

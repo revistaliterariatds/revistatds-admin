@@ -13,10 +13,11 @@ function sendHtmlMail(to, subject, html) {
 
 function sendConfirmation(destinatario, nombre, titulo, seguimientoUrl) {
   var subject = getMailSubject('mail_subject_confirmation', 'Recibimos tu envío — {{titulo}}', { titulo: titulo || 'sin título' });
+  var cuerpo = getMailBody('mail_body_confirmation', 'Gracias por enviarnos {{titulo}}. Ya está en nuestra bandeja y el equipo de redacción lo revisará.', { titulo: escapeHtml(titulo || 'tu producción') });
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Hola ' + escapeHtml(nombre || '') + ',</h1>',
-    '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">Gracias por enviarnos <strong>' + escapeHtml(titulo || 'tu producción') + '</strong>. Ya está en nuestra bandeja y el equipo de redacción lo revisará.</p>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">' + cuerpo + '</p>',
     '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">Podés seguir el estado de tu envío en este enlace (es personal, no lo compartas):</p>',
     '  <p style="margin:0 0 24px;"><a href="' + seguimientoUrl + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Ver estado de mi envío</a></p>',
     '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>',
@@ -68,6 +69,7 @@ function notifyTeam(tipo, detalle) {
 
 function sendPedirCorrecciones(autorEmail, produccion, token, pdfBlob, mensaje) {
   var subject = getMailSubject('mail_subject_correcciones', 'Correcciones solicitadas — {{titulo}}', { titulo: produccion.titulo });
+  var cuerpo = getMailBody('mail_body_correcciones', 'El equipo editorial te pidió correcciones sobre {{titulo}}. Subí tu nueva versión desde este enlace (personal, no lo compartas):', { titulo: escapeHtml(produccion.titulo) });
   var adjuntoBlock = pdfBlob
     ? '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">Adjuntamos el documento con las correcciones del editor en formato PDF.</p>'
     : '';
@@ -77,7 +79,7 @@ function sendPedirCorrecciones(autorEmail, produccion, token, pdfBlob, mensaje) 
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Hola ' + escapeHtml(produccion.autor) + ',</h1>',
-    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">El equipo editorial te pidió correcciones sobre <strong>' + escapeHtml(produccion.titulo) + '</strong>. Subí tu nueva versión desde este enlace (personal, no lo compartas):</p>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">' + cuerpo + '</p>',
     adjuntoBlock,
     mensajeBlock,
     '  <p style="margin:0 0 24px;"><a href="' + autorLink(token, 'edit') + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Subir nueva versión</a></p>',
@@ -96,11 +98,12 @@ function sendPedirCorrecciones(autorEmail, produccion, token, pdfBlob, mensaje) 
 
 function sendRevisionTerminada(adminEmails, produccion, editorNombre) {
   var subject = getMailSubject('mail_subject_revision', 'Revisión terminada — {{titulo}}', { titulo: produccion.titulo });
+  var cuerpo = getMailBody('mail_body_revision', '{{editor}} terminó la revisión. Queda en ESPERANDO_APROBACIÓN.', { editor: escapeHtml(editorNombre) });
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Revisión terminada</h1>',
     '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;"><strong>' + escapeHtml(produccion.titulo) + '</strong> · ' + escapeHtml(produccion.autor) + '</p>',
-    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">' + escapeHtml(editorNombre) + ' terminó la revisión. Queda en ESPERANDO_APROBACIÓN.</p>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">' + cuerpo + '</p>',
     '  <p style="margin:0;"><a href="' + PANEL_URL + '" style="color:#d95f1a;">Ver panel</a></p>',
     '</div>',
   ].join('');
@@ -116,10 +119,11 @@ function sendConsultaAutor(autorEmail, produccion, token, textoCorregido, pdfBlo
   function boton(color, url, label) {
     return '  <p style="margin:0 0 12px;"><a href="' + url + '" style="display:block;width:100%;text-align:center;background:' + color + ';color:#ffffff;padding:14px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;font-family:Lato,Arial,sans-serif;box-sizing:border-box;">' + label + '</a></p>';
   }
+  var cuerpo = getMailBody('mail_body_consulta', 'El equipo editorial terminó la revisión de {{titulo}}. Revisá la versión y elegí una opción (este enlace es de un solo uso):', { titulo: escapeHtml(produccion.titulo) });
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Tu producción está lista</h1>',
-    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">El equipo editorial terminó la revisión de <strong>' + escapeHtml(produccion.titulo) + '</strong>. Revisá la versión y elegí una opción (este enlace es de un solo uso):</p>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">' + cuerpo + '</p>',
     versionBlock,
     boton('#4b7f52', autorLink(token, 'approve'), 'Aprobar versión'),
     boton('#d95f1a', autorLink(token, 'edit'), 'Modificar versión'),
@@ -163,10 +167,11 @@ function sendSolicitudModificacion(produccion) {
 
 function sendNuevaVersion(editorEmail, produccion) {
   var subject = getMailSubject('mail_subject_version', 'Nueva versión recibida — {{titulo}}', { titulo: produccion.titulo });
+  var cuerpo = getMailBody('mail_body_version', '{{titulo}} tiene una nueva versión ({{version}}).', { titulo: escapeHtml(produccion.titulo), version: escapeHtml(produccion.version_actual) });
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;font-weight:400;">Nueva versión recibida</h1>',
-    '  <p style="font-size:16px;line-height:1.6;"><strong>' + escapeHtml(produccion.titulo) + '</strong> tiene una nueva versión (' + escapeHtml(produccion.version_actual) + ').</p>',
+    '  <p style="font-size:16px;line-height:1.6;">' + cuerpo + '</p>',
     '  <p><a href="' + PANEL_URL + '" style="color:#d95f1a;">Abrir el panel y continuar la revisión</a></p>',
     '</div>',
   ].join('');
@@ -175,10 +180,11 @@ function sendNuevaVersion(editorEmail, produccion) {
 
 function sendDevolucionEditor(editorEmail, produccion) {
   var subject = getMailSubject('mail_subject_devolucion', 'Producción devuelta a revisión — {{titulo}}', { titulo: produccion.titulo });
+  var cuerpo = getMailBody('mail_body_devolucion', '{{titulo}} fue devuelto por el equipo luego de la respuesta del autor.', { titulo: escapeHtml(produccion.titulo) });
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;font-weight:400;">Producción devuelta a revisión</h1>',
-    '  <p style="font-size:16px;line-height:1.6;"><strong>' + escapeHtml(produccion.titulo) + '</strong> fue devuelto por el equipo luego de la respuesta del autor.</p>',
+    '  <p style="font-size:16px;line-height:1.6;">' + cuerpo + '</p>',
     '  <p><a href="' + PANEL_URL + '" style="color:#d95f1a;">Abrir el panel</a></p>',
     '</div>',
   ].join('');
@@ -255,5 +261,82 @@ function sendAgendaNotificacion(cita) {
     '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Redacción</p>',
     '</div>',
   ].join('');
+  emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
+}
+
+// ── Recordatorio semanal a editores ──
+
+function sendRecordatorioEditor(editorEmail, items) {
+  var subject = getMailSubject('mail_subject_recordatorio', 'Producciones pendientes de revisión — {{cantidad}}', { cantidad: items.length });
+  var cuerpo = getMailBody('mail_body_recordatorio', 'Tenés {{cantidad}} producción/es pendientes de revisión en el tablero:', { cantidad: items.length });
+  var filas = items.map(function (it) {
+    var edicion = it.edicion ? ' · Edición ' + escapeHtml(it.edicion) : '';
+    return '  <tr style="border-bottom:1px solid #cec8bc;">' +
+      '<td style="padding:10px 8px;font-size:14px;line-height:1.5;"><strong>' + escapeHtml(it.titulo) + '</strong><br>' + escapeHtml(it.autor) + edicion + '</td>' +
+      '<td style="padding:10px 8px;font-size:13px;white-space:nowrap;">' + (it.dias > 0 ? it.dias + ' día/s' : 'hoy') + '</td>' +
+      '</tr>';
+  }).join('');
+  var html = [
+    '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+    '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Recordatorio de revisiones</h1>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">' + cuerpo + '</p>',
+    '  <table style="width:100%;border-collapse:collapse;margin:0 0 20px;">' + filas + '</table>',
+    '  <p style="margin:0;"><a href="' + PANEL_URL + '/tablero/" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Abrir tablero</a></p>',
+    '  <p style="font-size:13px;color:#8a837a;margin:16px 0 0;">Tramas del Sur — Redacción</p>',
+    '</div>',
+  ].join('');
+  sendHtmlMail(editorEmail, subject, html);
+}
+
+// ── Digest semanal a gestores (COORDINADOR + SUPERVISOR) ──
+
+function sendDigestGestores(secciones) {
+  var subject = getMailSubject('mail_subject_digest', 'Digest semanal del tablero — {{fecha}}', { fecha: secciones.fecha });
+  var cuerpo = getMailBody('mail_body_digest', 'Resumen semanal del circuito editorial:', {});
+  var bloques = secciones.bloques.map(function (b) {
+    if (!b.items.length) return '';
+    var filas = b.items.map(function (it) {
+      return '  <tr style="border-bottom:1px solid #cec8bc;">' +
+        '<td style="padding:8px;font-size:14px;line-height:1.5;"><strong>' + escapeHtml(it.titulo) + '</strong><br>' + escapeHtml(it.autor) + (it.extra ? ' · ' + escapeHtml(it.extra) : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    return '  <h2 style="font-family:\'Playfair Display\',Georgia,serif;font-size:17px;font-weight:400;margin:20px 0 8px;">' + escapeHtml(b.titulo) + ' (' + b.items.length + ')</h2>' +
+      '  <table style="width:100%;border-collapse:collapse;border:1px solid #cec8bc;">' + filas + '</table>';
+  }).join('');
+  var html = [
+    '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+    '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Digest semanal del tablero</h1>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">' + cuerpo + '</p>',
+    bloques,
+    '  <p style="margin:16px 0 0;"><a href="' + PANEL_URL + '/tablero/" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Abrir tablero</a></p>',
+    '  <p style="font-size:13px;color:#8a837a;margin:16px 0 0;">Tramas del Sur — Redacción</p>',
+    '</div>',
+  ].join('');
+  var emails = getEmailsByRoles(ROLES_NOTIF_GESTORES);
+  emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
+}
+
+// ── Alerta de tokens de autor vencidos (COORDINADOR + SUPERVISOR) ──
+
+function sendAlertaTokensVencidos(items) {
+  var subject = getMailSubject('mail_subject_token_vencido', 'Tokens de autor vencidos — {{cantidad}}', { cantidad: items.length });
+  var cuerpo = getMailBody('mail_body_token_vencido', 'Hay {{cantidad}} token/s de autor vencidos que requieren reenvío:', { cantidad: items.length });
+  var filas = items.map(function (it) {
+    return '  <tr style="border-bottom:1px solid #cec8bc;">' +
+      '<td style="padding:8px;font-size:14px;line-height:1.5;"><strong>' + escapeHtml(it.titulo) + '</strong><br>' + escapeHtml(it.autor) + '</td>' +
+      '<td style="padding:8px;font-size:13px;white-space:nowrap;">vencido hace ' + it.diasVencido + ' día/s</td>' +
+      '</tr>';
+  }).join('');
+  var html = [
+    '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+    '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Tokens de autor vencidos</h1>',
+    '  <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">' + cuerpo + '</p>',
+    '  <table style="width:100%;border-collapse:collapse;border:1px solid #cec8bc;margin:0 0 16px;">' + filas + '</table>',
+    '  <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">Para renovarlos, usá "Consultar al autor" o "Enviar correcciones" desde el tablero: generan un link nuevo.</p>',
+    '  <p style="margin:0;"><a href="' + PANEL_URL + '/tablero/" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Abrir tablero</a></p>',
+    '  <p style="font-size:13px;color:#8a837a;margin:16px 0 0;">Tramas del Sur — Redacción</p>',
+    '</div>',
+  ].join('');
+  var emails = getEmailsByRoles(ROLES_NOTIF_GESTORES);
   emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }

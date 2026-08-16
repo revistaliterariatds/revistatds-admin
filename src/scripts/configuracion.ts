@@ -23,14 +23,20 @@ function showAlert(message: string, error = false) {
   el.textContent = message;
 }
 
-const CONFIG_CACHE_KEY = 'tds-config-cache-v1';
+const CONFIG_CACHE_KEY = 'tds-config-cache-v2';
+
+const SUBJECT_KEYS = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda', 'recordatorio', 'digest', 'token_vencido'];
+const BODY_KEYS = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'recordatorio', 'digest', 'token_vencido'];
 
 function fillForm(config: Record<string, string>) {
   (document.getElementById('config-expira') as HTMLInputElement).value = config.expira_token_dias || '30';
+  (document.getElementById('config-recordatorio-dias') as HTMLInputElement).value = config.recordatorio_editores_dias || '3';
   (document.getElementById('config-site') as HTMLInputElement).value = config.site_base_url || '';
-  const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda'];
-  subjects.forEach((key) => {
+  SUBJECT_KEYS.forEach((key) => {
     (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value = config[`mail_subject_${key}`] || '';
+  });
+  BODY_KEYS.forEach((key) => {
+    (document.getElementById(`mail-body-${key}`) as HTMLInputElement).value = config[`mail_body_${key}`] || '';
   });
   (document.getElementById('config-form') as HTMLFormElement).hidden = false;
 }
@@ -61,10 +67,13 @@ async function submit(event: SubmitEvent) {
   event.preventDefault();
   try {
     await save('expira_token_dias', (document.getElementById('config-expira') as HTMLInputElement).value);
+    await save('recordatorio_editores_dias', (document.getElementById('config-recordatorio-dias') as HTMLInputElement).value);
     await save('site_base_url', (document.getElementById('config-site') as HTMLInputElement).value);
-const subjects = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda'];
-    for (const key of subjects) {
+    for (const key of SUBJECT_KEYS) {
       await save(`mail_subject_${key}`, (document.getElementById(`mail-subject-${key}`) as HTMLInputElement).value);
+    }
+    for (const key of BODY_KEYS) {
+      await save(`mail_body_${key}`, (document.getElementById(`mail-body-${key}`) as HTMLInputElement).value);
     }
     try { localStorage.removeItem(CONFIG_CACHE_KEY); } catch { /* sin caché local */ }
     showAlert('Configuración guardada.');
