@@ -17,6 +17,7 @@ var SHEETS = {
     'edicion', 'creado_por', 'creado_at', 'actualizado_at',
   ],
   AgendaComentarios: ['id', 'cita_id', 'autor', 'comentario', 'creado_at'],
+  Avisos: ['num_edicion', 'produccion_id', 'email_autor', 'fecha'],
 };
 
 function getSpreadsheet() {

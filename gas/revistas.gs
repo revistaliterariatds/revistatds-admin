@@ -249,10 +249,11 @@ function handleSubirRevistaFinal(idToken, payload) {
 
   CacheService.getScriptCache().remove(sesionSubidaKey(user.email));
   agendarAvisoEdicion(sesion.num, sesion.titulo);
+  agendarAvisoAutores(sesion.num, sesion.titulo);
 
   return {
     status: 'ok',
-    message: 'Edición ' + sesion.titulo + ' en proceso de publicación. Aparecerá en el sitio en ~1 minuto y avisamos al equipo por mail en ~2.',
+    message: 'Edición ' + sesion.titulo + ' en proceso de publicación. Aparecerá en el sitio en ~1 minuto, avisamos al equipo por mail en ~2 y a los autores en ~10.',
     num: sesion.num,
   };
 }
@@ -326,5 +327,131 @@ function dispatchearPublicarEdicion(payload) {
   });
   if (res.getResponseCode() !== 204) {
     throw new ApiError('GitHub no aceptó la publicación (HTTP ' + res.getResponseCode() + '). Revisá GITHUB_TOKEN_REVISTA.');
+  }
+}
+// ── aviso a los autores publicados (10 minutos después de publicar) ──
+// Felicitaciones a los autores cuyas producciones (estado PUBLICADO) forman
+// parte de la edición publicada. Prolijo y seguro:
+//  - un solo mail por autor (agrupado por email), cada uno solo con su info
+//  - registro en la hoja "Avisos" → idempotente, nunca se reenvía
+//  - link personal de estado solo si existe token (nunca se expone el token)
+//  - si falla el envío, reintenta en 3 minutos conservando lo pendiente
+
+var AVISO_AUTORES_KEY = 'aviso-autores-pendiente';
+
+function produccionesPublicadasDeEdicion(num) {
+  var sheet = getSheet('Tablero');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  var objetivo = nombreEdicion(num);
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idx.estado]) === ESTADOS.PUBLICADO &&
+        String(data[i][idx.edicion]) === objetivo) {
+      out.push({
+        _rowIndex: i,
+        id: String(data[i][idx.id] || ''),
+        titulo: String(data[i][idx.titulo] || ''),
+        autor: String(data[i][idx.autor] || ''),
+        email: String(data[i][idx.email_autor] || '').trim(),
+        token: String(data[i][idx.token_autor] || ''),
+      });
+    }
+  }
+  return out;
+}
+
+function avisoYaEnviado(num, produccionId) {
+  var sheet = getSheet('Avisos');
+  if (!sheet) return false;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(num) && String(data[i][1]) === String(produccionId)) return true;
+  }
+  return false;
+}
+
+function registrarAviso(num, produccionId, email) {
+  getSheet('Avisos').appendRow([String(num), String(produccionId), String(email), new Date()]);
+}
+
+function joinTitulos(titulos) {
+  var out = [];
+  titulos.forEach(function (t) { out.push('«' + escapeHtml(t) + '»'); });
+  if (out.length === 1) return out[0];
+  return out.slice(0, -1).join(', ') + ' y ' + out[out.length - 1];
+}
+
+function agendarAvisoAutores(num, titulo) {
+  var producciones = produccionesPublicadasDeEdicion(num);
+  // agrupa por email: un solo mail por autor con todas sus producciones
+  var grupos = {};
+  producciones.forEach(function (p) {
+    if (!p.email) return;
+    if (!grupos[p.email]) grupos[p.email] = { autor: p.autor, token: '', producciones: [] };
+    var g = grupos[p.email];
+    g.producciones.push({ id: p.id, titulo: p.titulo });
+    if (!g.token && p.token) g.token = p.token;
+  });
+  var lista = [];
+  Object.keys(grupos).forEach(function (email) {
+    var g = grupos[email];
+    lista.push({ email: email, autor: g.autor, token: g.token, producciones: g.producciones });
+  });
+  if (lista.length === 0) return; // sin autores publicados para esta edición
+  PropertiesService.getScriptProperties().setProperty(
+    AVISO_AUTORES_KEY, JSON.stringify({ num: num, titulo: titulo, grupos: lista }));
+  ScriptApp.newTrigger('enviarAvisoAutoresPublicados').timeBased().after(10 * 60 * 1000).create();
+}
+
+function enviarAvisoAutoresPublicados() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(AVISO_AUTORES_KEY);
+  if (!raw) return; // nada pendiente (o ya enviado)
+  var pendiente = JSON.parse(raw);
+  var sitio = siteBase();
+  var pdfUrl = REVISTAS_BASE_URL + 'rtds' + pendiente.num + '.pdf';
+
+  try {
+    pendiente.grupos.forEach(function (g) {
+      var pendientes = g.producciones.filter(function (p) {
+        return !avisoYaEnviado(pendiente.num, p.id);
+      });
+      if (pendientes.length === 0) return; // ya notificado antes
+      var titulos = pendientes.map(function (p) { return p.titulo; });
+      var subject = 'Tu publicación en Tramas del Sur — ' + pendiente.titulo;
+      var html = [
+        '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
+        '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">¡Felicitaciones!</h1>',
+        '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">Hola ' + escapeHtml(g.autor || '') + ',</p>',
+        '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">Tu producción ' + joinTitulos(titulos) + ' forma parte de la edición ' + escapeHtml(pendiente.titulo) + ' de Tramas del Sur, ya publicada.</p>',
+        '  <p style="font-size:16px;line-height:1.6;margin:0 0 12px;">Gracias por participar y por confiar en la revista: es un orgullo tener tu trabajo en estas páginas.</p>',
+        '  <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Te invitamos a leerla y a difundirla: compartila con tus contactos y en tus redes.</p>',
+        '  <p style="margin:0 0 12px;"><a href="' + sitio + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Leer la nueva edición</a></p>',
+        '  <p style="margin:0 0 12px;"><a href="' + pdfUrl + '" style="display:inline-block;border:1px solid #d95f1a;color:#d95f1a;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Descargar el PDF</a></p>',
+      ];
+      if (g.token) {
+        html.push('  <p style="margin:0 0 24px;"><a href="' + autorLink(g.token, 'estado') + '" style="display:inline-block;border:1px solid #d95f1a;color:#d95f1a;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Ver el estado de mi envío</a></p>');
+      } else {
+        html.push('  <p style="margin:0 0 24px;"></p>');
+      }
+      html.push('  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>');
+      html.push('</div>');
+      sendHtmlMail(g.email, subject, html.join(''));
+      pendientes.forEach(function (p) { registrarAviso(pendiente.num, p.id, g.email); });
+    });
+    props.deleteProperty(AVISO_AUTORES_KEY);
+  } catch (err) {
+    // reintenta en 3 minutos, conservando lo pendiente
+    ScriptApp.newTrigger('enviarAvisoAutoresPublicados').timeBased().after(3 * 60 * 1000).create();
+    return;
+  }
+
+  // limpieza: elimina triggers sobrantes de este handler
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'enviarAvisoAutoresPublicados') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
   }
 }
