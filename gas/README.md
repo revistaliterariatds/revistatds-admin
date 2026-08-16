@@ -79,6 +79,9 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
 | `panel/board/list` | idToken | `{ status, producciones: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
 | `panel/board/aprobar` | idToken + gestor | pasa `ESPERANDO_APROBACIÓN` → `APROBADO` |
+| `panel/board/pedir-correcciones` | idToken + editor titular | marca `CORRECCIONES_SOLICITADAS` **sin enviar mail** (avisa al equipo) |
+| `panel/board/enviar-correcciones` | idToken + gestor | envía al autor el `fileId` (→ PDF) + `mensaje`, genera token, estado `CORRECCIONES_SOLICITADAS` |
+| `panel/board/consultar-autor` | idToken + gestor | envía al autor el `fileId` (→ PDF) para aprobación, genera token, estado `CONSULTA_AUTOR` |
 | `panel/board/cambiar-estado` | idToken + COORDINADOR/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío (mueve también su carpeta a `RECIBIDOS` de la edición nueva) |
 | `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta de la producción (recursivo) para el selector |
@@ -140,7 +143,9 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 
 - **Consulta de aprobación**: el coordinador **elige el archivo** de la carpeta de la producción (selector `panel/board/archivos`); el backend lo convierte a **PDF** (`convertirAPdf`: PDF → tal cual, Google nativo → `getAs`, Word/ODT/RTF/TXT → Advanced Drive Service, imágenes → tal cual) y lo adjunta, sin links de Drive ni docs editables. Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
 - **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/SUPERVISOR** (sin WEBMASTER) para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
-- **Pedir correcciones**: link de un solo uso para subir versión.
+- **Pedir correcciones** (dos pasos, contacto centralizado en gestores):
+  1. El **editor** marca (`panel/board/pedir-correcciones`) → `CORRECCIONES_SOLICITADAS` sin mail ni token, y avisa al equipo.
+  2. El **gestor** envía (`panel/board/enviar-correcciones`) eligiendo el archivo (→ PDF) + un **mensaje adicional** opcional → genera el token y manda el mail con el link de un solo uso para subir versión.
 - **Confirmación de recibido**: primer link de seguimiento (token).
 
 ### Validación de archivos

@@ -77,8 +77,20 @@ src/
 - **Visibilidad por rol**: `RECIBIDO` (bandeja de entrada) solo lo ven COORDINADOR/WEBMASTER/SUPERVISOR. El EDITOR ve desde `PRESELECCIONADO` y **se autoasigna desde ahí**.
 - **Acceso al documento**: todo usuario logueado ve el botón **"Doc"** en cada fila desde el primer momento (apunta al doc de corrección; si aún no existe, a la carpeta con el original).
 - **Aprobar**: COORDINADOR/WEBMASTER/SUPERVISOR pueden pasar `ESPERANDO_APROBACIÓN` → `APROBADO` directamente (botón "Aprobar" junto a "Consultar al autor").
-- **Control administrativo**: COORDINADOR/WEBMASTER pueden **cambiar el estado de cualquier publicación en cualquier momento** desde el detalle (selector "Cambiar estado").
+- **Control administrativo**: COORDINADOR/WEBMASTER pueden **cambiar el estado de cualquier publicación en cualquier momento** desde el detalle (selector "Cambiar estado"). Si eligen `CONSULTA_AUTOR`, se abre el selector de archivo (igual que "Consultar al autor").
+- **Marcar publicable** (COORDINADOR/WEBMASTER): elige un archivo de la carpeta y lo copia a `PUBLICABLES/<id>-<nombre>` (guarda `url_publicable`).
+- **Borrar envío** (COORDINADOR/WEBMASTER): elimina por completo la carpeta de Drive, la copia en PUBLICABLES, la fila del tablero y su historial.
+- **Contacto con el autor centralizado en gestores**: el EDITOR solo **marca** ("Pedir correcciones"); el gestor **envía** el mail al autor ("Enviar correcciones al autor" / "Consultar al autor") eligiendo archivo → PDF adjunto.
 - El backend filtra `RECIBIDO` para el editor y valida que la autoasignación sea solo desde `PRESELECCIONADO`; `desasignar` devuelve la publicación a `PRESELECCIONADO`.
+
+## Estructura de Drive
+
+```
+Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
+```
+- Cada envío vive en `RECIBIDOS/<id>/` (original, `correccion/`, `v2…`, `version_aprobada/`). `PUBLICABLES/<id>-<nombre>` guarda las copias marcadas como publicables.
+- El envío nuevo cae en la edición cuyo rango apertura–cierre contiene la fecha de recepción (abierta → última → `SIN_EDICION`). Nombre de edición con cero a la izquierda (`EDICION N° 03`).
+- Migraciones: `migrateEstructuraDrive()` (mueve la carpeta legacy `Cuentos/<id>` a `RECIBIDOS`), `migrateEdicionesPorFecha()`, `migrateHistorialIdColumna()` (`id_cuento` → `id_produccion`).
 
 ## Rendimiento
 
@@ -109,9 +121,11 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - **Modificar cierre / reabrir**: COORDINADOR/WEBMASTER pueden cambiar la `fecha_cierre` de una edición cerrada o reabrirla (dejarla abierta), validando que no se superponga con la edición siguiente.
 - Migraciones idempotentes `migrateEdiciones()` (hoja + columna `edicion`) y `migrateEdicionesPorFecha()` (reetiqueta envíos según `fecha_recibido`).
 
-## Mail de aprobación al autor
+## Mails al autor
 
-- Al "Consultar al autor", el coordinador **elige el archivo** de la carpeta de la producción; el sistema lo convierte a **PDF** y lo adjunta (el autor nunca recibe links de Drive ni docs editables).
+- El contacto con el autor lo hacen **solo los gestores** (COORDINADOR/WEBMASTER/SUPERVISOR); el EDITOR solo **marca** las correcciones.
+- **Consultar al autor**: el gestor **elige el archivo** de la carpeta de la producción; el sistema lo convierte a **PDF** (`convertirAPdf`) y lo adjunta (el autor nunca recibe links de Drive ni docs editables).
+- **Enviar correcciones al autor**: mismo selector de archivo + **campo de mensaje adicional** (opcional); adjunta el PDF y el mensaje, con link de un solo uso para subir la nueva versión.
 - Tres **botones iguales con colores TDS** (Aprobar verde / Modificar naranja / No aprobar rojo), de **un solo uso** (el token se consume con la primera acción).
 - Explica que modificar requiere enviar un **nuevo archivo**: adjuntándolo **respondiendo el correo**, o como **nueva producción** con botón directo al formulario (`enviar.html`).
 - Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + COORDINADOR/SUPERVISOR** reciben aviso de que el autor solicita modificar su producción (WEBMASTER no recibe mails).
@@ -127,9 +141,12 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Contador histórico de visitas y medición de descargas de ediciones (con contador histórico).
 - Agenda (citas, comentarios, Meet, horarios con inicio/fin, mails, caché local) y ciclo de Ediciones (fechas elegibles sin solapamiento, auto-citas).
 - Tablero: estado `PRESELECCIONADO` con visibilidad por rol, botón "Doc" para todos, aprobar desde "En aprobación" y cambio de estado administrativo.
-- Mail de aprobación con PDF adjunto y botones de un solo uso; aviso al equipo cuando el autor pide modificar.
-- Rol `ADMINISTRADOR` renombrado a `COORDINADOR` (migración `migrateRoles()`); `WEBMASTER` con acceso total idéntico.
+- Mail de aprobación y de correcciones con PDF adjunto (archivo elegido por el gestor) y botones de un solo uso; aviso al equipo cuando el autor pide modificar.
+- Rol `ADMINISTRADOR` renombrado a `COORDINADOR` (migración `migrateRoles()`); `WEBMASTER` con acceso total idéntico pero **sin recibir mails**.
+- Estructura de Drive por ediciones (`EDICIONES/EDICION N° xx/RECIBIDOS|PUBLICABLES`), etiquetado por fecha, "marcar publicable", "borrar envío" y "modificar cierre / reabrir edición".
+- Término **"producción"** (antes "cuento") aplicado en código, mails, UI y columnas de hoja (`id_produccion`).
+- Contacto con el autor centralizado en gestores; el editor solo marca.
 - Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
-- QA automatizado ejecutado (17/17 PASS contra producción, sin login) — ver log en `revistatds/docs/plan-editorial.md`.
+- QA automatizado ejecutado (24/24 PASS contra producción, sin login) — ver log en `revistatds/docs/plan-editorial.md`.
 
 Ver el plan completo en `revistatds/docs/plan-editorial.md` y el contrato GAS en `gas/README.md`.
