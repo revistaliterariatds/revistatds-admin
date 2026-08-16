@@ -89,8 +89,12 @@ function doPost(e) {
       result = handleConfigSave(tokenFrom(data, e), data && data.key, data && data.value);
     } else if (action === 'panel/revistas/list') {
       result = handleListarRevistas(tokenFrom(data, e));  // ediciones publicadas (todos los roles)
-    } else if (action === 'panel/revistas/subir') {
-      result = handleSubirRevista(tokenFrom(data, e), data);  // publicar edición nueva (COORDINADOR/WEBMASTER)
+    } else if (action === 'panel/revistas/subir-chunk') {
+      result = handleSubirRevistaChunk(tokenFrom(data, e), data);  // chunk del PDF (COORDINADOR/WEBMASTER)
+    } else if (action === 'panel/revistas/subir-estado') {
+      result = handleSubirRevistaEstado(tokenFrom(data, e));  // reanudar tras error de red
+    } else if (action === 'panel/revistas/finalizar') {
+      result = handleSubirRevistaFinal(tokenFrom(data, e), data);  // portada + dispatch a GitHub
     } else if (action === 'panel/analytics/daily') {
       result = handleAnalyticsDaily(tokenFrom(data, e), data && data.days);
     } else if (action === 'autor/estado') {

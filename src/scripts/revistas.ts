@@ -106,10 +106,13 @@ function hideAlert() {
 }
 
 // ── subida de una edición nueva (COORDINADOR/WEBMASTER) ──
-const REVISTAS_PDF_MAX = 12 * 1024 * 1024;
+// El PDF viaja por chunks de 5 MB (base64); el backend lo reconstruye en Drive.
+// Si un chunk falla por red, se consulta el estado y se reanuda desde ahí.
+const REVISTAS_PDF_MAX = 40 * 1024 * 1024;
 const REVISTAS_PORTADA_MAX = 4 * 1024 * 1024;
+const CHUNK_BYTES = 5 * 1024 * 1024;
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -119,6 +122,37 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
     reader.readAsDataURL(file);
   });
+}
+
+async function subirPdf(pdfFile: File, num: string, titulo: string, btn: HTMLButtonElement | null) {
+  const totalChunks = Math.ceil(pdfFile.size / CHUNK_BYTES);
+  let sent = 0;
+  while (sent < totalChunks) {
+    const slice = pdfFile.slice(sent * CHUNK_BYTES, Math.min((sent + 1) * CHUNK_BYTES, pdfFile.size));
+    const chunk_b64 = await fileToBase64(slice);
+    if (btn) btn.textContent = `Subiendo… ${Math.round((sent / totalChunks) * 100)}%`;
+    let ok = false;
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      try {
+        const data = await api('panel/revistas/subir-chunk', {
+          chunk_b64,
+          index: sent,
+          total_chunks: totalChunks,
+          total_bytes: pdfFile.size,
+          num: sent === 0 ? num : undefined,
+          titulo: sent === 0 ? titulo : undefined,
+        });
+        if (data.status !== 'ok') throw new Error(data.message || 'Error subiendo el PDF.');
+        sent = Number(data.received) || sent + 1;
+        ok = true;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        const st = await api('panel/revistas/subir-estado');
+        sent = Number((st as { received?: number })?.received) || sent;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
 }
 
 function initSubida() {
@@ -138,24 +172,26 @@ function initSubida() {
 
     const pdfFile = pdfInput.files?.[0];
     if (!pdfFile) { showAlert('Elegí el PDF de la edición.'); return; }
-    if (pdfFile.size > REVISTAS_PDF_MAX) { showAlert('El PDF supera el máximo de 12 MB.'); return; }
+    if (pdfFile.size > REVISTAS_PDF_MAX) { showAlert('El PDF supera el máximo de 40 MB.'); return; }
     const portadaFile = portadaInput.files?.[0];
     if (portadaFile && portadaFile.size > REVISTAS_PORTADA_MAX) { showAlert('La portada supera el máximo de 4 MB.'); return; }
 
     if (btn) btnCargando(btn, true);
     try {
-      const pdf_b64 = await fileToBase64(pdfFile);
       const portada_b64 = portadaFile ? await fileToBase64(portadaFile) : '';
       const titulo = tituloInput.value.trim();
       const num = numInput.value.trim();
-      const data = await api('panel/revistas/subir', { pdf_b64, portada_b64, titulo, num });
-      if (data.status !== 'ok') { showAlert(data.message || 'No se pudo subir la edición.'); return; }
+      if (btn) btn.textContent = 'Subiendo… 0%';
+      await subirPdf(pdfFile, num, titulo, btn);
+      if (btn) btn.textContent = 'Publicando…';
+      const data = await api('panel/revistas/finalizar', { portada_b64 });
+      if (data.status !== 'ok') { showAlert(data.message || 'No se pudo publicar la edición.'); return; }
       form.reset();
       showAlert(data.message || 'Edición en proceso de publicación.');
       clearCachedRevistas();
       window.setTimeout(load, 60000); // la edición aparece sola cuando el sitio la publica
     } catch (err) {
-      showAlert((err as Error).message || 'No se pudo subir la edición.');
+      showAlert((err as Error).message || 'No se pudo subir la edición. Reintentá.');
     } finally {
       if (btn) btnCargando(btn, false);
     }
