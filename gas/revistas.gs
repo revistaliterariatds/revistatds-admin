@@ -148,6 +148,10 @@ function handleSubirRevistaChunk(idToken, payload) {
     if (index !== sesion.received) {
       throw new ApiError('La subida se desincronizó (se recibió hasta el chunk ' + sesion.received + ').');
     }
+    // la subida ya se completó en un intento anterior (respuesta perdida por red)
+    if (sesion.received === sesion.totalChunks) {
+      return { status: 'ok', received: sesion.received, completo: true };
+    }
   }
 
   var bytes = Utilities.base64Decode(chunkB64);
@@ -170,15 +174,35 @@ function handleSubirRevistaChunk(idToken, payload) {
   });
   var code = res.getResponseCode();
 
-  if (code === 201) {
-    // la subida se completó con este chunk
-    var metaCompleta = JSON.parse(res.getContentText());
-    sesion.fileId = metaCompleta.id;
+  if (code === 201 || code === 200) {
+    // la subida se completó con este chunk (Drive puede responder 200 o 201)
+    var body = res.getContentText();
+    if (body) {
+      try {
+        var metaCompleta = JSON.parse(body);
+        if (metaCompleta.id) sesion.fileId = metaCompleta.id;
+      } catch (e) { /* body sin recurso */ }
+    }
+    if (!sesion.fileId) {
+      // fallback: buscar el archivo por nombre en la carpeta de subidas
+      var folderSubidas = getOrCreateFolder(getRootFolder(), REVISTAS_UPLOAD_FOLDER);
+      var filesSubidos = folderSubidas.getFilesByName('rtds' + sesion.num + '.pdf');
+      if (filesSubidos.hasNext()) sesion.fileId = filesSubidos.next().getId();
+    }
     sesion.received = sesion.totalChunks;
   } else if (code === 308) {
     sesion.received = index + 1;
+    // si Drive informa hasta qué byte recibió, sincroniza el conteo
+    var rango = res.getHeaders()['Range'] || res.getHeaders()['range'];
+    if (rango) {
+      var ultimo = Number(String(rango).split('-')[1]);
+      if (!isNaN(ultimo)) {
+        var recibidos = Math.floor((ultimo + 1) / REVISTAS_CHUNK_BYTES);
+        if (recibidos > sesion.received && recibidos <= sesion.totalChunks) sesion.received = recibidos;
+      }
+    }
   } else {
-    throw new ApiError('Error subiendo el chunk ' + (index + 1) + ' (HTTP ' + code + '). Reintentá la subida.');
+    throw new ApiError('Error subiendo el chunk ' + (index + 1) + ' (HTTP ' + code + '): ' + String(res.getContentText()).slice(0, 200) + ' Reintentá la subida.');
   }
 
   CacheService.getScriptCache().put(sesionSubidaKey(email), JSON.stringify(sesion), 1800);
