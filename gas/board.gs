@@ -196,18 +196,27 @@ function handleReasignar(idToken, id, editorEmail) {
   }
 }
 
-// ── pedir correcciones al autor (editor titular) ──
-function handlePedirCorrecciones(idToken, id, motivo) {
+// ── pedir correcciones al autor (editor titular o gestor) ──
+function handlePedirCorrecciones(idToken, id, fileId, mensaje) {
   var user = requireInternalUser(idToken);
+  if (!fileId) throw new ApiError('Elegí el archivo a adjuntar al autor.');
+
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var c = findProduccionById(id);
     if (!c) throw new ApiError('Producción no encontrada.');
-    if (String(c.editor_asignado) !== String(user.email)) {
-      throw new AuthError('Solo el editor asignado puede operar esta producción.');
+    if (String(c.editor_asignado) !== String(user.email) && !esGestor(user)) {
+      throw new AuthError('Solo el editor asignado o un gestor puede operar esta producción.');
     }
     if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('La producción no está en revisión.');
+
+    // El archivo elegido debe pertenecer a la carpeta de la producción.
+    var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
+    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
+
+    // Se convierte a PDF antes de generar el token: si falla, no queda nada a medias.
+    var pdfBlob = convertirAPdf(String(fileId));
 
     // Token fresco + expiración (guardamos antes para que el link del mail valga).
     var token = Utilities.getUuid();
@@ -218,14 +227,14 @@ function handlePedirCorrecciones(idToken, id, motivo) {
 
     // El mail es crítico: si falla, revertimos el token y NO cambiamos el estado.
     try {
-      sendPedirCorrecciones(c.email_autor, c, token);
+      sendPedirCorrecciones(c.email_autor, c, token, pdfBlob, mensaje);
     } catch (e) {
       setCell(sheet, c._rowIndex, 'token_autor', '');
       throw new ApiError('No se pudo enviar el mail al autor: ' + (e.message || e));
     }
 
     setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
-    addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', motivo || '');
+    addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', mensaje || '');
     clearBoardCache();
 
     return ok({ message: 'Se pidieron correcciones al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });

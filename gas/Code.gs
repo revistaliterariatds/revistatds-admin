@@ -38,7 +38,7 @@ function doPost(e) {
     } else if (action === 'panel/board/reasignar') {
       result = handleReasignar(tokenFrom(data, e), data && data.id, data && data.editorEmail);
     } else if (action === 'panel/board/pedir-correcciones') {
-      result = handlePedirCorrecciones(tokenFrom(data, e), data && data.id, data && data.motivo);
+      result = handlePedirCorrecciones(tokenFrom(data, e), data && data.id, data && data.fileId, data && data.mensaje);
     } else if (action === 'panel/board/revision-terminada') {
       result = handleRevisionTerminada(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/board/consultar-autor') {

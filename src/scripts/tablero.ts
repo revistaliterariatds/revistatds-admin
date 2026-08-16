@@ -293,6 +293,21 @@ async function desasignar(id: string) {
   await cargar();
 }
 
+// Abre el selector de archivo para "Pedir correcciones" (adjuntar PDF + mensaje).
+async function abrirSelectorPedir(id: string) {
+  const group = document.getElementById('pedirGroup');
+  const select = document.getElementById('pedir-archivo') as HTMLSelectElement | null;
+  if (!group || !select) return;
+  const r = await api('panel/board/archivos', { id });
+  if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
+  const archivos = r.archivos || [];
+  if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
+  select.innerHTML = archivos
+    .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
+    .join('');
+  group.hidden = false;
+}
+
 // Abre el selector de archivo para "Consultar al autor" (adjuntar PDF).
 async function abrirSelectorConsulta(id: string) {
   const group = document.getElementById('consultaGroup');
@@ -322,8 +337,10 @@ async function abrirDetalle(id: string) {
   const soyTitular = c.editor_asignado === user?.email;
 
   const acciones: string[] = [];
-  if (soyTitular && c.estado === 'EN_REVISIÓN') {
+  if ((soyTitular || esGestor) && c.estado === 'EN_REVISIÓN') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="pedir">Pedir correcciones</button>`);
+  }
+  if (soyTitular && c.estado === 'EN_REVISIÓN') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="terminar">Revisión terminada</button>`);
   }
   if (esGestor && c.estado === 'ESPERANDO_APROBACIÓN') {
@@ -387,10 +404,16 @@ async function abrirDetalle(id: string) {
     <h3 class="detail-sub">Historial</h3>
     <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
     <div class="detail-acciones">${acciones.join(' ')}</div>
-    ${soyTitular && c.estado === 'EN_REVISIÓN' ? `
-      <div class="form-group" id="motivoGroup" hidden>
-        <label for="motivo">Motivo de las correcciones</label>
-        <textarea id="motivo" rows="3" placeholder="Qué cambiar…"></textarea>
+    ${(soyTitular || esGestor) && c.estado === 'EN_REVISIÓN' ? `
+      <div class="form-group" id="pedirGroup" hidden>
+        <label for="pedir-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
+        <select id="pedir-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
+        <label for="pedir-mensaje" style="margin-top:0.75rem;">Mensaje adicional (opcional)</label>
+        <textarea id="pedir-mensaje" rows="3" placeholder="Qué cambiar…"></textarea>
+        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+          <button type="button" class="btn-mini" id="btn-confirmar-pedir">Enviar al autor</button>
+          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-pedir">Cancelar</button>
+        </div>
       </div>` : ''}
     ${esAdmin ? `
       <div class="form-group" id="publicableGroup" hidden>
@@ -421,13 +444,21 @@ async function abrirDetalle(id: string) {
     else alert(r.message || 'No se pudo cambiar la edición.');
   });
 
-  content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
-    const motivoGroup = document.getElementById('motivoGroup');
-    if (motivoGroup && motivoGroup.hidden) { motivoGroup.hidden = false; return; }
-    const motivo = (document.getElementById('motivo') as HTMLTextAreaElement).value.trim();
-    const r = await api('panel/board/pedir-correcciones', { id, motivo });
+  content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', () => abrirSelectorPedir(id));
+
+  content.querySelector('#btn-confirmar-pedir')?.addEventListener('click', async () => {
+    const select = document.getElementById('pedir-archivo') as HTMLSelectElement | null;
+    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
+    const mensaje = (document.getElementById('pedir-mensaje') as HTMLTextAreaElement).value.trim();
+    if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
+    const r = await api('panel/board/pedir-correcciones', { id, fileId: select.value, mensaje });
     if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo.');
+    else alert(r.message || 'No se pudo pedir correcciones.');
+  });
+
+  content.querySelector('#btn-cancelar-pedir')?.addEventListener('click', () => {
+    const group = document.getElementById('pedirGroup');
+    if (group) group.hidden = true;
   });
 
   content.querySelector('[data-detalle-accion="terminar"]')?.addEventListener('click', async () => {

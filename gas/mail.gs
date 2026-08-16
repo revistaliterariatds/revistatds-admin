@@ -66,17 +66,32 @@ function notifyTeam(tipo, detalle) {
   emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }
 
-function sendPedirCorrecciones(autorEmail, produccion, token) {
+function sendPedirCorrecciones(autorEmail, produccion, token, pdfBlob, mensaje) {
   var subject = getMailSubject('mail_subject_correcciones', 'Correcciones solicitadas — {{titulo}}', { titulo: produccion.titulo });
+  var adjuntoBlock = pdfBlob
+    ? '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">Adjuntamos el documento con las correcciones del editor en formato PDF.</p>'
+    : '';
+  var mensajeBlock = mensaje
+    ? '  <div style="background:#ffffff;border:1px solid #cec8bc;padding:16px;margin:0 0 22px;white-space:pre-wrap;font-size:15px;line-height:1.7;">' + escapeHtml(mensaje) + '</div>'
+    : '';
   var html = [
     '<div style="font-family:Lato,Arial,sans-serif;color:#1e1a17;background:#f0ece3;padding:28px;max-width:600px;margin:0 auto;border:1px solid #cec8bc;">',
     '  <h1 style="font-family:\'Playfair Display\',Georgia,serif;color:#1e1a17;font-weight:400;margin:0 0 12px;">Hola ' + escapeHtml(produccion.autor) + ',</h1>',
     '  <p style="font-size:16px;line-height:1.6;margin:0 0 20px;">El equipo editorial te pidió correcciones sobre <strong>' + escapeHtml(produccion.titulo) + '</strong>. Subí tu nueva versión desde este enlace (personal, no lo compartas):</p>',
+    adjuntoBlock,
+    mensajeBlock,
     '  <p style="margin:0 0 24px;"><a href="' + autorLink(token, 'edit') + '" style="display:inline-block;background:#d95f1a;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:2px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Subir nueva versión</a></p>',
     '  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>',
     '</div>',
   ].join('');
-  sendHtmlMail(autorEmail, subject, html);
+  var params = {
+    to: autorEmail,
+    subject: subject,
+    htmlBody: html,
+    name: MAIL_FROM_NAME,
+  };
+  if (pdfBlob) params.attachments = [pdfBlob];
+  MailApp.sendEmail(params);
 }
 
 function sendRevisionTerminada(adminEmails, produccion, editorNombre) {
