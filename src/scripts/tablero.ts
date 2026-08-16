@@ -343,7 +343,7 @@ async function abrirDetalle(id: string) {
   ).join('');
 
   const edicionesOpts = ['<option value="">Sin edición</option>']
-    .concat(ediciones.map((e) => `<option value="${esc(e.numero)}"${c.edicion === String(e.numero) ? ' selected' : ''}>Edición ${esc(e.numero)}</option>`))
+    .concat(ediciones.map((e) => `<option value="${esc(e.numero)}"${String(c.edicion ?? '').trim() === String(e.numero) ? ' selected' : ''}>Edición ${esc(e.numero)}</option>`))
     .join('');
 
   content.innerHTML = `
