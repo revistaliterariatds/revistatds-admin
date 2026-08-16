@@ -54,7 +54,7 @@ function sendAsignacion(editorEmail, cuento, docUrl) {
 }
 
 function notifyTeam(tipo, detalle) {
-  var emails = getEmailsByRoles(ROLES_GESTORES);
+  var emails = getEmailsByRoles(ROLES_NOTIF_GESTORES);
   if (emails.length === 0) return;
   var subject = '[' + tipo + '] ' + detalle;
   var html = [
@@ -129,7 +129,7 @@ function sendConsultaAutor(autorEmail, cuento, token, textoCorregido, pdfBlob) {
 function sendSolicitudModificacion(cuento) {
   var destinatarios = [];
   if (cuento.editor_asignado) destinatarios.push(String(cuento.editor_asignado));
-  getEmailsByRoles(ROLES_GESTORES).forEach(function (e) {
+  getEmailsByRoles(ROLES_NOTIF_GESTORES).forEach(function (e) {
     if (destinatarios.indexOf(e) < 0) destinatarios.push(e);
   });
   if (destinatarios.length === 0) return;
@@ -220,7 +220,7 @@ function sumarDiasKey(key, dias) {
 }
 
 function sendAgendaNotificacion(cita) {
-  var emails = getEmailsByRoles(ROLES_INTERNOS);
+  var emails = getEmailsByRoles(ROLES_NOTIF_INTERNOS);
   if (emails.length === 0) return;
   var subject = getMailSubject('mail_subject_agenda', 'Nueva cita en la agenda — {{titulo}}', { titulo: cita.titulo });
   var fecha = String(cita.fecha || '');

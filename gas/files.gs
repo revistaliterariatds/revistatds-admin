@@ -15,10 +15,102 @@ function getRootFolder() {
   return it.hasNext() ? it.next() : DriveApp.createFolder(DRIVE_ROOT);
 }
 
+// ── Estructura por ediciones ──
+// Tramas del Sur / EDICIONES / EDICION N° xx / {RECIBIDOS, PUBLICABLES}
+// El número lleva cero a la izquierda para que Drive ordene alfabéticamente.
+function nombreEdicion(numero) {
+  var n = String(numero);
+  while (n.length < 2) n = '0' + n;
+  return 'EDICION N° ' + n;
+}
+
+function getEdicionesRoot() {
+  return getOrCreateFolder(getRootFolder(), 'EDICIONES');
+}
+
+function getEdicionFolder(numero) {
+  return getOrCreateFolder(getEdicionesRoot(), nombreEdicion(numero));
+}
+
+function getRecibidosFolder(numero) {
+  return getOrCreateFolder(getEdicionFolder(numero), 'RECIBIDOS');
+}
+
+function getPublicablesFolder(numero) {
+  return getOrCreateFolder(getEdicionFolder(numero), 'PUBLICABLES');
+}
+
+// Edición a la que pertenece un envío nuevo: la abierta; si no hay, la última
+// (aunque esté cerrada); si no existe ninguna, una carpeta SIN_EDICION.
+function edicionDestino() {
+  return edicionActual() || ultimaEdicion() || 'SIN_EDICION';
+}
+
 function createCuentoFolder(id) {
+  return getRecibidosFolder(edicionDestino()).createFolder(id);
+}
+
+// Copia un archivo del cuento a PUBLICABLES/<id>-<nombre> (sueltos, sin subcarpeta).
+function copiarAPublicables(cuento, fileId) {
+  var edicion = String(cuento.edicion || edicionDestino());
+  var destino = getPublicablesFolder(edicion);
+  var file = DriveApp.getFileById(fileId);
+  var nombre = String(cuento.id || '') + '-' + file.getName();
+  return file.makeCopy(nombre, destino).getUrl();
+}
+
+// Lista recursiva de archivos en la carpeta del cuento (para el selector del panel).
+function listarArchivosCuento(cuento) {
+  var out = [];
+  (function walk(folder, ruta) {
+    var files = folder.getFiles();
+    while (files.hasNext()) {
+      var f = files.next();
+      out.push({ fileId: f.getId(), nombre: f.getName(), mime: f.getMimeType(), carpeta: ruta, url: f.getUrl() });
+    }
+    var subfolders = folder.getFolders();
+    while (subfolders.hasNext()) {
+      var sub = subfolders.next();
+      walk(sub, ruta + '/' + sub.getName());
+    }
+  })(getCuentoFolder(cuento), 'raíz');
+  return out;
+}
+
+// Migración única (idempotente): mueve las carpetas existentes de Cuentos/<id>
+// a RECIBIDOS/<edicion> de la estructura por ediciones y crea las carpetas base.
+function migrateEstructuraDrive() {
+  ensureSchema();
+
+  listarEdiciones().forEach(function (e) {
+    getRecibidosFolder(e.numero);
+    getPublicablesFolder(e.numero);
+  });
+
+  var tablero = getSheet('Tablero');
+  var edicionById = {};
+  if (tablero && tablero.getLastRow() > 1) {
+    var idx = headerIndex(tablero);
+    var data = tablero.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      edicionById[String(data[i][idx.id])] = String(data[i][idx.edicion] || '');
+    }
+  }
+
   var root = getRootFolder();
   var cuentos = getOrCreateFolder(root, 'Cuentos');
-  return cuentos.createFolder(id);
+  var movidos = 0;
+  var folders = cuentos.getFolders();
+  while (folders.hasNext()) {
+    var f = folders.next();
+    var edicion = edicionById[f.getName()] || ultimaEdicion();
+    if (!edicion) continue;
+    f.moveTo(getRecibidosFolder(edicion));
+    movidos++;
+  }
+
+  Logger.log('migrateEstructuraDrive: ' + movidos + ' carpeta(s) movidas a RECIBIDOS.');
+  return 'OK (' + movidos + ' carpeta(s) movidas)';
 }
 
 // Valida y normaliza adjuntos antes de tocar Drive. El formulario productivo

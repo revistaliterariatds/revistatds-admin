@@ -251,7 +251,7 @@ function handleRevisionTerminada(idToken, id) {
     addHistory(c.id, displayName(user.email), 'REVISION_TERMINADA', 'El editor terminó la revisión.');
     clearBoardCache();
 
-    var admins = getEmailsByRoles(ROLES_GESTORES);
+    var admins = getEmailsByRoles(ROLES_NOTIF_GESTORES);
     if (admins.length === 0) admins = [getSecret('ADMIN_EMAIL')].filter(Boolean);
     sendRevisionTerminada(admins, c, displayName(user.email));
 
@@ -370,6 +370,40 @@ function handleAprobar(idToken, id) {
     clearBoardCache();
     notifyTeam('Aprobado', displayName(user.email) + ' aprobó "' + c.titulo + '"');
     return ok({ message: 'Cuento aprobado.', estado: ESTADOS.APROBADO });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── listar archivos de la carpeta del cuento (gestores, para el selector) ──
+function handleBoardArchivos(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  var c = findCuentoById(id);
+  if (!c) throw new ApiError('Cuento no encontrado.');
+  return ok({ archivos: listarArchivosCuento(c) });
+}
+
+// ── marcar publicable (COORDINADOR/WEBMASTER): copia el archivo elegido a PUBLICABLES ──
+function handleMarcarPublicable(idToken, id, fileId) {
+  var user = requireInternalUser(idToken);
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede marcar publicable.');
+  if (!fileId) throw new ApiError('Falta el archivo a marcar como publicable.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+
+    var pertenece = listarArchivosCuento(c).some(function (a) { return a.fileId === String(fileId); });
+    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de este cuento.');
+
+    var url = copiarAPublicables(c, String(fileId));
+    setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
+    addHistory(c.id, displayName(user.email), 'MARCADO_PUBLICABLE', 'Copiado a PUBLICABLES (' + url + ')');
+    clearBoardCache();
+    return ok({ message: 'Publicable registrado.', url_publicable: url });
   } finally {
     lock.releaseLock();
   }

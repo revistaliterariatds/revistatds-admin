@@ -112,7 +112,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Adjunta el **documento de corrección del editor en PDF** (el autor nunca recibe links de Drive ni docs editables; fallback al texto en el cuerpo si no hay doc).
 - Tres **botones iguales con colores TDS** (Aprobar verde / Modificar naranja / No aprobar rojo), de **un solo uso** (el token se consume con la primera acción).
 - Explica que modificar requiere enviar un **nuevo archivo**: adjuntándolo **respondiendo el correo**, o como **nueva producción** con botón directo al formulario (`enviar.html`).
-- Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + COORDINADOR/WEBMASTER/SUPERVISOR** reciben aviso de que el autor solicita modificar su cuento.
+- Si el autor sube una versión desde `CONSULTA_AUTOR`, **editor asignado + COORDINADOR/SUPERVISOR** reciben aviso de que el autor solicita modificar su cuento (WEBMASTER no recibe mails).
 - La página del autor (`/autor/`) muestra un **popup de confirmación** del resultado (aprobada / rechazo aceptado + invitación / versión recibida).
 
 ## Estado verificado

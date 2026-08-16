@@ -77,7 +77,9 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/board/list` | idToken | `{ status, cuentos: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
 | `panel/board/aprobar` | idToken + gestor | pasa `ESPERANDO_APROBACIÓN` → `APROBADO` |
 | `panel/board/cambiar-estado` | idToken + COORDINADOR/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
-| `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío |
+| `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío (mueve también su carpeta a `RECIBIDOS` de la edición nueva) |
+| `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta del cuento (recursivo) para el selector |
+| `panel/board/marcar-publicable` | idToken + COORDINADOR/WEBMASTER | copia el `fileId` elegido a `PUBLICABLES/<id>-<nombre>` y guarda `url_publicable` |
 | `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + COORDINADOR/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
 | `panel/ediciones/cerrar` | idToken + COORDINADOR/WEBMASTER | cierra edición con `fecha_cierre` elegida |
@@ -132,7 +134,7 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 ### Mails del autor
 
 - **Consulta de aprobación**: adjunta el **doc de corrección en PDF** (`pdfDocCorreccion`), sin links de Drive ni docs editables (fallback: texto en el cuerpo). Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
-- **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/WEBMASTER/SUPERVISOR** para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
+- **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/SUPERVISOR** (sin WEBMASTER) para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
 - **Pedir correcciones**: link de un solo uso para subir versión.
 - **Confirmación de recibido**: primer link de seguimiento (token).
 
@@ -147,6 +149,22 @@ operación y no se avanza la versión ni el estado.
 Los asuntos de mail se pueden editar desde Configuración. Admiten la variable
 `{{titulo}}`; los cuerpos HTML siguen siendo plantillas controladas por código
 hasta completar la siguiente etapa de parametrización.
+
+## Estructura de Drive por ediciones
+
+- `Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }`.
+- Cada envío vive en `RECIBIDOS/<id>/` (carpeta de trabajo: original, `correccion/`,
+  `v2…`, `version_aprobada/`). Sin edición abierta, se guarda en `RECIBIDOS` de la
+  última edición (aunque esté cerrada); si no hay ninguna, en `SIN_EDICION`.
+- "Marcar publicable" copia el archivo elegido a `PUBLICABLES/<id>-<nombre>` (sueltos).
+- El nombre de edición lleva cero a la izquierda (`EDICION N° 03`) para ordenar bien.
+- Migración única `migrateEstructuraDrive()`: mueve `Cuentos/<id>` → `RECIBIDOS/<edicion>`.
+
+## Notificaciones (WEBMASTER excluido)
+
+WEBMASTER conserva todos los permisos de edición, pero **no recibe mails**: las
+notificaciones al equipo usan `ROLES_NOTIF_GESTORES`/`ROLES_NOTIF_INTERNOS`
+(COORDINADOR + SUPERVISOR, + EDITOR), sin WEBMASTER.
 
 Nota importante: el routing se hace por el campo `action` del body (NO por path,
 p. ej. `/exec/panel/auth/whoami`), porque agregar path a la URL de GAS rompe CORS

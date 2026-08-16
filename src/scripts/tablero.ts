@@ -16,6 +16,7 @@ interface Cuento {
   version_actual: string;
   convocatoria: string;
   edicion: string;
+  url_publicable: string;
   fecha_recibido: string;
   titular: string;
 }
@@ -327,6 +328,12 @@ async function abrirDetalle(id: string) {
   if (c.url_carpeta_drive) {
     acciones.push(`<a class="btn-ghost" href="${esc(c.url_carpeta_drive)}" target="_blank" rel="noopener noreferrer">Carpeta Drive</a>`);
   }
+  if (esAdmin) {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="marcar-publicable">Marcar publicable</button>`);
+  }
+  if (c.url_publicable) {
+    acciones.push(`<a class="btn-ghost" href="${esc(c.url_publicable)}" target="_blank" rel="noopener noreferrer">Publicable</a>`);
+  }
 
   const timeline = hist.map((h) => `
     <li><span class="tl-fecha">${fmtRelativa(h.timestamp)}</span>
@@ -368,6 +375,15 @@ async function abrirDetalle(id: string) {
       <div class="form-group" id="motivoGroup" hidden>
         <label for="motivo">Motivo de las correcciones</label>
         <textarea id="motivo" rows="3" placeholder="Qué cambiar…"></textarea>
+      </div>` : ''}
+    ${esAdmin ? `
+      <div class="form-group" id="publicableGroup" hidden>
+        <label for="publicable-archivo">Elegí el archivo para copiar a PUBLICABLES</label>
+        <select id="publicable-archivo" class="filter-select" aria-label="Archivo para publicable"></select>
+        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+          <button type="button" class="btn-mini" id="btn-confirmar-publicable">Confirmar</button>
+          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-publicable">Cancelar</button>
+        </div>
       </div>` : ''}
   `;
 
@@ -439,6 +455,34 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'descartar' });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo descartar.');
+  });
+
+  content.querySelector('[data-detalle-accion="marcar-publicable"]')?.addEventListener('click', async () => {
+    const group = document.getElementById('publicableGroup');
+    const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
+    if (!group || !select) return;
+    const r = await api('panel/board/archivos', { id });
+    if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
+    const archivos = r.archivos || [];
+    if (!archivos.length) { alert('No hay archivos en la carpeta de este cuento.'); return; }
+    select.innerHTML = archivos
+      .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
+      .join('');
+    group.hidden = false;
+  });
+
+  content.querySelector('#btn-confirmar-publicable')?.addEventListener('click', async () => {
+    const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
+    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
+    if (!confirm('¿Copiar este archivo a la carpeta PUBLICABLES de su edición?')) return;
+    const r = await api('panel/board/marcar-publicable', { id, fileId: select.value });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo marcar publicable.');
+  });
+
+  content.querySelector('#btn-cancelar-publicable')?.addEventListener('click', () => {
+    const group = document.getElementById('publicableGroup');
+    if (group) group.hidden = true;
   });
 }
 

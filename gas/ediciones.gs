@@ -24,6 +24,12 @@ function edicionActual() {
   return '';
 }
 
+// Número de la última edición (sin importar el estado), o '' si no hay ninguna.
+function ultimaEdicion() {
+  var ediciones = listarEdiciones();
+  return ediciones.length ? ediciones[ediciones.length - 1].numero : '';
+}
+
 function listarEdiciones() {
   var sheet = getSheet('Ediciones');
   if (!sheet || sheet.getLastRow() <= 1) return [];
@@ -158,6 +164,9 @@ function handleAbrirEdicion(idToken, fechaApertura) {
       numeroNuevo = (Number(ediciones[ediciones.length - 1].numero) || 0) + 1;
     }
     getSheet('Ediciones').appendRow([String(numeroNuevo), 'abierta', fecha, '']);
+    // Estructura de Drive de la nueva edición: RECIBIDOS y PUBLICABLES.
+    getRecibidosFolder(String(numeroNuevo));
+    getPublicablesFolder(String(numeroNuevo));
     clearEdicionesCache();
     clearAgendaCache();
 
@@ -188,6 +197,12 @@ function handleCambiarEdicion(idToken, id, edicion) {
 
   var sheet = getSheet('Tablero');
   setCell(sheet, c._rowIndex, 'edicion', edicionStr);
+  // Mueve la carpeta de trabajo a RECIBIDOS de la edición nueva (solo si se
+  // asigna una edición concreta; la copia en PUBLICABLES, si existe, no se toca).
+  if (edicionStr) {
+    try { getCuentoFolder(c).moveTo(getRecibidosFolder(edicionStr)); }
+    catch (e) { /* el cambio de etiqueta no debe fallar por un problema de Drive */ }
+  }
   addHistory(c.id, displayName(user.email), 'EDICION_CAMBIADA',
     edicionStr ? 'Reasignado a la edición ' + edicionStr : 'Edición sin asignar');
   clearBoardCache();

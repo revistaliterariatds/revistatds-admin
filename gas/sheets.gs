@@ -6,7 +6,7 @@ var SHEETS = {
     'id', 'titulo', 'autor', 'email_autor', 'edad', 'categoria', 'estado',
     'editor_asignado', 'url_carpeta_drive', 'url_doc_correccion',
     'version_actual', 'token_autor', 'token_expira', 'convocatoria',
-    'fecha_recibido', 'fecha_actualizacion', 'edicion',
+    'fecha_recibido', 'fecha_actualizacion', 'edicion', 'url_publicable',
   ],
   Historial: ['id_cuento', 'timestamp', 'actor', 'accion', 'detalle'],
   Config: ['clave', 'valor'],
