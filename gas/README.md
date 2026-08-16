@@ -84,6 +84,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + COORDINADOR/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
 | `panel/ediciones/cerrar` | idToken + COORDINADOR/WEBMASTER | cierra edición con `fecha_cierre` elegida |
+| `panel/ediciones/editar-cierre` | idToken + COORDINADOR/WEBMASTER | modifica la `fecha_cierre` o reabre la edición (sin superponerse con otra) |
 | `panel/agenda/list` | idToken | citas del mes (fecha/hora y `hora_fin` normalizadas, contador de comentarios) |
 | `panel/agenda/detalle` | idToken | cita + hilo de comentarios |
 | `panel/agenda/crear` | idToken | crea cita (con `notificar` opcional → mail a roles activos) |
@@ -160,6 +161,8 @@ hasta completar la siguiente etapa de parametrización.
 - "Marcar publicable" copia el archivo elegido a `PUBLICABLES/<id>-<nombre>` (sueltos).
 - El nombre de edición lleva cero a la izquierda (`EDICION N° 03`) para ordenar bien.
 - Migración única `migrateEstructuraDrive()`: mueve `Cuentos/<id>` → `RECIBIDOS/<edicion>`.
+- **Etiquetado por fecha**: `edicionDestino()` asigna el envío a la edición cuyo rango
+  apertura–cierre contiene hoy (abierta → última → `SIN_EDICION` como fallback).
 
 ## Notificaciones (WEBMASTER excluido)
 

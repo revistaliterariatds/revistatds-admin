@@ -63,6 +63,8 @@ function doPost(e) {
       result = handleEdicionesList(tokenFrom(data, e));
     } else if (action === 'panel/ediciones/cerrar') {
       result = handleCerrarEdicion(tokenFrom(data, e), data && data.numero, data && data.fecha_cierre);
+    } else if (action === 'panel/ediciones/editar-cierre') {
+      result = handleEditarCierre(tokenFrom(data, e), data && data.numero, data && data.fecha_cierre);
     } else if (action === 'panel/ediciones/abrir') {
       result = handleAbrirEdicion(tokenFrom(data, e), data && data.fecha_apertura);
     } else if (action === 'panel/agenda/list') {

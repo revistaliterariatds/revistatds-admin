@@ -77,6 +77,7 @@ function renderLista() {
       </div>
       <div class="edicion-acciones">
         ${abierta ? `<button type="button" class="btn-enviar" data-accion="cerrar" data-numero="${esc(e.numero)}">Cerrar edición</button>` : ''}
+        ${!abierta ? `<button type="button" class="btn-enviar" data-accion="editar-cierre" data-numero="${esc(e.numero)}">Modificar cierre / reabrir</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -96,6 +97,9 @@ function renderLista() {
 
   lista.querySelectorAll('[data-accion="cerrar"]').forEach((btn) => {
     btn.addEventListener('click', () => abrirDialogoCerrar((btn as HTMLElement).dataset.numero || ''));
+  });
+  lista.querySelectorAll('[data-accion="editar-cierre"]').forEach((btn) => {
+    btn.addEventListener('click', () => abrirDialogoEditarCierre((btn as HTMLElement).dataset.numero || ''));
   });
   lista.querySelectorAll('[data-accion="abrir"]').forEach((btn) => {
     btn.addEventListener('click', () => abrirDialogoAbrir());
@@ -125,6 +129,43 @@ function abrirDialogoCerrar(numero: string) {
     const data = await api('panel/ediciones/cerrar', { numero, fecha_cierre: fecha });
     if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición cerrada.'); await cargar(); }
     else showAlert(data.message || 'No se pudo cerrar.', true);
+  });
+}
+
+function abrirDialogoEditarCierre(numero: string) {
+  const modal = document.getElementById('edicionModal') as HTMLDialogElement;
+  const content = document.getElementById('edicionModalContent')!;
+  const ed = ediciones.find((e) => e.numero === numero);
+  content.innerHTML = `
+    <h2 class="detail-titulo">Editar edición ${esc(numero)}</h2>
+    <p class="config-intro">Modificá la fecha de cierre o dejá la edición abierta de nuevo. No puede superponerse con la fecha de apertura de la edición siguiente.</p>
+    <form id="edicion-form" class="cita-form">
+      <div class="form-group">
+        <label for="edicion-fecha">Fecha de cierre</label>
+        <input id="edicion-fecha" type="date" value="${esc(ed?.fecha_cierre || '')}" ${ed?.fecha_apertura ? `min="${esc(ed.fecha_apertura)}"` : ''} />
+      </div>
+      <div class="detail-acciones">
+        <button type="submit" class="btn-enviar">Guardar fecha de cierre</button>
+        <button type="button" class="btn-ghost" id="edicion-reabrir">Reabrir (dejar abierta)</button>
+        <button type="button" class="btn-ghost" id="edicion-cancelar">Cancelar</button>
+      </div>
+    </form>`;
+  modal.showModal();
+
+  content.querySelector('#edicion-cancelar')?.addEventListener('click', () => modal.close());
+  content.querySelector('#edicion-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
+    if (!fecha) { showAlert('Elegí una fecha de cierre.', true); return; }
+    const data = await api('panel/ediciones/editar-cierre', { numero, fecha_cierre: fecha });
+    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Cierre actualizado.'); await cargar(); }
+    else showAlert(data.message || 'No se pudo actualizar.', true);
+  });
+  content.querySelector('#edicion-reabrir')?.addEventListener('click', async () => {
+    if (!confirm('¿Reabrir la edición ' + numero + '? Quedará abierta, sin fecha de cierre.')) return;
+    const data = await api('panel/ediciones/editar-cierre', { numero, fecha_cierre: '' });
+    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición reabierta.'); await cargar(); }
+    else showAlert(data.message || 'No se pudo reabrir.', true);
   });
 }
 

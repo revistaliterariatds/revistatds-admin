@@ -30,6 +30,24 @@ function ultimaEdicion() {
   return ediciones.length ? ediciones[ediciones.length - 1].numero : '';
 }
 
+// Edición cuyo rango [apertura, cierre] contiene la fecha dada (cierre vacío =
+// abierta, sin límite superior). Las ediciones no se superponen, así que a lo
+// sumo una contiene la fecha; devuelve '' si ninguna la contiene.
+function edicionPorFecha(fechaKey) {
+  var ediciones = listarEdiciones();
+  if (!ediciones.length) return '';
+  var mejor = '';
+  ediciones.forEach(function (e) {
+    var apertura = e.fecha_apertura || '';
+    var cierre = e.fecha_cierre || '';
+    if (!apertura) return;
+    if (fechaKey < apertura) return;
+    if (cierre && fechaKey > cierre) return;
+    mejor = e.numero;
+  });
+  return mejor;
+}
+
 function listarEdiciones() {
   var sheet = getSheet('Ediciones');
   if (!sheet || sheet.getLastRow() <= 1) return [];
@@ -182,6 +200,87 @@ function handleAbrirEdicion(idToken, fechaApertura) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ── editar el cierre de una edición (COORDINADOR/WEBMASTER) ──
+// Permite cambiar la fecha de cierre o reabrir la edición (dejarla sin cierre).
+// La nueva fecha (o la reapertura) no puede superponerse con otra edición.
+function handleEditarCierre(idToken, numero, fechaCierre) {
+  var user = requireInternalUser(idToken);
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede editar el cierre.');
+
+  var fecha = '';
+  if (fechaCierre) {
+    fecha = validarFechaInput(fechaCierre);
+    if (!fecha) throw new ApiError('Ingresá una fecha de cierre válida.');
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var ediciones = listarEdiciones();
+    var ed = null;
+    ediciones.forEach(function (e) { if (e.numero === String(numero)) ed = e; });
+    if (!ed) throw new ApiError('Edición no encontrada.');
+
+    if (fecha && ed.fecha_apertura && fecha < ed.fecha_apertura) {
+      throw new ApiError('La fecha de cierre no puede ser anterior a la apertura (' + ed.fecha_apertura + ').');
+    }
+
+    // No solapamiento con las demás ediciones (reapertura = sin límite superior).
+    ediciones.forEach(function (f) {
+      if (f.numero === ed.numero) return;
+      if (rangoSeSuperpone(ed.fecha_apertura, fecha, f.fecha_apertura, f.fecha_cierre)) {
+        throw new ApiError('La fecha se superpone con la edición ' + f.numero + '.');
+      }
+    });
+
+    var sheet = getSheet('Ediciones');
+    var row = findRowIndex(sheet, 'numero', ed.numero);
+    if (fecha) {
+      setCell(sheet, row, 'fecha_cierre', fecha);
+      setCell(sheet, row, 'estado', 'cerrada');
+    } else {
+      setCell(sheet, row, 'fecha_cierre', '');
+      setCell(sheet, row, 'estado', 'abierta');
+    }
+    clearEdicionesCache();
+    clearAgendaCache();
+    clearBoardCache();
+
+    return ok({
+      message: fecha ? 'Fecha de cierre actualizada.' : 'Edición reabierta.',
+      estado: fecha ? 'cerrada' : 'abierta',
+      fecha_cierre: fecha || null,
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Migración idempotente: reetiqueta los envíos existentes según la edición que
+// contenga su `fecha_recibido` (rellena la columna `edicion` cuando difiere).
+function migrateEdicionesPorFecha() {
+  ensureTableroSchema();
+  var tablero = getSheet('Tablero');
+  if (!tablero || tablero.getLastRow() <= 1) return 'OK (sin filas)';
+  var idx = headerIndex(tablero);
+  if (idx.fecha_recibido === undefined || idx.edicion === undefined) return 'OK (faltan columnas)';
+
+  var data = tablero.getDataRange().getValues();
+  var actualizados = 0;
+  for (var i = 1; i < data.length; i++) {
+    var fechaRecibido = fmtCelda(data[i][idx.fecha_recibido], 'yyyy-MM-dd');
+    if (!fechaRecibido) continue;
+    var edicion = edicionPorFecha(fechaRecibido);
+    if (!edicion) continue;
+    if (String(data[i][idx.edicion]) === edicion) continue;
+    tablero.getRange(i + 1, idx.edicion + 1).setValue(edicion);
+    actualizados++;
+  }
+  clearBoardCache();
+  Logger.log('migrateEdicionesPorFecha: ' + actualizados + ' envío(s) reetiquetados por fecha.');
+  return 'OK (' + actualizados + ' envío(s) reetiquetados)';
 }
 
 // ── reasignar la edición de una publicación (COORDINADOR/WEBMASTER/SUPERVISOR) ──

@@ -61,7 +61,7 @@ function handleEnvio(data) {
     convocatoria: convocatoria,
     fecha_recibido: now,
     fecha_actualizacion: now,
-    edicion: edicionActual(), // vacío si no hay edición abierta
+    edicion: edicionDestino(), // por rango de fecha (abierta → última → SIN_EDICION)
   }));
 
   addHistory(id, 'AUTOR', 'ENVIO_RECIBIDO', 'Alta desde formulario (' + convocatoria + ')');

@@ -40,10 +40,15 @@ function getPublicablesFolder(numero) {
   return getOrCreateFolder(getEdicionFolder(numero), 'PUBLICABLES');
 }
 
-// Edición a la que pertenece un envío nuevo: la abierta; si no hay, la última
-// (aunque esté cerrada); si no existe ninguna, una carpeta SIN_EDICION.
+// Edición a la que pertenece un envío nuevo: la que contenga la fecha de hoy
+// (por rango apertura–cierre; incluye ediciones cerradas con cierre futuro);
+// si no hay ninguna, la edición abierta; si no, la última; si no, SIN_EDICION.
 function edicionDestino() {
-  return edicionActual() || ultimaEdicion() || 'SIN_EDICION';
+  var porFecha = edicionPorFecha(hoyKey());
+  if (porFecha) return porFecha;
+  var abierta = edicionActual();
+  if (abierta) return abierta;
+  return ultimaEdicion() || 'SIN_EDICION';
 }
 
 function createCuentoFolder(id) {

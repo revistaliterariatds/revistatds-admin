@@ -105,7 +105,9 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Ciclo de recepción: hoja `Ediciones` (`numero · estado · fecha_apertura · fecha_cierre`) + columna `edicion` en `Tablero` (etiqueta de cada envío).
 - **Abrir** (COORDINADOR/WEBMASTER): fecha de apertura elegida; la nueva edición nace **sin fecha de cierre** (se define al cerrar). **Cerrar**: fecha de cierre elegida. Validación de **no solapamiento** entre ediciones (compartir días), solo una abierta a la vez, `numero` = último+1.
 - **Reasignar edición** de un envío: COORDINADOR/WEBMASTER/SUPERVISOR desde el tablero.
-- Migración idempotente `migrateEdiciones()` (crea hoja, agrega columna `edicion` y siembra edición inicial 3) — ejecutable una sola vez.
+- **Etiquetado por fecha**: cada envío nuevo cae en la edición cuyo rango apertura–cierre contiene la fecha de recepción (incluye ediciones cerradas con cierre futuro); si ninguna, en la abierta y, si no, en la última.
+- **Modificar cierre / reabrir**: COORDINADOR/WEBMASTER pueden cambiar la `fecha_cierre` de una edición cerrada o reabrirla (dejarla abierta), validando que no se superponga con la edición siguiente.
+- Migraciones idempotentes `migrateEdiciones()` (hoja + columna `edicion`) y `migrateEdicionesPorFecha()` (reetiqueta envíos según `fecha_recibido`).
 
 ## Mail de aprobación al autor
 
