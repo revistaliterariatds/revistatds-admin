@@ -1,7 +1,7 @@
 // ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (COORDINADOR/WEBMASTER).
 // Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
-import { api, btnCargando, clearSession, getUser, getIdToken } from './api';
+import { api, clearSession, getUser, getIdToken } from './api';
 
 interface Edicion {
   numero: string;
@@ -141,12 +141,13 @@ function abrirDialogoCerrar(numero: string) {
     </form>`;
   modal.showModal();
   bindFormulario(modal, async (fecha) => {
+    modal.close();
     const r = await mutarEdicion('panel/ediciones/cerrar', { numero, fecha_cierre: fecha }, () => {
       const e = ediciones.find((x) => x.numero === numero);
       if (e) { e.fecha_cierre = fecha; e.estado = 'CERRADA'; }
       renderLista();
     });
-    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición cerrada.'); }
+    if (r.status === 'ok') showAlert(r.message || 'Edición cerrada.');
     else showAlert(r.message || 'No se pudo cerrar.', true);
   });
 }
@@ -176,28 +177,24 @@ function abrirDialogoEditarCierre(numero: string) {
     e.preventDefault();
     const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
     if (!fecha) { showAlert('Elegí una fecha de cierre.', true); return; }
-    const btn = content.querySelector('#edicion-form button[type="submit"]') as HTMLButtonElement | null;
-    btnCargando(btn, true);
+    modal.close();
     const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: fecha }, () => {
       const x = ediciones.find((y) => y.numero === numero);
       if (x) { x.fecha_cierre = fecha; x.estado = 'CERRADA'; }
       renderLista();
     });
-    btnCargando(btn, false);
-    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Cierre actualizado.'); }
+    if (r.status === 'ok') showAlert(r.message || 'Cierre actualizado.');
     else showAlert(r.message || 'No se pudo actualizar.', true);
   });
   content.querySelector('#edicion-reabrir')?.addEventListener('click', async () => {
     if (!confirm('¿Reabrir la edición ' + numero + '? Quedará abierta, sin fecha de cierre.')) return;
-    const btn = content.querySelector('#edicion-reabrir') as HTMLButtonElement | null;
-    btnCargando(btn, true);
+    modal.close();
     const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: '' }, () => {
       const x = ediciones.find((y) => y.numero === numero);
       if (x) { x.fecha_cierre = ''; x.estado = 'ABIERTA'; }
       renderLista();
     });
-    btnCargando(btn, false);
-    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición reabierta.'); }
+    if (r.status === 'ok') showAlert(r.message || 'Edición reabierta.');
     else showAlert(r.message || 'No se pudo reabrir.', true);
   });
 }
@@ -220,8 +217,9 @@ function abrirDialogoAbrir() {
     </form>`;
   modal.showModal();
   bindFormulario(modal, async (fecha) => {
+    modal.close();
     const r = await mutarEdicion('panel/ediciones/abrir', { fecha_apertura: fecha }, () => { /* el número lo asigna el backend */ });
-    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición abierta.'); }
+    if (r.status === 'ok') showAlert(r.message || 'Edición abierta.');
     else showAlert(r.message || 'No se pudo abrir.', true);
   });
 }
@@ -233,10 +231,7 @@ function bindFormulario(modal: HTMLDialogElement, onConfirm: (fecha: string) => 
     e.preventDefault();
     const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
     if (!fecha) { showAlert('Elegí una fecha.', true); return; }
-    const btn = content.querySelector('#edicion-form button[type="submit"]') as HTMLButtonElement | null;
-    btnCargando(btn, true);
     await onConfirm(fecha);
-    btnCargando(btn, false);
   });
 }
 

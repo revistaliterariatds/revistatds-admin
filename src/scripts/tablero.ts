@@ -1,6 +1,6 @@
 // tablero.ts — vista del tablero editorial (Fase 3).
 
-import { api, btnCargando, getUser, clearSession, getIdToken } from './api';
+import { api, getUser, clearSession, getIdToken } from './api';
 
 interface Produccion {
   id: string;
@@ -485,8 +485,8 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
     if (!confirm('¿Marcar que el autor debe hacer correcciones? El coordinador le enviará luego el mail.')) return;
-    const r = await mutar(id, 'panel/board/pedir-correcciones', {}, { estado: 'CORRECCIONES_SOLICITADAS' });
     modal.close();
+    const r = await mutar(id, 'panel/board/pedir-correcciones', {}, { estado: 'CORRECCIONES_SOLICITADAS' });
     if (r.status !== 'ok') alert(r.message || 'No se pudo marcar.');
   });
 
@@ -497,12 +497,9 @@ async function abrirDetalle(id: string) {
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     const mensaje = (document.getElementById('enviar-mensaje') as HTMLTextAreaElement).value.trim();
     if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
-    const btn = content.querySelector('#btn-confirmar-enviar') as HTMLButtonElement | null;
-    btnCargando(btn, true);
+    modal.close();
     const r = await mutar(id, 'panel/board/enviar-correcciones', { fileId: select.value, mensaje }, { enviado_autor: true, estado: 'CORRECCIONES_SOLICITADAS' });
-    btnCargando(btn, false);
-    if (r.status === 'ok') { modal.close(); return; }
-    alert(r.message || 'No se pudo enviar.');
+    if (r.status !== 'ok') alert(r.message || 'No se pudo enviar.');
   });
 
   content.querySelector('#btn-cancelar-enviar')?.addEventListener('click', () => {
@@ -512,8 +509,8 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="terminar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Marcar la revisión como terminada?')) return;
-    const r = await mutar(id, 'panel/board/revision-terminada', {}, { estado: 'ESPERANDO_APROBACIÓN' });
     modal.close();
+    const r = await mutar(id, 'panel/board/revision-terminada', {}, { estado: 'ESPERANDO_APROBACIÓN' });
     if (r.status !== 'ok') alert(r.message || 'No se pudo.');
   });
 
@@ -523,12 +520,9 @@ async function abrirDetalle(id: string) {
     const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     if (!confirm('¿Enviar este archivo (como PDF) al autor para aprobación?')) return;
-    const btn = content.querySelector('#btn-confirmar-consulta') as HTMLButtonElement | null;
-    btnCargando(btn, true);
+    modal.close();
     const r = await mutar(id, 'panel/board/consultar-autor', { fileId: select.value }, { estado: 'CONSULTA_AUTOR' });
-    btnCargando(btn, false);
-    if (r.status === 'ok') { modal.close(); return; }
-    alert(r.message || 'No se pudo consultar al autor.');
+    if (r.status !== 'ok') alert(r.message || 'No se pudo consultar al autor.');
   });
 
   content.querySelector('#btn-cancelar-consulta')?.addEventListener('click', () => {
@@ -538,8 +532,8 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Aprobar esta producción?')) return;
-    const r = await mutar(id, 'panel/board/aprobar', {}, { estado: 'APROBADO' });
     modal.close();
+    const r = await mutar(id, 'panel/board/aprobar', {}, { estado: 'APROBADO' });
     if (r.status !== 'ok') alert(r.message || 'No se pudo aprobar.');
   });
 
@@ -553,30 +547,30 @@ async function abrirDetalle(id: string) {
       return;
     }
     if (!confirm('¿Cambiar el estado de esta publicación a "' + estado + '"?')) return;
-    const r = await mutar(id, 'panel/board/cambiar-estado', { estado }, { estado });
     modal.close();
+    const r = await mutar(id, 'panel/board/cambiar-estado', { estado }, { estado });
     if (r.status !== 'ok') alert(r.message || 'No se pudo cambiar el estado.');
   });
 
   content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {
     if (!confirm('¿Devolver esta producción al editor para retrabajarla?')) return;
-    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'devolver' }, { estado: 'EN_REVISIÓN' });
     modal.close();
+    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'devolver' }, { estado: 'EN_REVISIÓN' });
     if (r.status !== 'ok') alert(r.message || 'No se pudo devolver al editor.');
   });
 
   content.querySelector('[data-detalle-accion="descartar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Descartar definitivamente esta producción?')) return;
-    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'descartar' }, { estado: 'DESCARTADO' });
     modal.close();
+    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'descartar' }, { estado: 'DESCARTADO' });
     if (r.status !== 'ok') alert(r.message || 'No se pudo descartar.');
   });
 
   content.querySelector('[data-detalle-accion="marcar-publicable"]')?.addEventListener('click', async () => {
     if (c.url_publicable) {
       if (!confirm('¿Marcar esta producción como publicable?')) return;
-      const r = await mutar(id, 'panel/board/marcar-publicable', {}, { estado: 'PUBLICADO' });
       modal.close();
+      const r = await mutar(id, 'panel/board/marcar-publicable', {}, { estado: 'PUBLICADO' });
       if (r.status !== 'ok') alert(r.message || 'No se pudo marcar publicable.');
       return;
     }
@@ -597,12 +591,9 @@ async function abrirDetalle(id: string) {
     const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     if (!confirm('¿Copiar este archivo a PUBLICABLES y marcar la producción como publicable?')) return;
-    const btn = content.querySelector('#btn-confirmar-publicable') as HTMLButtonElement | null;
-    btnCargando(btn, true);
+    modal.close();
     const r = await mutar(id, 'panel/board/marcar-publicable', { fileId: select.value }, { estado: 'PUBLICADO' });
-    btnCargando(btn, false);
-    if (r.status === 'ok') { modal.close(); return; }
-    alert(r.message || 'No se pudo marcar publicable.');
+    if (r.status !== 'ok') alert(r.message || 'No se pudo marcar publicable.');
   });
 
   content.querySelector('#btn-cancelar-publicable')?.addEventListener('click', () => {
@@ -612,10 +603,10 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="borrar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Borrar este envío por completo? Se eliminará la carpeta de Drive, la copia en PUBLICABLES, la fila y su historial. Esta acción no se puede deshacer.')) return;
+    modal.close();
     const r = await mutar(id, 'panel/board/borrar', {}, (c) => {
       producciones = producciones.filter((p) => p.id !== c.id);
     });
-    modal.close();
     if (r.status !== 'ok') alert(r.message || 'No se pudo borrar el envío.');
   });
 }
