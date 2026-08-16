@@ -330,6 +330,7 @@ async function abrirDetalle(id: string) {
   }
   if (esAdmin) {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="marcar-publicable">Marcar publicable</button>`);
+    acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="borrar">Borrar envío</button>`);
   }
   if (c.url_publicable) {
     acciones.push(`<a class="btn-ghost" href="${esc(c.url_publicable)}" target="_blank" rel="noopener noreferrer">Publicable</a>`);
@@ -483,6 +484,13 @@ async function abrirDetalle(id: string) {
   content.querySelector('#btn-cancelar-publicable')?.addEventListener('click', () => {
     const group = document.getElementById('publicableGroup');
     if (group) group.hidden = true;
+  });
+
+  content.querySelector('[data-detalle-accion="borrar"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Borrar este envío por completo? Se eliminará la carpeta de Drive, la copia en PUBLICABLES, la fila y su historial. Esta acción no se puede deshacer.')) return;
+    const r = await api('panel/board/borrar', { id });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo borrar el envío.');
   });
 }
 

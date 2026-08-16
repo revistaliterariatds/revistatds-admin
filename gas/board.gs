@@ -409,6 +409,59 @@ function handleMarcarPublicable(idToken, id, fileId) {
   }
 }
 
+// ── borrar envío por completo (COORDINADOR/WEBMASTER) ──
+// Elimina la carpeta de Drive (original, corrección, versiones, version_aprobada),
+// la copia en PUBLICABLES, la fila del Tablero y su historial.
+function handleBorrarCuento(idToken, id) {
+  var user = requireInternalUser(idToken);
+  if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede borrar un envío.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findCuentoById(id);
+    if (!c) throw new ApiError('Cuento no encontrado.');
+
+    // Carpeta de trabajo del cuento (con todo su contenido).
+    if (c.url_carpeta_drive) {
+      var mFolder = String(c.url_carpeta_drive).match(/\/folders\/([-\w]+)/);
+      if (mFolder) {
+        try { DriveApp.getFolderById(mFolder[1]).setTrashed(true); }
+        catch (e) { /* el borrado no debe fallar por un problema de Drive */ }
+      }
+    }
+
+    // Copia en PUBLICABLES, si existe.
+    if (c.url_publicable) {
+      var mFile = String(c.url_publicable).match(/\/d\/([\w-]+)/);
+      if (mFile) {
+        try { DriveApp.getFileById(mFile[1]).setTrashed(true); }
+        catch (e) { /* idem */ }
+      }
+    }
+
+    // Historial del cuento.
+    var hist = getSheet('Historial');
+    if (hist && hist.getLastRow() > 1) {
+      var idx = headerIndex(hist);
+      var data = hist.getDataRange().getValues();
+      for (var i = data.length - 1; i >= 1; i--) {
+        if (String(data[i][idx.id_cuento]) === String(id)) {
+          hist.deleteRow(i + 1);
+        }
+      }
+    }
+
+    // Fila del Tablero.
+    getSheet('Tablero').deleteRow(c._rowIndex + 1);
+    clearBoardCache();
+
+    return ok({ message: 'Envío eliminado por completo.' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ── cambiar estado arbitrario (COORDINADOR/WEBMASTER, en cualquier momento) ──
 function handleCambiarEstado(idToken, id, nuevoEstado) {
   var user = requireInternalUser(idToken);

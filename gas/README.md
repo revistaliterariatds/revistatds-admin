@@ -80,6 +80,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío (mueve también su carpeta a `RECIBIDOS` de la edición nueva) |
 | `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta del cuento (recursivo) para el selector |
 | `panel/board/marcar-publicable` | idToken + COORDINADOR/WEBMASTER | copia el `fileId` elegido a `PUBLICABLES/<id>-<nombre>` y guarda `url_publicable` |
+| `panel/board/borrar` | idToken + COORDINADOR/WEBMASTER | elimina el envío por completo (carpeta de Drive, copia en PUBLICABLES, fila del Tablero e historial) |
 | `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + COORDINADOR/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
 | `panel/ediciones/cerrar` | idToken + COORDINADOR/WEBMASTER | cierra edición con `fecha_cierre` elegida |
