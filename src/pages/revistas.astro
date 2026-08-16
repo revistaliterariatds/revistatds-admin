@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Revistas — Tramas del Sur" description="Ediciones publicadas de Tramas del Sur.">
+  <section class="users-page" aria-labelledby="revistas-heading">
+    <header class="board-header">
+      <div>
+        <p class="board-eyebrow">Ediciones publicadas</p>
+        <h1 id="revistas-heading">Revistas</h1>
+      </div>
+      <button id="btn-refrescar-revistas" class="btn-ghost" type="button">Refrescar</button>
+    </header>
+    <div id="revistas-alert" class="status-card" hidden></div>
+    <p class="config-intro" style="margin-bottom:1rem;">
+      Todas las ediciones publicadas de la revista, tal como aparecen en el sitio. Cuando se suba una edición nueva, aparece sola acá.
+    </p>
+    <div class="revistas-grid" id="revistas-grid" aria-busy="true"></div>
+    <div class="board-empty" id="revistas-empty" hidden>No hay ediciones publicadas todavía.</div>
+  </section>
+
+  <!-- Modal lector -->
+  <dialog id="revistaModal" class="detail-modal">
+    <div class="detail-inner revista-lector">
+      <button id="btn-cerrar-revista" class="detail-close" type="button" aria-label="Cerrar">×</button>
+      <iframe id="revista-frame" class="revista-frame" title="Lector de la revista" allowfullscreen></iframe>
+    </div>
+  </dialog>
+</Layout>
+
+<script>
+  import '../scripts/revistas.ts';
+</script>

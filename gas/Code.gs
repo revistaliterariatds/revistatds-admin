@@ -87,6 +87,8 @@ function doPost(e) {
       result = handleConfigList(tokenFrom(data, e));
     } else if (action === 'panel/config/save') {
       result = handleConfigSave(tokenFrom(data, e), data && data.key, data && data.value);
+    } else if (action === 'panel/revistas/list') {
+      result = handleListarRevistas(tokenFrom(data, e));  // ediciones publicadas (todos los roles)
     } else if (action === 'panel/analytics/daily') {
       result = handleAnalyticsDaily(tokenFrom(data, e), data && data.days);
     } else if (action === 'autor/estado') {
