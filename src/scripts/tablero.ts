@@ -18,6 +18,7 @@ interface Produccion {
   edicion: string;
   url_publicable: string;
   fecha_recibido: string;
+  enviado_autor: boolean;
   titular: string;
 }
 
@@ -293,10 +294,10 @@ async function desasignar(id: string) {
   await cargar();
 }
 
-// Abre el selector de archivo para "Pedir correcciones" (adjuntar PDF + mensaje).
-async function abrirSelectorPedir(id: string) {
-  const group = document.getElementById('pedirGroup');
-  const select = document.getElementById('pedir-archivo') as HTMLSelectElement | null;
+// Abre el selector de archivo para "Enviar correcciones al autor" (adjuntar PDF + mensaje).
+async function abrirSelectorEnviarCorrecciones(id: string) {
+  const group = document.getElementById('enviarCorreccionesGroup');
+  const select = document.getElementById('enviar-archivo') as HTMLSelectElement | null;
   if (!group || !select) return;
   const r = await api('panel/board/archivos', { id });
   if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
@@ -337,11 +338,12 @@ async function abrirDetalle(id: string) {
   const soyTitular = c.editor_asignado === user?.email;
 
   const acciones: string[] = [];
-  if ((soyTitular || esGestor) && c.estado === 'EN_REVISIÓN') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="pedir">Pedir correcciones</button>`);
-  }
   if (soyTitular && c.estado === 'EN_REVISIÓN') {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="pedir">Pedir correcciones</button>`);
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="terminar">Revisión terminada</button>`);
+  }
+  if (esGestor && c.estado === 'CORRECCIONES_SOLICITADAS' && !c.enviado_autor) {
+    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="enviar-correcciones">Enviar correcciones al autor</button>`);
   }
   if (esGestor && c.estado === 'ESPERANDO_APROBACIÓN') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="consultar">Consultar al autor</button>`);
@@ -404,15 +406,15 @@ async function abrirDetalle(id: string) {
     <h3 class="detail-sub">Historial</h3>
     <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
     <div class="detail-acciones">${acciones.join(' ')}</div>
-    ${(soyTitular || esGestor) && c.estado === 'EN_REVISIÓN' ? `
-      <div class="form-group" id="pedirGroup" hidden>
-        <label for="pedir-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
-        <select id="pedir-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
-        <label for="pedir-mensaje" style="margin-top:0.75rem;">Mensaje adicional (opcional)</label>
-        <textarea id="pedir-mensaje" rows="3" placeholder="Qué cambiar…"></textarea>
+    ${esGestor ? `
+      <div class="form-group" id="enviarCorreccionesGroup" hidden>
+        <label for="enviar-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
+        <select id="enviar-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
+        <label for="enviar-mensaje" style="margin-top:0.75rem;">Mensaje adicional (opcional)</label>
+        <textarea id="enviar-mensaje" rows="3" placeholder="Qué cambiar…"></textarea>
         <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-          <button type="button" class="btn-mini" id="btn-confirmar-pedir">Enviar al autor</button>
-          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-pedir">Cancelar</button>
+          <button type="button" class="btn-mini" id="btn-confirmar-enviar">Enviar al autor</button>
+          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-enviar">Cancelar</button>
         </div>
       </div>` : ''}
     ${esAdmin ? `
@@ -444,20 +446,27 @@ async function abrirDetalle(id: string) {
     else alert(r.message || 'No se pudo cambiar la edición.');
   });
 
-  content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', () => abrirSelectorPedir(id));
-
-  content.querySelector('#btn-confirmar-pedir')?.addEventListener('click', async () => {
-    const select = document.getElementById('pedir-archivo') as HTMLSelectElement | null;
-    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
-    const mensaje = (document.getElementById('pedir-mensaje') as HTMLTextAreaElement).value.trim();
-    if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
-    const r = await api('panel/board/pedir-correcciones', { id, fileId: select.value, mensaje });
+  content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
+    if (!confirm('¿Marcar que el autor debe hacer correcciones? El coordinador le enviará luego el mail.')) return;
+    const r = await api('panel/board/pedir-correcciones', { id });
     if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo pedir correcciones.');
+    else alert(r.message || 'No se pudo marcar.');
   });
 
-  content.querySelector('#btn-cancelar-pedir')?.addEventListener('click', () => {
-    const group = document.getElementById('pedirGroup');
+  content.querySelector('[data-detalle-accion="enviar-correcciones"]')?.addEventListener('click', () => abrirSelectorEnviarCorrecciones(id));
+
+  content.querySelector('#btn-confirmar-enviar')?.addEventListener('click', async () => {
+    const select = document.getElementById('enviar-archivo') as HTMLSelectElement | null;
+    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
+    const mensaje = (document.getElementById('enviar-mensaje') as HTMLTextAreaElement).value.trim();
+    if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
+    const r = await api('panel/board/enviar-correcciones', { id, fileId: select.value, mensaje });
+    if (r.status === 'ok') { modal.close(); await cargar(); }
+    else alert(r.message || 'No se pudo enviar.');
+  });
+
+  content.querySelector('#btn-cancelar-enviar')?.addEventListener('click', () => {
+    const group = document.getElementById('enviarCorreccionesGroup');
     if (group) group.hidden = true;
   });
 

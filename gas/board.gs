@@ -4,6 +4,7 @@
 function produccionPublica(c) {
   var out = {};
   SHEETS.Tablero.forEach(function (h, j) { out[h] = c[h]; });
+  out.enviado_autor = !!c.token_autor; // ya se envió un mail con token al autor
   out.token_autor = '';      // nunca exponer el token
   out.token_expira = '';
   out.titular = c.editor_asignado ? titularInfo(c.editor_asignado) : '';
@@ -196,9 +197,37 @@ function handleReasignar(idToken, id, editorEmail) {
   }
 }
 
-// ── pedir correcciones al autor (editor titular o gestor) ──
-function handlePedirCorrecciones(idToken, id, fileId, mensaje) {
+// ── pedir correcciones al autor (editor titular: solo marca, NO envía mail) ──
+function handlePedirCorrecciones(idToken, id) {
   var user = requireInternalUser(idToken);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (String(c.editor_asignado) !== String(user.email)) {
+      throw new AuthError('Solo el editor asignado puede marcar esta producción.');
+    }
+    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('La producción no está en revisión.');
+
+    setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
+    addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', 'El editor pidió correcciones (pendiente de envío al autor).');
+    clearBoardCache();
+
+    // Avisa al equipo para que el coordinador envíe el mail al autor.
+    try { notifyTeam('Correcciones pendientes', displayName(user.email) + ' pidió correcciones para "' + c.titulo + '".'); }
+    catch (e) { /* el aviso no bloquea la marca */ }
+
+    return ok({ message: 'Correcciones marcadas. El coordinador debe enviarlas al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ── enviar correcciones al autor (gestor): adjunta PDF + mensaje ──
+function handleEnviarCorrecciones(idToken, id, fileId, mensaje) {
+  var user = requireInternalUser(idToken);
+  if (!esGestor(user)) throw new AuthError('Solo un gestor puede enviar el mail al autor.');
   if (!fileId) throw new ApiError('Elegí el archivo a adjuntar al autor.');
 
   var lock = LockService.getScriptLock();
@@ -206,38 +235,33 @@ function handlePedirCorrecciones(idToken, id, fileId, mensaje) {
   try {
     var c = findProduccionById(id);
     if (!c) throw new ApiError('Producción no encontrada.');
-    if (String(c.editor_asignado) !== String(user.email) && !esGestor(user)) {
-      throw new AuthError('Solo el editor asignado o un gestor puede operar esta producción.');
-    }
-    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('La producción no está en revisión.');
+    if (c.estado !== ESTADOS.CORRECCIONES_SOLICITADAS) throw new ApiError('La producción no está en correcciones solicitadas.');
+    if (c.token_autor) throw new ApiError('Ya se envió el mail de correcciones al autor.');
 
     // El archivo elegido debe pertenecer a la carpeta de la producción.
     var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
     if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
 
-    // Se convierte a PDF antes de generar el token: si falla, no queda nada a medias.
     var pdfBlob = convertirAPdf(String(fileId));
 
-    // Token fresco + expiración (guardamos antes para que el link del mail valga).
     var token = Utilities.getUuid();
     var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
     var sheet = getSheet('Tablero');
     setCell(sheet, c._rowIndex, 'token_autor', token);
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
-    // El mail es crítico: si falla, revertimos el token y NO cambiamos el estado.
     try {
       sendPedirCorrecciones(c.email_autor, c, token, pdfBlob, mensaje);
     } catch (e) {
       setCell(sheet, c._rowIndex, 'token_autor', '');
+      setCell(sheet, c._rowIndex, 'token_expira', '');
       throw new ApiError('No se pudo enviar el mail al autor: ' + (e.message || e));
     }
 
-    setEstado(c, ESTADOS.CORRECCIONES_SOLICITADAS);
-    addHistory(c.id, displayName(user.email), 'CORRECCIONES_SOLICITADAS', mensaje || '');
+    addHistory(c.id, displayName(user.email), 'CORRECCIONES_ENVIADAS', 'El equipo envió las correcciones al autor.');
     clearBoardCache();
 
-    return ok({ message: 'Se pidieron correcciones al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });
+    return ok({ message: 'Se enviaron las correcciones al autor.', estado: ESTADOS.CORRECCIONES_SOLICITADAS });
   } finally {
     lock.releaseLock();
   }
