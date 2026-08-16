@@ -339,6 +339,7 @@ function handleConsultarAutor(idToken, id, fileId) {
 }
 
 // ── publicación (COORDINADOR/SUPERVISOR) ──
+// PUBLICADO implica publicable: asegura que la producción quede en PUBLICABLES.
 function handlePublicar(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
@@ -348,7 +349,14 @@ function handlePublicar(idToken, id) {
   try {
     var c = findProduccionById(id);
     if (!c) throw new ApiError('Producción no encontrada.');
-    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar una producción aprobado.');
+    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar una producción aprobada.');
+
+    // Si aún no se copió a PUBLICABLES (no se marcó como publicable), copiarlo ahora.
+    if (!c.url_publicable) {
+      var url = copiarAprobadaAPublicables(c);
+      setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
+      addHistory(c.id, displayName(user.email), 'MARCADO_PUBLICABLE', 'Copiado a PUBLICABLES al publicar.');
+    }
 
     setEstado(c, ESTADOS.PUBLICADO);
     addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La versión aprobada fue marcada como publicada.');

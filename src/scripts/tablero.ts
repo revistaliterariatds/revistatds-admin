@@ -382,7 +382,7 @@ async function abrirDetalle(id: string) {
 
   content.innerHTML = `
     <h2 class="detail-titulo">${esc(c.titulo)}</h2>
-    <div class="detail-badge">${badge(c.estado)}</div>
+    <div class="detail-badge">${badge(c.estado)}${c.url_publicable ? ` <span class="badge badge-green">Publicable</span>` : ''}</div>
     <dl class="detail-meta">
       <div><dt>Autor</dt><dd>${esc(c.autor)} <span class="td-cat">(${esc(c.email_autor)})</span></dd></div>
       <div><dt>Categoría</dt><dd>${esc(c.categoria || 'Sin clasificar')}</dd></div>
