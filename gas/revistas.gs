@@ -375,6 +375,18 @@ function registrarAviso(num, produccionId, email) {
   getSheet('Avisos').appendRow([String(num), String(produccionId), String(email), new Date()]);
 }
 
+// Mails a autores: pueden salir desde un alias Gmail (Script Property
+// MAIL_FROM_AUTORES = email del alias, dado de alta en "Send mail as" de la
+// cuenta dueña). Si no está configurado, usa la cuenta del script (MailApp).
+function sendMailAutores(to, subject, html) {
+  var desde = getSecret('MAIL_FROM_AUTORES');
+  if (desde) {
+    GmailApp.sendEmail({ to: to, subject: subject, htmlBody: html, from: desde, name: MAIL_FROM_NAME });
+  } else {
+    sendHtmlMail(to, subject, html);
+  }
+}
+
 function joinTitulos(titulos) {
   var out = [];
   titulos.forEach(function (t) { out.push('«' + escapeHtml(t) + '»'); });
@@ -437,7 +449,7 @@ function enviarAvisoAutoresPublicados() {
       }
       html.push('  <p style="font-size:13px;color:#8a837a;margin:0;">Tramas del Sur — Revista literaria independiente</p>');
       html.push('</div>');
-      sendHtmlMail(g.email, subject, html.join(''));
+      sendMailAutores(g.email, subject, html.join(''));
       pendientes.forEach(function (p) { registrarAviso(pendiente.num, p.id, g.email); });
     });
     props.deleteProperty(AVISO_AUTORES_KEY);
