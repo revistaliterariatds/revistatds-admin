@@ -272,9 +272,8 @@ function handleConsultarAutor(idToken, id, fileId) {
   try {
     var c = findProduccionById(id);
     if (!c) throw new ApiError('Producción no encontrada.');
-    if (c.estado !== ESTADOS.ESPERANDO_APROBACION) {
-      throw new ApiError('Solo se puede consultar al autor una revisión terminada.');
-    }
+    // El coordinador puede consultar al autor desde cualquier estado (también
+    // lo usa el selector administrativo "Cambiar estado" → CONSULTA_AUTOR).
 
     // El archivo elegido debe pertenecer a la carpeta de la producción.
     var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });

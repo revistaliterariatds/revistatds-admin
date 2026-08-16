@@ -293,6 +293,21 @@ async function desasignar(id: string) {
   await cargar();
 }
 
+// Abre el selector de archivo para "Consultar al autor" (adjuntar PDF).
+async function abrirSelectorConsulta(id: string) {
+  const group = document.getElementById('consultaGroup');
+  const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
+  if (!group || !select) return;
+  const r = await api('panel/board/archivos', { id });
+  if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
+  const archivos = r.archivos || [];
+  if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
+  select.innerHTML = archivos
+    .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
+    .join('');
+  group.hidden = false;
+}
+
 // ── detalle ──
 async function abrirDetalle(id: string) {
   const modal = document.getElementById('detailModal') as HTMLDialogElement;
@@ -422,19 +437,7 @@ async function abrirDetalle(id: string) {
     else alert(r.message || 'No se pudo.');
   });
 
-  content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', async () => {
-    const group = document.getElementById('consultaGroup');
-    const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
-    if (!group || !select) return;
-    const r = await api('panel/board/archivos', { id });
-    if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
-    const archivos = r.archivos || [];
-    if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
-    select.innerHTML = archivos
-      .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
-      .join('');
-    group.hidden = false;
-  });
+  content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', () => abrirSelectorConsulta(id));
 
   content.querySelector('#btn-confirmar-consulta')?.addEventListener('click', async () => {
     const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
@@ -468,6 +471,11 @@ async function abrirDetalle(id: string) {
   content.querySelector('#btn-cambiar-estado')?.addEventListener('click', async () => {
     const estado = estadoSelect?.value;
     if (!estado) return;
+    if (estado === 'CONSULTA_AUTOR') {
+      // Consultar al autor requiere elegir el archivo a adjuntar como PDF.
+      await abrirSelectorConsulta(id);
+      return;
+    }
     if (!confirm('¿Cambiar el estado de esta publicación a "' + estado + '"?')) return;
     const r = await api('panel/board/cambiar-estado', { id, estado });
     if (r.status === 'ok') { modal.close(); await cargar(); }
