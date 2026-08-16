@@ -64,31 +64,6 @@ function copiarAPublicables(produccion, fileId) {
   return file.makeCopy(nombre, destino).getUrl();
 }
 
-// Copia la versión aprobada (o la vigente) a PUBLICABLES/<id>-<nombre>. Se usa al
-// publicar, para que PUBLICADO quede en la carpeta de publicables.
-function copiarAprobadaAPublicables(produccion) {
-  var edicion = String(produccion.edicion || edicionDestino());
-  var destino = getPublicablesFolder(edicion);
-  var folder = getProduccionFolder(produccion);
-
-  var origen = getOrCreateFolder(folder, 'version_aprobada');
-  if (!origen.getFiles().hasNext()) {
-    var version = 'v' + (produccion.version_actual || '1');
-    var vFolders = folder.getFoldersByName(version);
-    origen = vFolders.hasNext() ? vFolders.next() : folder;
-  }
-
-  var files = origen.getFiles();
-  var url = '';
-  while (files.hasNext()) {
-    var f = files.next();
-    var nombre = String(produccion.id || '') + '-' + f.getName();
-    url = f.makeCopy(nombre, destino).getUrl();
-  }
-  if (!url) throw new ApiError('No hay archivos para copiar a PUBLICABLES.');
-  return url;
-}
-
 // Lista recursiva de archivos en la carpeta de la producción (para el selector del panel).
 function listarArchivosProduccion(produccion) {
   var out = [];

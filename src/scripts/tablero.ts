@@ -30,7 +30,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   'ESPERANDO_APROBACIÓN': { label: 'En aprobación', color: 'orange' },
   'CONSULTA_AUTOR': { label: 'Consulta autor', color: 'orange' },
   'APROBADO': { label: 'Aprobado', color: 'green' },
-  'PUBLICADO': { label: 'Publicado', color: 'green' },
+  'PUBLICADO': { label: 'Publicable', color: 'green' },
   'RECHAZADO_POR_AUTOR': { label: 'Rechazado', color: 'red' },
   'DESCARTADO': { label: 'Descartado', color: 'grey' },
 };
@@ -349,9 +349,6 @@ async function abrirDetalle(id: string) {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="consultar">Consultar al autor</button>`);
     acciones.push(`<button type="button" class="btn-enviar btn-enviar-solid" data-detalle-accion="aprobar">Aprobar</button>`);
   }
-  if (esGestor && c.estado === 'APROBADO') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="publicar">Marcar publicado</button>`);
-  }
   if (esGestor && c.estado === 'RECHAZADO_POR_AUTOR') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="devolver">Devolver al editor</button>`);
     acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="descartar">Descartar</button>`);
@@ -362,7 +359,7 @@ async function abrirDetalle(id: string) {
   if (c.url_carpeta_drive) {
     acciones.push(`<a class="btn-ghost" href="${esc(c.url_carpeta_drive)}" target="_blank" rel="noopener noreferrer">Carpeta Drive</a>`);
   }
-  if (esAdmin) {
+  if (esAdmin && c.estado !== 'PUBLICADO') {
     acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="marcar-publicable">Marcar publicable</button>`);
     acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="borrar">Borrar envío</button>`);
   }
@@ -382,7 +379,7 @@ async function abrirDetalle(id: string) {
 
   content.innerHTML = `
     <h2 class="detail-titulo">${esc(c.titulo)}</h2>
-    <div class="detail-badge">${badge(c.estado)}${c.url_publicable ? ` <span class="badge badge-green">Publicable</span>` : ''}</div>
+    <div class="detail-badge">${badge(c.estado)}${c.estado !== 'PUBLICADO' && c.url_publicable ? ` <span class="badge badge-green">Publicable</span>` : ''}</div>
     <dl class="detail-meta">
       <div><dt>Autor</dt><dd>${esc(c.autor)} <span class="td-cat">(${esc(c.email_autor)})</span></dd></div>
       <div><dt>Categoría</dt><dd>${esc(c.categoria || 'Sin clasificar')}</dd></div>
@@ -399,7 +396,7 @@ async function abrirDetalle(id: string) {
       <div class="form-group" style="margin-bottom:1rem;">
         <label for="cambiar-estado">Cambiar estado (administración)</label>
         <select id="cambiar-estado" class="filter-select" aria-label="Cambiar el estado de esta publicación">
-          ${Object.keys(ESTADOS).map((k) => `<option value="${k}"${c.estado === k ? ' selected' : ''}>${esc(ESTADOS[k].label)}</option>`).join('')}
+          ${Object.keys(ESTADOS).filter((k) => k !== 'PUBLICADO').map((k) => `<option value="${k}"${c.estado === k ? ' selected' : ''}>${esc(ESTADOS[k].label)}</option>`).join('')}
         </select>
         <button type="button" class="btn-mini" id="btn-cambiar-estado" style="margin-top:0.5rem;">Aplicar estado</button>
       </div>` : ''}
@@ -493,13 +490,6 @@ async function abrirDetalle(id: string) {
     if (group) group.hidden = true;
   });
 
-  content.querySelector('[data-detalle-accion="publicar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Marcar esta producción como publicada?')) return;
-    const r = await api('panel/board/publicar', { id });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo publicar.');
-  });
-
   content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Aprobar esta producción?')) return;
     const r = await api('panel/board/aprobar', { id });
@@ -537,6 +527,13 @@ async function abrirDetalle(id: string) {
   });
 
   content.querySelector('[data-detalle-accion="marcar-publicable"]')?.addEventListener('click', async () => {
+    if (c.url_publicable) {
+      if (!confirm('¿Marcar esta producción como publicable?')) return;
+      const r = await api('panel/board/marcar-publicable', { id });
+      if (r.status === 'ok') { modal.close(); await cargar(); }
+      else alert(r.message || 'No se pudo marcar publicable.');
+      return;
+    }
     const group = document.getElementById('publicableGroup');
     const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
     if (!group || !select) return;
@@ -553,7 +550,7 @@ async function abrirDetalle(id: string) {
   content.querySelector('#btn-confirmar-publicable')?.addEventListener('click', async () => {
     const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
-    if (!confirm('¿Copiar este archivo a la carpeta PUBLICABLES de su edición?')) return;
+    if (!confirm('¿Copiar este archivo a PUBLICABLES y marcar la producción como publicable?')) return;
     const r = await api('panel/board/marcar-publicable', { id, fileId: select.value });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo marcar publicable.');

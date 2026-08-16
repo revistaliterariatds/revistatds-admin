@@ -338,36 +338,6 @@ function handleConsultarAutor(idToken, id, fileId) {
   }
 }
 
-// ── publicación (COORDINADOR/SUPERVISOR) ──
-// PUBLICADO implica publicable: asegura que la producción quede en PUBLICABLES.
-function handlePublicar(idToken, id) {
-  var user = requireInternalUser(idToken);
-  if (!esGestor(user)) throw new AuthError('Sin permisos.');
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var c = findProduccionById(id);
-    if (!c) throw new ApiError('Producción no encontrada.');
-    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar una producción aprobada.');
-
-    // Si aún no se copió a PUBLICABLES (no se marcó como publicable), copiarlo ahora.
-    if (!c.url_publicable) {
-      var url = copiarAprobadaAPublicables(c);
-      setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
-      addHistory(c.id, displayName(user.email), 'MARCADO_PUBLICABLE', 'Copiado a PUBLICABLES al publicar.');
-    }
-
-    setEstado(c, ESTADOS.PUBLICADO);
-    addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La versión aprobada fue marcada como publicada.');
-    clearBoardCache();
-    notifyTeam('Publicado', displayName(user.email) + ' publicó "' + c.titulo + '"');
-    return ok({ message: 'Producción marcada como publicada.', estado: ESTADOS.PUBLICADO });
-  } finally {
-    lock.releaseLock();
-  }
-}
-
 // ── resolución de rechazo del autor (COORDINADOR/SUPERVISOR) ──
 function handleResolverRechazo(idToken, id, resolucion) {
   var user = requireInternalUser(idToken);
@@ -432,26 +402,36 @@ function handleBoardArchivos(idToken, id) {
   return ok({ archivos: listarArchivosProduccion(c) });
 }
 
-// ── marcar publicable (COORDINADOR/WEBMASTER): copia el archivo elegido a PUBLICABLES ──
+// ── marcar publicable (COORDINADOR/WEBMASTER) ──
+// Unifica "publicable" = "publicado": copia el archivo elegido a PUBLICABLES
+// (si falta) y pasa la producción al estado PUBLICADO (se muestra "Publicable").
 function handleMarcarPublicable(idToken, id, fileId) {
   var user = requireInternalUser(idToken);
   if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede marcar publicable.');
-  if (!fileId) throw new ApiError('Falta el archivo a marcar como publicable.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var c = findProduccionById(id);
     if (!c) throw new ApiError('Producción no encontrada.');
+    if (c.estado === ESTADOS.PUBLICADO) throw new ApiError('La producción ya está marcada como publicable.');
 
-    var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
-    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
+    // Si aún no está en PUBLICABLES, copiar el archivo elegido.
+    if (!c.url_publicable) {
+      if (!fileId) throw new ApiError('Elegí el archivo a copiar a PUBLICABLES.');
+      var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
+      if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
+      var url = copiarAPublicables(c, String(fileId));
+      setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
+      c.url_publicable = url;
+      addHistory(c.id, displayName(user.email), 'MARCADO_PUBLICABLE', 'Copiado a PUBLICABLES (' + url + ')');
+    }
 
-    var url = copiarAPublicables(c, String(fileId));
-    setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
-    addHistory(c.id, displayName(user.email), 'MARCADO_PUBLICABLE', 'Copiado a PUBLICABLES (' + url + ')');
+    setEstado(c, ESTADOS.PUBLICADO);
+    addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La producción fue marcada como publicable.');
     clearBoardCache();
-    return ok({ message: 'Publicable registrado.', url_publicable: url });
+    notifyTeam('Publicable', displayName(user.email) + ' marcó "' + c.titulo + '" como publicable.');
+    return ok({ message: 'Producción marcada como publicable.', estado: ESTADOS.PUBLICADO, url_publicable: c.url_publicable });
   } finally {
     lock.releaseLock();
   }

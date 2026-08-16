@@ -85,7 +85,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/board/cambiar-estado` | idToken + COORDINADOR/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío (mueve también su carpeta a `RECIBIDOS` de la edición nueva) |
 | `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta de la producción (recursivo) para el selector |
-| `panel/board/marcar-publicable` | idToken + COORDINADOR/WEBMASTER | copia el `fileId` elegido a `PUBLICABLES/<id>-<nombre>` y guarda `url_publicable` |
+| `panel/board/marcar-publicable` | idToken + COORDINADOR/WEBMASTER | unifica "publicable" = "publicado": copia el `fileId` (si `url_publicable` vacío) a `PUBLICABLES/<id>-<nombre>`, guarda `url_publicable` y pasa el estado a `PUBLICADO` |
 | `panel/board/borrar` | idToken + COORDINADOR/WEBMASTER | elimina el envío por completo (carpeta de Drive, copia en PUBLICABLES, fila del Tablero e historial) |
 | `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
 | `panel/ediciones/abrir` | idToken + COORDINADOR/WEBMASTER | abre nueva edición con `fecha_apertura` (nace sin fecha de cierre) |
@@ -166,7 +166,9 @@ hasta completar la siguiente etapa de parametrización.
 - Cada envío vive en `RECIBIDOS/<id>/` (carpeta de trabajo: original, `correccion/`,
   `v2…`, `version_aprobada/`). Sin edición abierta, se guarda en `RECIBIDOS` de la
   última edición (aunque esté cerrada); si no hay ninguna, en `SIN_EDICION`.
-- "Marcar publicable" copia el archivo elegido a `PUBLICABLES/<id>-<nombre>` (sueltos).
+- "Marcar publicable" es la única acción para publicar: copia el archivo elegido a
+  `PUBLICABLES/<id>-<nombre>` (sueltos) y deja la producción en estado `PUBLICADO`
+  (se muestra "Publicable"). El estado `PUBLICADO` siempre implica publicable.
 - El nombre de edición lleva cero a la izquierda (`EDICION N° 03`) para ordenar bien.
 - Migración única `migrateEstructuraDrive()`: mueve la carpeta legacy `Cuentos/<id>` → `RECIBIDOS/<edicion>`.
 - **Etiquetado por fecha**: `edicionDestino()` asigna el envío a la edición cuyo rango
