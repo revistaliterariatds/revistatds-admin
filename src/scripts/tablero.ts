@@ -430,6 +430,8 @@ function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produc
     .concat(ediciones.map((e) => `<option value="${esc(e.numero)}"${String(c.edicion ?? '').trim() === String(e.numero) ? ' selected' : ''}>Edición ${esc(e.numero)}</option>`))
     .join('');
 
+  const histAbierto = (content.querySelector('.detail-historial') as HTMLDetailsElement | null)?.open ?? false;
+
   content.innerHTML = `
     <h2 class="detail-titulo">${esc(c.titulo)}</h2>
     <div class="detail-badge">${badge(c.estado)}${c.estado !== 'PUBLICADO' && c.url_publicable ? ` <span class="badge badge-green">Publicable</span>` : ''}</div>
@@ -453,8 +455,10 @@ function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produc
         </select>
         <button type="button" class="btn-mini" id="btn-cambiar-estado" style="margin-top:0.5rem;">Aplicar estado</button>
       </div>` : ''}
-    <h3 class="detail-sub">Historial</h3>
-    <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
+    <details class="detail-historial" style="margin-bottom:0.75rem;">
+      <summary class="detail-sub" style="cursor:pointer;user-select:none;">Historial${hist.length ? ` · ${hist.length} registro${hist.length === 1 ? '' : 's'}` : ''}</summary>
+      <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
+    </details>
     <div class="detail-acciones">${acciones.join(' ')}</div>
     ${esGestor ? `
       <div class="form-group" id="enviarCorreccionesGroup" hidden>
@@ -488,6 +492,9 @@ function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produc
   `;
 
   modal.showModal();
+
+  const det = content.querySelector('.detail-historial') as HTMLDetailsElement | null;
+  if (det && histAbierto) det.open = true;
 
   const edicionSelect = content.querySelector('#cambiar-edicion') as HTMLSelectElement | null;
   edicionSelect?.addEventListener('change', async () => {
