@@ -11,7 +11,7 @@ un solo deployment) con Google Sheets como DB. Los archivos del backend viven en
 - `WEBMASTER` — acceso total, idéntico a `COORDINADOR` (usuario técnico).
 - `SUPERVISOR` — todo, menos modificar usuarios (Usuarios en solo lectura).
 - `EDITOR` — tablero desde `PRESELECCIONADO`, autoasignación y solo sus asignados.
-- `AUTOR` — solo su cuento vía token de un solo uso.
+- `AUTOR` — solo su producción vía token de un solo uso.
 
 Regla: **no reintroducir `ADMINISTRADOR`**. El backend rechaza roles desconocidos
 (`auth.gs` valida contra `ROLES_INTERNOS`), así que cualquier fila de `Roles` con

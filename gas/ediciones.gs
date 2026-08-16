@@ -291,21 +291,21 @@ function handleCambiarEdicion(idToken, id, edicion) {
   var edicionStr = String(edicion == null ? '' : edicion).trim();
   if (edicionStr && !existeEdicion(edicionStr)) throw new ApiError('La edición elegida no existe.');
 
-  var c = findCuentoById(id);
-  if (!c) throw new ApiError('Cuento no encontrado.');
+  var c = findProduccionById(id);
+  if (!c) throw new ApiError('Producción no encontrada.');
 
   var sheet = getSheet('Tablero');
   setCell(sheet, c._rowIndex, 'edicion', edicionStr);
   // Mueve la carpeta de trabajo a RECIBIDOS de la edición nueva (solo si se
   // asigna una edición concreta; la copia en PUBLICABLES, si existe, no se toca).
   if (edicionStr) {
-    try { getCuentoFolder(c).moveTo(getRecibidosFolder(edicionStr)); }
+    try { getProduccionFolder(c).moveTo(getRecibidosFolder(edicionStr)); }
     catch (e) { /* el cambio de etiqueta no debe fallar por un problema de Drive */ }
   }
   addHistory(c.id, displayName(user.email), 'EDICION_CAMBIADA',
     edicionStr ? 'Reasignado a la edición ' + edicionStr : 'Edición sin asignar');
   clearBoardCache();
-  return ok({ message: 'Edición del cuento actualizada.', edicion: edicionStr });
+  return ok({ message: 'Edición de la producción actualizada.', edicion: edicionStr });
 }
 
 // Migración única: columna `edicion` en Tablero + hoja Ediciones sembrada.

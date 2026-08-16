@@ -2,7 +2,7 @@
 
 import { api, getUser, clearSession, getIdToken } from './api';
 
-interface Cuento {
+interface Produccion {
   id: string;
   titulo: string;
   autor: string;
@@ -34,7 +34,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   'DESCARTADO': { label: 'Descartado', color: 'grey' },
 };
 
-let cuentos: Cuento[] = [];
+let producciones: Produccion[] = [];
 let estadoActivo = 'TODOS';
 let convocatoriaActiva = 'TODAS';
 let edicionActiva = 'TODAS';
@@ -102,10 +102,10 @@ function convocatoriaLabel(c: string): string {
 // ── filtros ──
 function renderEstadoSelect() {
   const cont: Record<string, number> = {};
-  cuentos.forEach((c) => { cont[c.estado] = (cont[c.estado] || 0) + 1; });
+  producciones.forEach((c) => { cont[c.estado] = (cont[c.estado] || 0) + 1; });
 
   const el = document.getElementById('filtro-estado') as HTMLSelectElement;
-  const options = [`<option value="TODOS">Todos los estados (${cuentos.length})</option>`];
+  const options = [`<option value="TODOS">Todos los estados (${producciones.length})</option>`];
   Object.keys(ESTADOS).forEach((k) => {
     if (!esGestor && k === 'RECIBIDO') return; // RECIBIDO solo lo ve admin/supervisor
     const n = cont[k] || 0;
@@ -117,10 +117,10 @@ function renderEstadoSelect() {
 
 function renderConvocatoriaSelect() {
   const cont: Record<string, number> = {};
-  cuentos.forEach((c) => { cont[c.convocatoria] = (cont[c.convocatoria] || 0) + 1; });
+  producciones.forEach((c) => { cont[c.convocatoria] = (cont[c.convocatoria] || 0) + 1; });
 
   const el = document.getElementById('filtro-convocatoria') as HTMLSelectElement;
-  const options = [`<option value="TODAS">Todas (${cuentos.length})</option>`];
+  const options = [`<option value="TODAS">Todas (${producciones.length})</option>`];
   ['general', 'docentes'].forEach((k) => {
     const n = cont[k] || 0;
     options.push(`<option value="${k}">${esc(convocatoriaLabel(k))} (${n})</option>`);
@@ -131,13 +131,13 @@ function renderConvocatoriaSelect() {
 
 function renderEdicionSelect() {
   const cont: Record<string, number> = {};
-  cuentos.forEach((c) => {
+  producciones.forEach((c) => {
     const key = c.edicion ? String(c.edicion) : 'sin-edicion';
     cont[key] = (cont[key] || 0) + 1;
   });
 
   const el = document.getElementById('filtro-edicion') as HTMLSelectElement;
-  const options = [`<option value="TODAS">Todas (${cuentos.length})</option>`];
+  const options = [`<option value="TODAS">Todas (${producciones.length})</option>`];
   Object.keys(cont).sort().forEach((k) => {
     const label = k === 'sin-edicion' ? 'Sin edición' : 'Edición ' + k;
     options.push(`<option value="${k}">${esc(label)} (${cont[k]})</option>`);
@@ -146,8 +146,8 @@ function renderEdicionSelect() {
   el.value = edicionActiva;
 }
 
-function visibles(): Cuento[] {
-  return cuentos.filter((c) => {
+function visibles(): Produccion[] {
+  return producciones.filter((c) => {
     if (estadoActivo !== 'TODOS' && c.estado !== estadoActivo) return false;
     if (convocatoriaActiva !== 'TODAS' && c.convocatoria !== convocatoriaActiva) return false;
     if (edicionActiva !== 'TODAS') {
@@ -200,7 +200,7 @@ function renderTable() {
 
     return `<tr class="board-row" data-id="${esc(c.id)}">
       <td data-label="Estado">${badge(c.estado)}</td>
-      <td data-label="Cuento" class="td-titulo">
+      <td data-label="Producción" class="td-titulo">
         <strong>${esc(c.titulo)}</strong>
         <span class="td-cat">${esc(c.categoria || 'Sin clasificar')}${c.edad ? ' · ' + esc(c.edad) : ''}</span>
       </td>
@@ -259,7 +259,7 @@ async function cargar() {
     alert(data.message || 'No se pudo cargar el tablero.');
     return;
   }
-  cuentos = data.cuentos;
+  producciones = data.producciones;
   if (esGestor && ed.status === 'ok') editores = ed.editores || [];
   if (esGestor && edicionesData.status === 'ok') ediciones = edicionesData.ediciones || [];
   renderEstadoSelect();
@@ -287,7 +287,7 @@ async function reasignar(id: string, editorEmail: string) {
 }
 
 async function desasignar(id: string) {
-  if (!confirm('¿Desasignar este cuento?')) return;
+  if (!confirm('¿Desasignar esta producción?')) return;
   const data = await api('panel/board/desasignar', { id });
   if (data.status !== 'ok') alert(data.message || 'No se pudo desasignar.');
   await cargar();
@@ -302,7 +302,7 @@ async function abrirDetalle(id: string) {
     alert(data.message || 'No se pudo cargar el detalle.');
     return;
   }
-  const c: Cuento = data.cuento;
+  const c: Produccion = data.produccion;
   const hist: { timestamp: string; actor: string; accion: string; detalle: string }[] = data.historial || [];
   const soyTitular = c.editor_asignado === user?.email;
 
@@ -429,7 +429,7 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/board/archivos', { id });
     if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
     const archivos = r.archivos || [];
-    if (!archivos.length) { alert('No hay archivos en la carpeta de este cuento.'); return; }
+    if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
     select.innerHTML = archivos
       .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
       .join('');
@@ -451,14 +451,14 @@ async function abrirDetalle(id: string) {
   });
 
   content.querySelector('[data-detalle-accion="publicar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Marcar este cuento como publicado?')) return;
+    if (!confirm('¿Marcar esta producción como publicada?')) return;
     const r = await api('panel/board/publicar', { id });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo publicar.');
   });
 
   content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Aprobar este cuento?')) return;
+    if (!confirm('¿Aprobar esta producción?')) return;
     const r = await api('panel/board/aprobar', { id });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo aprobar.');
@@ -475,14 +475,14 @@ async function abrirDetalle(id: string) {
   });
 
   content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Devolver este cuento al editor para retrabajarlo?')) return;
+    if (!confirm('¿Devolver esta producción al editor para retrabajarla?')) return;
     const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'devolver' });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo devolver al editor.');
   });
 
   content.querySelector('[data-detalle-accion="descartar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Descartar definitivamente este cuento?')) return;
+    if (!confirm('¿Descartar definitivamente esta producción?')) return;
     const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'descartar' });
     if (r.status === 'ok') { modal.close(); await cargar(); }
     else alert(r.message || 'No se pudo descartar.');
@@ -495,7 +495,7 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/board/archivos', { id });
     if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
     const archivos = r.archivos || [];
-    if (!archivos.length) { alert('No hay archivos en la carpeta de este cuento.'); return; }
+    if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
     select.innerHTML = archivos
       .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
       .join('');

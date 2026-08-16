@@ -4,7 +4,7 @@
 // `estado` (lectura) no consume el token; `approve`/`reject`/`edit` sí
 // (un solo uso por ronda, con LockService anti doble clic).
 
-function findCuento(colName, value) {
+function findProduccion(colName, value) {
   var sheet = getSheet('Tablero');
   var idx = headerIndex(sheet);
   var data = sheet.getDataRange().getValues();
@@ -18,38 +18,39 @@ function findCuento(colName, value) {
   return null;
 }
 
-function findCuentoByToken(token) { return findCuento('token_autor', token); }
-function findCuentoById(id) { return findCuento('id', id); }
+function findProduccionByToken(token) { return findProduccion('token_autor', token); }
+function findProduccionById(id) { return findProduccion('id', id); }
 
 function requireToken(token) {
   if (!token) throw new ApiError('Falta el token.');
-  var cuento = findCuentoByToken(token);
-  if (!cuento) throw new ApiError('Link inválido o ya utilizado.');
-  if (cuento.token_expira && new Date(cuento.token_expira).getTime() < Date.now()) {
+  var produccion = findProduccionByToken(token);
+  if (!produccion) throw new ApiError('Link inválido o ya utilizado.');
+  if (produccion.token_expira && new Date(produccion.token_expira).getTime() < Date.now()) {
     throw new ApiError('El link venció.');
   }
-  return cuento;
+  return produccion;
 }
 
-function setEstado(cuento, nuevoEstado) {
+function setEstado(produccion, nuevoEstado) {
   var sheet = getSheet('Tablero');
-  setCell(sheet, cuento._rowIndex, 'estado', nuevoEstado);
-  setCell(sheet, cuento._rowIndex, 'fecha_actualizacion', new Date());
-  cuento.estado = nuevoEstado;
+  setCell(sheet, produccion._rowIndex, 'estado', nuevoEstado);
+  setCell(sheet, produccion._rowIndex, 'fecha_actualizacion', new Date());
+  produccion.estado = nuevoEstado;
 }
 
-function consumeToken(cuento) {
-  setCell(getSheet('Tablero'), cuento._rowIndex, 'token_autor', '');
-  cuento.token_autor = '';
+function consumeToken(produccion) {
+  setCell(getSheet('Tablero'), produccion._rowIndex, 'token_autor', '');
+  produccion.token_autor = '';
 }
 
-function getHistorial(idCuento) {
+function getHistorial(idProduccion) {
   var sheet = getSheet('Historial');
   var idx = headerIndex(sheet);
+  var colId = historialIdIndex(sheet);
   var data = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][idx.id_cuento]) === String(idCuento)) {
+    if (String(data[i][colId]) === String(idProduccion)) {
       out.push({
         timestamp: data[i][idx.timestamp],
         actor: data[i][idx.actor],
@@ -126,10 +127,10 @@ function handleAutorEdit(token, archivos) {
     }
     var archivosArr = validarArchivos(archivos);
 
-    // Guardar la nueva versión en la carpeta del cuento.
+    // Guardar la nueva versión en la carpeta de la producción.
     var version = parseInt(c.version_actual || '1', 10) + 1;
     var estadoAnterior = c.estado;
-    var folder = getCuentoFolder(c);
+    var folder = getProduccionFolder(c);
     var subfolder = getOrCreateFolder(folder, 'v' + version);
     saveFiles(subfolder, archivosArr);
 
@@ -159,13 +160,13 @@ function handleAutorEdit(token, archivos) {
   }
 }
 
-function getCuentoFolder(cuento) {
-  var url = cuento.url_carpeta_drive;
+function getProduccionFolder(produccion) {
+  var url = produccion.url_carpeta_drive;
   if (url) {
     try {
       var m = url.match(/\/folders\/([-\w]+)/);
       if (m) return DriveApp.getFolderById(m[1]);
     } catch (e) { /* fallback abajo */ }
   }
-  return createCuentoFolder(cuento.id);
+  return createProduccionFolder(produccion.id);
 }

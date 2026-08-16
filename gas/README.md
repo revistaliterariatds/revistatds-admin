@@ -77,11 +77,11 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `action` en body | Auth | Devuelve |
 |---|---|---|
 | `panel/auth/whoami` | idToken | `{ status, email, rol, nombre }` |
-| `panel/board/list` | idToken | `{ status, cuentos: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
+| `panel/board/list` | idToken | `{ status, producciones: [...] }` (el EDITOR no recibe los `RECIBIDO`) |
 | `panel/board/aprobar` | idToken + gestor | pasa `ESPERANDO_APROBACIÓN` → `APROBADO` |
 | `panel/board/cambiar-estado` | idToken + COORDINADOR/WEBMASTER | cambia el estado a cualquiera de `ESTADOS` (control administrativo) |
 | `panel/board/cambiar-edicion` | idToken + gestor | reasigna la edición de un envío (mueve también su carpeta a `RECIBIDOS` de la edición nueva) |
-| `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta del cuento (recursivo) para el selector |
+| `panel/board/archivos` | idToken + gestor | lista los archivos de la carpeta de la producción (recursivo) para el selector |
 | `panel/board/marcar-publicable` | idToken + COORDINADOR/WEBMASTER | copia el `fileId` elegido a `PUBLICABLES/<id>-<nombre>` y guarda `url_publicable` |
 | `panel/board/borrar` | idToken + COORDINADOR/WEBMASTER | elimina el envío por completo (carpeta de Drive, copia en PUBLICABLES, fila del Tablero e historial) |
 | `panel/ediciones/list` | idToken + COORDINADOR/WEBMASTER | lista de ediciones (con `fecha_apertura`/`fecha_cierre`) |
@@ -138,7 +138,7 @@ El token es secreto y no debe guardarse en el repositorio ni en la hoja `Config`
 
 ### Mails del autor
 
-- **Consulta de aprobación**: el coordinador **elige el archivo** de la carpeta del cuento (selector `panel/board/archivos`); el backend lo convierte a **PDF** (`convertirAPdf`: PDF → tal cual, Google nativo → `getAs`, Word/ODT/RTF/TXT → Advanced Drive Service, imágenes → tal cual) y lo adjunta, sin links de Drive ni docs editables. Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
+- **Consulta de aprobación**: el coordinador **elige el archivo** de la carpeta de la producción (selector `panel/board/archivos`); el backend lo convierte a **PDF** (`convertirAPdf`: PDF → tal cual, Google nativo → `getAs`, Word/ODT/RTF/TXT → Advanced Drive Service, imágenes → tal cual) y lo adjunta, sin links de Drive ni docs editables. Tres botones iguales con colores TDS (**Aprobar** verde / **Modificar** naranja / **No aprobar** rojo) — token de un solo uso (la primera acción invalida el resto). El texto aclara que modificar requiere un **nuevo archivo**: adjuntándolo **respondiendo el correo** o como **nueva producción** por el formulario (botón a `enviar.html`).
 - **Autor pide modificar** (`autor/edit` desde `CONSULTA_AUTOR`): `sendSolicitudModificacion` avisa a **editor asignado + COORDINADOR/SUPERVISOR** (sin WEBMASTER) para que se contacten y definan. Desde `CORRECCIONES_SOLICITADAS` solo avisa al editor (`sendNuevaVersion`).
 - **Pedir correcciones**: link de un solo uso para subir versión.
 - **Confirmación de recibido**: primer link de seguimiento (token).
@@ -163,7 +163,7 @@ hasta completar la siguiente etapa de parametrización.
   última edición (aunque esté cerrada); si no hay ninguna, en `SIN_EDICION`.
 - "Marcar publicable" copia el archivo elegido a `PUBLICABLES/<id>-<nombre>` (sueltos).
 - El nombre de edición lleva cero a la izquierda (`EDICION N° 03`) para ordenar bien.
-- Migración única `migrateEstructuraDrive()`: mueve `Cuentos/<id>` → `RECIBIDOS/<edicion>`.
+- Migración única `migrateEstructuraDrive()`: mueve la carpeta legacy `Cuentos/<id>` → `RECIBIDOS/<edicion>`.
 - **Etiquetado por fecha**: `edicionDestino()` asigna el envío a la edición cuyo rango
   apertura–cierre contiene hoy (abierta → última → `SIN_EDICION` como fallback).
 

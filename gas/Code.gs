@@ -58,7 +58,7 @@ function doPost(e) {
     } else if (action === 'panel/board/marcar-publicable') {
       result = handleMarcarPublicable(tokenFrom(data, e), data && data.id, data && data.fileId);
     } else if (action === 'panel/board/borrar') {
-      result = handleBorrarCuento(tokenFrom(data, e), data && data.id);
+      result = handleBorrarProduccion(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/ediciones/list') {
       result = handleEdicionesList(tokenFrom(data, e));
     } else if (action === 'panel/ediciones/cerrar') {

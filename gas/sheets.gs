@@ -8,7 +8,7 @@ var SHEETS = {
     'version_actual', 'token_autor', 'token_expira', 'convocatoria',
     'fecha_recibido', 'fecha_actualizacion', 'edicion', 'url_publicable',
   ],
-  Historial: ['id_cuento', 'timestamp', 'actor', 'accion', 'detalle'],
+  Historial: ['id_produccion', 'timestamp', 'actor', 'accion', 'detalle'],
   Config: ['clave', 'valor'],
   Descargas: ['archivo', 'accion', 'fecha'],
   Ediciones: ['numero', 'estado', 'fecha_apertura', 'fecha_cierre'],
@@ -82,6 +82,29 @@ function headerIndex(sheet) {
   var idx = {};
   headers.forEach(function (h, i) { idx[h] = i; });
   return idx;
+}
+
+// Devuelve el índice de columna del id en Historial, con fallback a la columna
+// legacy `id_cuento` (si la migración de renombre aún no se ejecutó).
+function historialIdIndex(sheet) {
+  var idx = headerIndex(sheet);
+  if (idx.id_produccion !== undefined) return idx.id_produccion;
+  return idx.id_cuento;
+}
+
+// Migración idempotente: renombra la columna `id_cuento` → `id_produccion` en
+// la hoja Historial (el resto de las columnas queda igual).
+function migrateHistorialIdColumna() {
+  var sheet = getSheet('Historial');
+  if (!sheet || sheet.getLastRow() < 1) return 'OK (sin Historial)';
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (headers[i] === 'id_cuento') {
+      sheet.getRange(1, i + 1).setValue('id_produccion');
+      return 'OK (id_cuento → id_produccion)';
+    }
+  }
+  return 'OK (ya migrado)';
 }
 
 // Devuelve el índice de fila (0-based, sin contar el header) o -1.

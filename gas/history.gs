@@ -1,8 +1,8 @@
-// history.gs — Historial append-only de acciones sobre cada cuento.
+// history.gs — Historial append-only de acciones sobre cada producción.
 
-function addHistory(idCuento, actor, accion, detalle) {
+function addHistory(idProduccion, actor, accion, detalle) {
   getSheet('Historial').appendRow([
-    idCuento,
+    idProduccion,
     new Date(),
     actor,
     accion,

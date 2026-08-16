@@ -1,7 +1,7 @@
 // board.gs — tablero del panel (Fase 3: lectura + autoasignación + acciones del titular).
 
 // ── helpers ──
-function cuentoPublico(c) {
+function produccionPublica(c) {
   var out = {};
   SHEETS.Tablero.forEach(function (h, j) { out[h] = c[h]; });
   out.token_autor = '';      // nunca exponer el token
@@ -31,7 +31,7 @@ function handleBoardList(idToken) {
     for (var i = 1; i < data.length; i++) {
       var row = { _rowIndex: i };
       SHEETS.Tablero.forEach(function (h) { row[h] = data[i][idx[h]]; });
-      rows.push(cuentoPublico(row));
+      rows.push(produccionPublica(row));
     }
     cache.put('board-list', JSON.stringify(rows), 30);
   }
@@ -42,19 +42,19 @@ function handleBoardList(idToken) {
     rows = rows.filter(function (r) { return r.estado !== ESTADOS.RECIBIDO; });
   }
 
-  return ok({ cuentos: rows, yo: { email: user.email, rol: user.rol } });
+  return ok({ producciones: rows, yo: { email: user.email, rol: user.rol } });
 }
 
-// ── detalle de un cuento + historial ──
+// ── detalle de una producción + historial ──
 function handleBoardDetail(idToken, id) {
   requireInternalUser(idToken);
-  var c = findCuentoById(id);
-  if (!c) throw new ApiError('Cuento no encontrado.');
-  return ok({ cuento: cuentoPublico(c), historial: getHistorial(c.id) });
+  var c = findProduccionById(id);
+  if (!c) throw new ApiError('Producción no encontrada.');
+  return ok({ produccion: produccionPublica(c), historial: getHistorial(c.id) });
 }
 
 // ── asignación compartida (auto o manual) ──
-function asignarCuento(c, editorEmail, actor) {
+function asignarProduccion(c, editorEmail, actor) {
   // El Doc se crea primero: si falla (scope), no se asigna nada.
   var docUrl = createDocCorreccion(c, editorEmail);
   var sheet = getSheet('Tablero');
@@ -96,21 +96,21 @@ function handleBoardEditors(idToken) {
 // ── autoasignación (EDITOR) ──
 function handleAsignarme(idToken, id) {
   var user = requireInternalUser(idToken);
-  if (user.rol !== ROLES.EDITOR) throw new AuthError('Solo EDITOR puede autoasignarse cuentos.');
+  if (user.rol !== ROLES.EDITOR) throw new AuthError('Solo EDITOR puede autoasignarse producciones.');
   ensureTableroSchema();
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
-    if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
-    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo cuentos PRESELECCIONADO pueden autoasignarse.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (c.editor_asignado) throw new ApiError('La producción ya tiene editor.');
+    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo producciones PRESELECCIONADAS pueden autoasignarse.');
 
-    var docUrl = asignarCuento(c, user.email, displayName(user.email));
+    var docUrl = asignarProduccion(c, user.email, displayName(user.email));
     try { notifyTeam('Asignado', displayName(user.email) + ' se asignó "' + c.titulo + '"'); } catch (e) { /* el aviso no bloquea la asignación */ }
 
-    return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
+    return ok({ message: 'Producción asignada.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
   } finally {
     lock.releaseLock();
   }
@@ -127,15 +127,15 @@ function handleAsignar(idToken, id, editorEmail) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
-    if (c.editor_asignado) throw new ApiError('El cuento ya tiene editor.');
-    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo cuentos PRESELECCIONADO pueden asignarse.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (c.editor_asignado) throw new ApiError('La producción ya tiene editor.');
+    if (c.estado !== ESTADOS.PRESELECCIONADO) throw new ApiError('Solo producciones PRESELECCIONADAS pueden asignarse.');
 
-    var docUrl = asignarCuento(c, editorEmail, displayName(user.email));
+    var docUrl = asignarProduccion(c, editorEmail, displayName(user.email));
     try { notifyTeam('Asignado', displayName(user.email) + ' asignó "' + c.titulo + '" a ' + displayName(editorEmail)); } catch (e) { /* el aviso no bloquea la asignación */ }
 
-    return ok({ message: 'Cuento asignado.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
+    return ok({ message: 'Producción asignada.', estado: ESTADOS.EN_REVISION, doc_url: docUrl });
   } finally {
     lock.releaseLock();
   }
@@ -149,9 +149,9 @@ function handleDesasignar(idToken, id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
-    if (!c.editor_asignado) throw new ApiError('El cuento no tiene editor.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (!c.editor_asignado) throw new ApiError('La producción no tiene editor.');
 
     var editorAnterior = c.editor_asignado;
     setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', '');
@@ -163,7 +163,7 @@ function handleDesasignar(idToken, id) {
     clearBoardCache();
     sendLiberacion(editorAnterior, c);
 
-    return ok({ message: 'Cuento desasignado.', estado: c.estado });
+    return ok({ message: 'Producción desasignada.', estado: c.estado });
   } finally {
     lock.releaseLock();
   }
@@ -179,9 +179,9 @@ function handleReasignar(idToken, id, editorEmail) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
-    if (!c.editor_asignado) throw new ApiError('El cuento no tiene editor.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (!c.editor_asignado) throw new ApiError('La producción no tiene editor.');
 
     var anterior = c.editor_asignado;
     setCell(getSheet('Tablero'), c._rowIndex, 'editor_asignado', editorEmail);
@@ -190,7 +190,7 @@ function handleReasignar(idToken, id, editorEmail) {
     // Notifica al nuevo editor con el Doc existente (no se recrea).
     try { sendAsignacion(editorEmail, c, c.url_doc_correccion); } catch (e) { /* el mail no bloquea la reasignación */ }
 
-    return ok({ message: 'Cuento reasignado.', estado: c.estado });
+    return ok({ message: 'Producción reasignada.', estado: c.estado });
   } finally {
     lock.releaseLock();
   }
@@ -202,12 +202,12 @@ function handlePedirCorrecciones(idToken, id, motivo) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     if (String(c.editor_asignado) !== String(user.email)) {
-      throw new AuthError('Solo el editor asignado puede operar este cuento.');
+      throw new AuthError('Solo el editor asignado puede operar esta producción.');
     }
-    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('El cuento no está en revisión.');
+    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('La producción no está en revisión.');
 
     // Token fresco + expiración (guardamos antes para que el link del mail valga).
     var token = Utilities.getUuid();
@@ -240,12 +240,12 @@ function handleRevisionTerminada(idToken, id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     if (String(c.editor_asignado) !== String(user.email)) {
-      throw new AuthError('Solo el editor asignado puede operar este cuento.');
+      throw new AuthError('Solo el editor asignado puede operar esta producción.');
     }
-    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('El cuento no está en revisión.');
+    if (c.estado !== ESTADOS.EN_REVISION) throw new ApiError('La producción no está en revisión.');
 
     setEstado(c, ESTADOS.ESPERANDO_APROBACION);
     addHistory(c.id, displayName(user.email), 'REVISION_TERMINADA', 'El editor terminó la revisión.');
@@ -270,15 +270,15 @@ function handleConsultarAutor(idToken, id, fileId) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     if (c.estado !== ESTADOS.ESPERANDO_APROBACION) {
       throw new ApiError('Solo se puede consultar al autor una revisión terminada.');
     }
 
-    // El archivo elegido debe pertenecer a la carpeta del cuento.
-    var pertenece = listarArchivosCuento(c).some(function (a) { return a.fileId === String(fileId); });
-    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de este cuento.');
+    // El archivo elegido debe pertenecer a la carpeta de la producción.
+    var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
+    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
 
     // Se convierte a PDF antes de generar el token: si falla, no queda nada a medias.
     var pdfBlob = convertirAPdf(String(fileId));
@@ -314,15 +314,15 @@ function handlePublicar(idToken, id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
-    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar un cuento aprobado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
+    if (c.estado !== ESTADOS.APROBADO) throw new ApiError('Solo se puede publicar una producción aprobado.');
 
     setEstado(c, ESTADOS.PUBLICADO);
     addHistory(c.id, displayName(user.email), 'PUBLICADO', 'La versión aprobada fue marcada como publicada.');
     clearBoardCache();
     notifyTeam('Publicado', displayName(user.email) + ' publicó "' + c.titulo + '"');
-    return ok({ message: 'Cuento marcado como publicado.', estado: ESTADOS.PUBLICADO });
+    return ok({ message: 'Producción marcada como publicada.', estado: ESTADOS.PUBLICADO });
   } finally {
     lock.releaseLock();
   }
@@ -339,22 +339,22 @@ function handleResolverRechazo(idToken, id, resolucion) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     if (c.estado !== ESTADOS.RECHAZADO_POR_AUTOR) {
-      throw new ApiError('El cuento no está rechazado por el autor.');
+      throw new ApiError('La producción no está rechazada por el autor.');
     }
 
     var nuevoEstado = resolucion === 'devolver' ? ESTADOS.EN_REVISION : ESTADOS.DESCARTADO;
     setEstado(c, nuevoEstado);
     addHistory(c.id, displayName(user.email), resolucion === 'devolver' ? 'DEVUELTO_A_EDITOR' : 'DESCARTADO',
-      resolucion === 'devolver' ? 'El equipo devolvió el cuento al editor.' : 'El equipo descartó el cuento.');
+      resolucion === 'devolver' ? 'El equipo devolvió la producción al editor.' : 'El equipo descartó la producción.');
     clearBoardCache();
     if (resolucion === 'devolver' && c.editor_asignado) {
       try { sendDevolucionEditor(c.editor_asignado, c); }
       catch (e) { notifyTeam('Notificación pendiente', 'No se pudo avisar al editor sobre la devolución de "' + c.titulo + '".'); }
     }
-    return ok({ message: resolucion === 'devolver' ? 'Cuento devuelto al editor.' : 'Cuento descartado.', estado: nuevoEstado });
+    return ok({ message: resolucion === 'devolver' ? 'Producción devuelta al editor.' : 'Producción descartada.', estado: nuevoEstado });
   } finally {
     lock.releaseLock();
   }
@@ -368,8 +368,8 @@ function handleAprobar(idToken, id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     if (c.estado !== ESTADOS.ESPERANDO_APROBACION) {
       throw new ApiError('Solo se puede aprobar una revisión terminada.');
     }
@@ -377,19 +377,19 @@ function handleAprobar(idToken, id) {
     addHistory(c.id, displayName(user.email), 'APROBADO', 'Aprobado directamente por el equipo.');
     clearBoardCache();
     notifyTeam('Aprobado', displayName(user.email) + ' aprobó "' + c.titulo + '"');
-    return ok({ message: 'Cuento aprobado.', estado: ESTADOS.APROBADO });
+    return ok({ message: 'Producción aprobada.', estado: ESTADOS.APROBADO });
   } finally {
     lock.releaseLock();
   }
 }
 
-// ── listar archivos de la carpeta del cuento (gestores, para el selector) ──
+// ── listar archivos de la carpeta de la producción (gestores, para el selector) ──
 function handleBoardArchivos(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
-  var c = findCuentoById(id);
-  if (!c) throw new ApiError('Cuento no encontrado.');
-  return ok({ archivos: listarArchivosCuento(c) });
+  var c = findProduccionById(id);
+  if (!c) throw new ApiError('Producción no encontrada.');
+  return ok({ archivos: listarArchivosProduccion(c) });
 }
 
 // ── marcar publicable (COORDINADOR/WEBMASTER): copia el archivo elegido a PUBLICABLES ──
@@ -401,11 +401,11 @@ function handleMarcarPublicable(idToken, id, fileId) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
 
-    var pertenece = listarArchivosCuento(c).some(function (a) { return a.fileId === String(fileId); });
-    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de este cuento.');
+    var pertenece = listarArchivosProduccion(c).some(function (a) { return a.fileId === String(fileId); });
+    if (!pertenece) throw new ApiError('El archivo no pertenece a la carpeta de esta producción.');
 
     var url = copiarAPublicables(c, String(fileId));
     setCell(getSheet('Tablero'), c._rowIndex, 'url_publicable', url);
@@ -420,17 +420,17 @@ function handleMarcarPublicable(idToken, id, fileId) {
 // ── borrar envío por completo (COORDINADOR/WEBMASTER) ──
 // Elimina la carpeta de Drive (original, corrección, versiones, version_aprobada),
 // la copia en PUBLICABLES, la fila del Tablero y su historial.
-function handleBorrarCuento(idToken, id) {
+function handleBorrarProduccion(idToken, id) {
   var user = requireInternalUser(idToken);
   if (!esAdmin(user)) throw new AuthError('Solo COORDINADOR o WEBMASTER puede borrar un envío.');
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
 
-    // Carpeta de trabajo del cuento (con todo su contenido).
+    // Carpeta de trabajo de la producción (con todo su contenido).
     if (c.url_carpeta_drive) {
       var mFolder = String(c.url_carpeta_drive).match(/\/folders\/([-\w]+)/);
       if (mFolder) {
@@ -448,13 +448,13 @@ function handleBorrarCuento(idToken, id) {
       }
     }
 
-    // Historial del cuento.
+    // Historial de la producción.
     var hist = getSheet('Historial');
     if (hist && hist.getLastRow() > 1) {
       var idx = headerIndex(hist);
       var data = hist.getDataRange().getValues();
       for (var i = data.length - 1; i >= 1; i--) {
-        if (String(data[i][idx.id_cuento]) === String(id)) {
+        if (String(data[i][idx.id_produccion]) === String(id)) {
           hist.deleteRow(i + 1);
         }
       }
@@ -482,8 +482,8 @@ function handleCambiarEstado(idToken, id, nuevoEstado) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var c = findCuentoById(id);
-    if (!c) throw new ApiError('Cuento no encontrado.');
+    var c = findProduccionById(id);
+    if (!c) throw new ApiError('Producción no encontrada.');
     setEstado(c, estado);
     addHistory(c.id, displayName(user.email), 'ESTADO_CAMBIADO', 'El equipo cambió el estado a ' + estado + '.');
     clearBoardCache();

@@ -40,7 +40,7 @@ function handleEnvio(data) {
 
   var archivos = Array.isArray(data.archivos) ? data.archivos : [];
   var archivosValidados = validarArchivos(archivos);
-  var folder = createCuentoFolder(id);
+  var folder = createProduccionFolder(id);
   saveFiles(folder, archivosValidados);
 
   var now = new Date();

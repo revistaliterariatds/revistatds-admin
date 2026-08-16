@@ -9,7 +9,7 @@ var CONFIG_DEFAULTS = {
   mail_subject_revision: 'Revisión terminada — {{titulo}}',
   mail_subject_consulta: 'Tu producción está lista para aprobación — {{titulo}}',
   mail_subject_version: 'Nueva versión recibida — {{titulo}}',
-  mail_subject_devolucion: 'Cuento devuelto a revisión — {{titulo}}',
+  mail_subject_devolucion: 'Producción devuelta a revisión — {{titulo}}',
   mail_subject_agenda: 'Nueva cita en la agenda — {{titulo}}',
 };
 

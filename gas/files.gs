@@ -1,4 +1,4 @@
-// files.gs — Drive: carpeta por cuento y guardado de adjuntos.
+// files.gs — Drive: carpeta por producción y guardado de adjuntos.
 
 var DRIVE_ROOT = 'Tramas del Sur';
 var MAX_FILES = 3;
@@ -51,21 +51,21 @@ function edicionDestino() {
   return ultimaEdicion() || 'SIN_EDICION';
 }
 
-function createCuentoFolder(id) {
+function createProduccionFolder(id) {
   return getRecibidosFolder(edicionDestino()).createFolder(id);
 }
 
-// Copia un archivo del cuento a PUBLICABLES/<id>-<nombre> (sueltos, sin subcarpeta).
-function copiarAPublicables(cuento, fileId) {
-  var edicion = String(cuento.edicion || edicionDestino());
+// Copia un archivo de la producción a PUBLICABLES/<id>-<nombre> (sueltos, sin subcarpeta).
+function copiarAPublicables(produccion, fileId) {
+  var edicion = String(produccion.edicion || edicionDestino());
   var destino = getPublicablesFolder(edicion);
   var file = DriveApp.getFileById(fileId);
-  var nombre = String(cuento.id || '') + '-' + file.getName();
+  var nombre = String(produccion.id || '') + '-' + file.getName();
   return file.makeCopy(nombre, destino).getUrl();
 }
 
-// Lista recursiva de archivos en la carpeta del cuento (para el selector del panel).
-function listarArchivosCuento(cuento) {
+// Lista recursiva de archivos en la carpeta de la producción (para el selector del panel).
+function listarArchivosProduccion(produccion) {
   var out = [];
   (function walk(folder, ruta) {
     var files = folder.getFiles();
@@ -78,12 +78,12 @@ function listarArchivosCuento(cuento) {
       var sub = subfolders.next();
       walk(sub, ruta + '/' + sub.getName());
     }
-  })(getCuentoFolder(cuento), 'raíz');
+  })(getProduccionFolder(produccion), 'raíz');
   return out;
 }
 
-// Migración única (idempotente): mueve las carpetas existentes de Cuentos/<id>
-// a RECIBIDOS/<edicion> de la estructura por ediciones y crea las carpetas base.
+// Migración única (idempotente): mueve las carpetas existentes de la carpeta
+// legacy "Cuentos/<id>" a RECIBIDOS/<edicion> y crea las carpetas base.
 function migrateEstructuraDrive() {
   ensureSchema();
 
@@ -103,7 +103,7 @@ function migrateEstructuraDrive() {
   }
 
   var root = getRootFolder();
-  var cuentos = getOrCreateFolder(root, 'Cuentos');
+  var cuentos = getOrCreateFolder(root, 'Cuentos'); // carpeta legacy (anterior a la estructura por ediciones)
   var movidos = 0;
   var folders = cuentos.getFolders();
   while (folders.hasNext()) {
@@ -174,15 +174,15 @@ function saveFiles(folder, files) {
 }
 
 // ── Doc de corrección (Fase 3) ──
-// Crea un Google Doc en la carpeta del cuento con el texto del original
+// Crea un Google Doc en la carpeta de la producción con el texto del original
 // (si es texto plano) y lo comparte con el editor.
-function createDocCorreccion(cuento, editorEmail, sourceFolder) {
-  var folder = getCuentoFolder(cuento);
-  var doc = DocumentApp.create('Corrección — ' + cuento.titulo);
+function createDocCorreccion(produccion, editorEmail, sourceFolder) {
+  var folder = getProduccionFolder(produccion);
+  var doc = DocumentApp.create('Corrección — ' + produccion.titulo);
   var body = doc.getBody();
-  body.appendParagraph('Título: ' + cuento.titulo).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph('Autor: ' + cuento.autor);
-  body.appendParagraph('Categoría: ' + (cuento.categoria || CATEGORIA_DEFAULT));
+  body.appendParagraph('Título: ' + produccion.titulo).setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  body.appendParagraph('Autor: ' + produccion.autor);
+  body.appendParagraph('Categoría: ' + (produccion.categoria || CATEGORIA_DEFAULT));
   body.appendParagraph('────────────────────────────────────────');
   body.appendParagraph('Texto del original:').setHeading(DocumentApp.ParagraphHeading.HEADING2);
 
@@ -201,9 +201,9 @@ function createDocCorreccion(cuento, editorEmail, sourceFolder) {
   return doc.getUrl();
 }
 
-function textoDocCorreccion(cuento) {
-  if (!cuento.url_doc_correccion) return '';
-  var match = String(cuento.url_doc_correccion).match(/\/d\/([\w-]+)/);
+function textoDocCorreccion(produccion) {
+  if (!produccion.url_doc_correccion) return '';
+  var match = String(produccion.url_doc_correccion).match(/\/d\/([\w-]+)/);
   if (!match) return '';
   try { return DocumentApp.openById(match[1]).getBody().getText(); } catch (e) { return ''; }
 }
@@ -211,9 +211,9 @@ function textoDocCorreccion(cuento) {
 // PDF del doc de corrección para adjuntar al mail del autor.
 // El autor nunca recibe links de Drive ni documentos editables:
 // solo el archivo en formato PDF.
-function pdfDocCorreccion(cuento) {
-  if (!cuento.url_doc_correccion) return null;
-  var match = String(cuento.url_doc_correccion).match(/\/d\/([\w-]+)/);
+function pdfDocCorreccion(produccion) {
+  if (!produccion.url_doc_correccion) return null;
+  var match = String(produccion.url_doc_correccion).match(/\/d\/([\w-]+)/);
   if (!match) return null;
   try {
     return DriveApp.getFileById(match[1]).getAs('application/pdf');
@@ -283,12 +283,12 @@ function extractText(folder) {
 }
 
 // Copia los archivos de la versión vigente a una carpeta estable para publicación.
-function guardarVersionAprobada(cuento) {
-  var folder = getCuentoFolder(cuento);
+function guardarVersionAprobada(produccion) {
+  var folder = getProduccionFolder(produccion);
   var aprobada = getOrCreateFolder(folder, 'version_aprobada');
   if (aprobada.getFiles().hasNext()) return aprobada.getUrl();
 
-  var version = 'v' + (cuento.version_actual || '1');
+  var version = 'v' + (produccion.version_actual || '1');
   var folders = folder.getFoldersByName(version);
   var origen = folders.hasNext() ? folders.next() : folder;
   var files = origen.getFiles();
