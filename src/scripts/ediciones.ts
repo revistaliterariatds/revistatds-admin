@@ -1,7 +1,7 @@
 // ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (COORDINADOR/WEBMASTER).
 // Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
-import { api, clearSession, getUser, getIdToken } from './api';
+import { api, btnCargando, clearSession, getUser, getIdToken } from './api';
 
 interface Edicion {
   numero: string;
@@ -14,6 +14,21 @@ const user = getUser();
 const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let ediciones: Edicion[] = [];
+
+// ── caché local (stale-while-revalidate) ──
+const EDICIONES_CACHE_KEY = 'tds-ediciones-cache-v1';
+
+function readCachedEdiciones(): Edicion[] | null {
+  try { return JSON.parse(localStorage.getItem(EDICIONES_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
+function saveCachedEdiciones(list: Edicion[]) {
+  try { localStorage.setItem(EDICIONES_CACHE_KEY, JSON.stringify(list)); } catch { /* sin caché local */ }
+}
+
+function clearCachedEdiciones() {
+  try { localStorage.removeItem(EDICIONES_CACHE_KEY); } catch { /* sin caché local */ }
+}
 
 function renderNav() {
   const navUser = document.getElementById('nav-user');
@@ -126,9 +141,13 @@ function abrirDialogoCerrar(numero: string) {
     </form>`;
   modal.showModal();
   bindFormulario(modal, async (fecha) => {
-    const data = await api('panel/ediciones/cerrar', { numero, fecha_cierre: fecha });
-    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición cerrada.'); await cargar(); }
-    else showAlert(data.message || 'No se pudo cerrar.', true);
+    const r = await mutarEdicion('panel/ediciones/cerrar', { numero, fecha_cierre: fecha }, () => {
+      const e = ediciones.find((x) => x.numero === numero);
+      if (e) { e.fecha_cierre = fecha; e.estado = 'CERRADA'; }
+      renderLista();
+    });
+    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición cerrada.'); }
+    else showAlert(r.message || 'No se pudo cerrar.', true);
   });
 }
 
@@ -157,15 +176,29 @@ function abrirDialogoEditarCierre(numero: string) {
     e.preventDefault();
     const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
     if (!fecha) { showAlert('Elegí una fecha de cierre.', true); return; }
-    const data = await api('panel/ediciones/editar-cierre', { numero, fecha_cierre: fecha });
-    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Cierre actualizado.'); await cargar(); }
-    else showAlert(data.message || 'No se pudo actualizar.', true);
+    const btn = content.querySelector('#edicion-form button[type="submit"]') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: fecha }, () => {
+      const x = ediciones.find((y) => y.numero === numero);
+      if (x) { x.fecha_cierre = fecha; x.estado = 'CERRADA'; }
+      renderLista();
+    });
+    btnCargando(btn, false);
+    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Cierre actualizado.'); }
+    else showAlert(r.message || 'No se pudo actualizar.', true);
   });
   content.querySelector('#edicion-reabrir')?.addEventListener('click', async () => {
     if (!confirm('¿Reabrir la edición ' + numero + '? Quedará abierta, sin fecha de cierre.')) return;
-    const data = await api('panel/ediciones/editar-cierre', { numero, fecha_cierre: '' });
-    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición reabierta.'); await cargar(); }
-    else showAlert(data.message || 'No se pudo reabrir.', true);
+    const btn = content.querySelector('#edicion-reabrir') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: '' }, () => {
+      const x = ediciones.find((y) => y.numero === numero);
+      if (x) { x.fecha_cierre = ''; x.estado = 'ABIERTA'; }
+      renderLista();
+    });
+    btnCargando(btn, false);
+    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición reabierta.'); }
+    else showAlert(r.message || 'No se pudo reabrir.', true);
   });
 }
 
@@ -187,9 +220,9 @@ function abrirDialogoAbrir() {
     </form>`;
   modal.showModal();
   bindFormulario(modal, async (fecha) => {
-    const data = await api('panel/ediciones/abrir', { fecha_apertura: fecha });
-    if (data.status === 'ok') { modal.close(); showAlert(data.message || 'Edición abierta.'); await cargar(); }
-    else showAlert(data.message || 'No se pudo abrir.', true);
+    const r = await mutarEdicion('panel/ediciones/abrir', { fecha_apertura: fecha }, () => { /* el número lo asigna el backend */ });
+    if (r.status === 'ok') { modal.close(); showAlert(r.message || 'Edición abierta.'); }
+    else showAlert(r.message || 'No se pudo abrir.', true);
   });
 }
 
@@ -200,16 +233,32 @@ function bindFormulario(modal: HTMLDialogElement, onConfirm: (fecha: string) => 
     e.preventDefault();
     const fecha = (document.getElementById('edicion-fecha') as HTMLInputElement).value;
     if (!fecha) { showAlert('Elegí una fecha.', true); return; }
+    const btn = content.querySelector('#edicion-form button[type="submit"]') as HTMLButtonElement | null;
+    btnCargando(btn, true);
     await onConfirm(fecha);
+    btnCargando(btn, false);
   });
+}
+
+// Mutación con feedback optimista: invalida la caché, aplica el cambio local
+// al instante y re-sincroniza con el servidor (revierte si falla).
+async function mutarEdicion(accion: string, body: Record<string, unknown>, aplicar: () => void) {
+  clearCachedEdiciones();
+  aplicar();
+  const r = await api(accion, body);
+  await cargar();
+  return r;
 }
 
 async function cargar() {
   hideAlert();
+  const cached = readCachedEdiciones();
+  if (cached) { ediciones = cached; renderLista(); }
   const data = await api('panel/ediciones/list');
-  if (data.status !== 'ok') { showAlert(data.message || 'No se pudo cargar.', true); return; }
+  if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudo cargar.', true); return; }
   ediciones = data.ediciones || [];
   renderLista();
+  saveCachedEdiciones(ediciones);
 }
 
 function init() {

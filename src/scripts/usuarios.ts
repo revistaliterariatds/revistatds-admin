@@ -1,4 +1,4 @@
-import { api, clearSession, getIdToken, getUser } from './api';
+import { api, btnCargando, clearSession, getIdToken, getUser } from './api';
 
 interface UsuarioPanel { email: string; rol: string; nombre: string; alias: string; usar_alias_notif: boolean; activo: boolean; }
 const user = getUser();
@@ -88,17 +88,32 @@ async function cargar() {
 
 async function guardar(event: SubmitEvent) {
   event.preventDefault();
-  const data = await api('panel/users/save', {
-    email: (document.getElementById('user-email') as HTMLInputElement).value,
-    nombre: (document.getElementById('user-name') as HTMLInputElement).value,
-    rol: (document.getElementById('user-role') as HTMLSelectElement).value,
-    alias: (document.getElementById('user-alias') as HTMLInputElement).value,
-    usar_alias_notif: (document.getElementById('user-alias-notif') as HTMLInputElement).checked,
-    activo: (document.getElementById('user-active') as HTMLInputElement).checked,
-  });
-  if (data.status !== 'ok') { alertUser(data.message || 'No se pudo guardar.', true); return; }
+  const form = document.getElementById('user-form') as HTMLFormElement;
+  const email = (document.getElementById('user-email') as HTMLInputElement).value;
+  const nombre = (document.getElementById('user-name') as HTMLInputElement).value;
+  const rol = (document.getElementById('user-role') as HTMLSelectElement).value;
+  const alias = (document.getElementById('user-alias') as HTMLInputElement).value;
+  const usar_alias_notif = (document.getElementById('user-alias-notif') as HTMLInputElement).checked;
+  const activo = (document.getElementById('user-active') as HTMLInputElement).checked;
+  const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+  btnCargando(btn, true);
   try { localStorage.removeItem(USERS_CACHE_KEY); } catch { /* sin caché local */ }
-  (document.getElementById('user-form') as HTMLFormElement).hidden = true;
+  const index = form.dataset.index;
+  if (index !== undefined && index !== '') {
+    const u = usuarios[Number(index)];
+    if (u) Object.assign(u, { nombre, rol, alias, usar_alias_notif, activo });
+  } else {
+    usuarios.push({ email, nombre, rol, alias, usar_alias_notif, activo });
+  }
+  renderUsers();
+  form.hidden = true;
+  const data = await api('panel/users/save', { email, nombre, rol, alias, usar_alias_notif, activo });
+  btnCargando(btn, false);
+  if (data.status !== 'ok') {
+    alertUser(data.message || 'No se pudo guardar.', true);
+    await cargar(); // revierte el optimismo
+    return;
+  }
   alertUser(data.message || 'Usuario guardado.');
   await cargar();
 }

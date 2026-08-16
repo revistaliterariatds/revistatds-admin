@@ -1,6 +1,6 @@
 // tablero.ts — vista del tablero editorial (Fase 3).
 
-import { api, getUser, clearSession, getIdToken } from './api';
+import { api, btnCargando, getUser, clearSession, getIdToken } from './api';
 
 interface Produccion {
   id: string;
@@ -42,6 +42,23 @@ let edicionActiva = 'TODAS';
 let termino = '';
 let editores: { email: string; nombre: string }[] = [];
 let ediciones: { numero: string; estado: string }[] = [];
+
+// ── caché local (stale-while-revalidate) ──
+// Guarda la última respuesta del tablero para pintar al instante al entrar
+// y refrescar en segundo plano; se invalida en cada mutación.
+const BOARD_CACHE_KEY = 'tds-board-cache-v1';
+
+function readCachedBoard(): { producciones: Produccion[]; editores: { email: string; nombre: string }[]; ediciones: { numero: string; estado: string }[] } | null {
+  try { return JSON.parse(localStorage.getItem(BOARD_CACHE_KEY) || 'null'); } catch { return null; }
+}
+
+function saveCachedBoard(cache: { producciones: Produccion[]; editores: { email: string; nombre: string }[]; ediciones: { numero: string; estado: string }[] }) {
+  try { localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify(cache)); } catch { /* sin caché local */ }
+}
+
+function clearCachedBoard() {
+  try { localStorage.removeItem(BOARD_CACHE_KEY); } catch { /* sin caché local */ }
+}
 
 // ── sesión ──
 const user = getUser();
@@ -253,11 +270,20 @@ function editorSelect(tipo: 'asignar' | 'reasignar', id: string): string {
 
 // ── acciones ──
 async function cargar() {
+  const cached = readCachedBoard();
+  if (cached) {
+    producciones = cached.producciones;
+    if (esGestor) { editores = cached.editores || []; ediciones = cached.ediciones || []; }
+    renderEstadoSelect();
+    renderConvocatoriaSelect();
+    renderEdicionSelect();
+    renderTable();
+  }
   const edPromise = esGestor ? api('panel/board/editors') : Promise.resolve({ status: 'ok', editores: [] });
   const edicionesPromise = esGestor ? api('panel/ediciones/list') : Promise.resolve({ status: 'ok', ediciones: [] });
   const [data, ed, edicionesData] = await Promise.all([api('panel/board/list'), edPromise, edicionesPromise]);
   if (data.status !== 'ok') {
-    alert(data.message || 'No se pudo cargar el tablero.');
+    if (!cached) alert(data.message || 'No se pudo cargar el tablero.');
     return;
   }
   producciones = data.producciones;
@@ -267,31 +293,46 @@ async function cargar() {
   renderConvocatoriaSelect();
   renderEdicionSelect();
   renderTable();
+  saveCachedBoard({ producciones, editores, ediciones });
+}
+
+// Aplica una mutación con feedback optimista: invalida la caché local,
+// aplica el cambio visual al instante y re-sincroniza con el servidor
+// (si falla, la recarga revierte el optimismo).
+async function mutar(id: string, action: string, body: Record<string, unknown> = {}, patch?: Partial<Produccion> | ((c: Produccion) => void)) {
+  clearCachedBoard();
+  const c = producciones.find((p) => p.id === id);
+  if (patch) {
+    if (typeof patch === 'function') { if (c) patch(c); }
+    else if (c) Object.assign(c, patch);
+    renderTable();
+  }
+  const r = await api(action, { id, ...body });
+  await cargar();
+  return r;
 }
 
 async function asignarme(id: string) {
-  const data = await api('panel/board/asignarme', { id });
-  if (data.status !== 'ok') alert(data.message || 'No se pudo asignar.');
-  await cargar(); // refrescar siempre: el backend puede haber asignado antes de un aviso fallido
+  const r = await mutar(id, 'panel/board/asignarme', {}, { estado: 'EN_REVISIÓN', editor_asignado: user?.email || '' });
+  if (r.status !== 'ok') alert(r.message || 'No se pudo asignar.');
 }
 
 async function asignar(id: string, editorEmail: string) {
-  const data = await api('panel/board/asignar', { id, editorEmail });
-  if (data.status !== 'ok') alert(data.message || 'No se pudo asignar.');
-  await cargar();
+  const r = await mutar(id, 'panel/board/asignar', { editorEmail }, { estado: 'EN_REVISIÓN', editor_asignado: editorEmail });
+  if (r.status !== 'ok') alert(r.message || 'No se pudo asignar.');
 }
 
 async function reasignar(id: string, editorEmail: string) {
-  const data = await api('panel/board/reasignar', { id, editorEmail });
-  if (data.status !== 'ok') alert(data.message || 'No se pudo reasignar.');
-  await cargar();
+  const r = await mutar(id, 'panel/board/reasignar', { editorEmail }, { editor_asignado: editorEmail });
+  if (r.status !== 'ok') alert(r.message || 'No se pudo reasignar.');
 }
 
 async function desasignar(id: string) {
   if (!confirm('¿Desasignar esta producción?')) return;
-  const data = await api('panel/board/desasignar', { id });
-  if (data.status !== 'ok') alert(data.message || 'No se pudo desasignar.');
-  await cargar();
+  const c = producciones.find((p) => p.id === id);
+  const estado = c && (c.estado === 'CONSULTA_AUTOR' || c.estado === 'RECHAZADO_POR_AUTOR') ? undefined : 'PRESELECCIONADO';
+  const r = await mutar(id, 'panel/board/desasignar', {}, { editor_asignado: '', ...(estado ? { estado } : {}) });
+  if (r.status !== 'ok') alert(r.message || 'No se pudo desasignar.');
 }
 
 // Abre el selector de archivo para "Enviar correcciones al autor" (adjuntar PDF + mensaje).
@@ -438,16 +479,15 @@ async function abrirDetalle(id: string) {
 
   const edicionSelect = content.querySelector('#cambiar-edicion') as HTMLSelectElement | null;
   edicionSelect?.addEventListener('change', async () => {
-    const r = await api('panel/board/cambiar-edicion', { id, edicion: edicionSelect.value });
-    if (r.status === 'ok') await abrirDetalle(id);
-    else alert(r.message || 'No se pudo cambiar la edición.');
+    const r = await mutar(id, 'panel/board/cambiar-edicion', { edicion: edicionSelect.value }, { edicion: edicionSelect.value });
+    if (r.status !== 'ok') alert(r.message || 'No se pudo cambiar la edición.');
   });
 
   content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
     if (!confirm('¿Marcar que el autor debe hacer correcciones? El coordinador le enviará luego el mail.')) return;
-    const r = await api('panel/board/pedir-correcciones', { id });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo marcar.');
+    const r = await mutar(id, 'panel/board/pedir-correcciones', {}, { estado: 'CORRECCIONES_SOLICITADAS' });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo marcar.');
   });
 
   content.querySelector('[data-detalle-accion="enviar-correcciones"]')?.addEventListener('click', () => abrirSelectorEnviarCorrecciones(id));
@@ -457,9 +497,12 @@ async function abrirDetalle(id: string) {
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     const mensaje = (document.getElementById('enviar-mensaje') as HTMLTextAreaElement).value.trim();
     if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
-    const r = await api('panel/board/enviar-correcciones', { id, fileId: select.value, mensaje });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo enviar.');
+    const btn = content.querySelector('#btn-confirmar-enviar') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    const r = await mutar(id, 'panel/board/enviar-correcciones', { fileId: select.value, mensaje }, { enviado_autor: true, estado: 'CORRECCIONES_SOLICITADAS' });
+    btnCargando(btn, false);
+    if (r.status === 'ok') { modal.close(); return; }
+    alert(r.message || 'No se pudo enviar.');
   });
 
   content.querySelector('#btn-cancelar-enviar')?.addEventListener('click', () => {
@@ -469,9 +512,9 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="terminar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Marcar la revisión como terminada?')) return;
-    const r = await api('panel/board/revision-terminada', { id });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo.');
+    const r = await mutar(id, 'panel/board/revision-terminada', {}, { estado: 'ESPERANDO_APROBACIÓN' });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo.');
   });
 
   content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', () => abrirSelectorConsulta(id));
@@ -480,9 +523,12 @@ async function abrirDetalle(id: string) {
     const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     if (!confirm('¿Enviar este archivo (como PDF) al autor para aprobación?')) return;
-    const r = await api('panel/board/consultar-autor', { id, fileId: select.value });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo consultar al autor.');
+    const btn = content.querySelector('#btn-confirmar-consulta') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    const r = await mutar(id, 'panel/board/consultar-autor', { fileId: select.value }, { estado: 'CONSULTA_AUTOR' });
+    btnCargando(btn, false);
+    if (r.status === 'ok') { modal.close(); return; }
+    alert(r.message || 'No se pudo consultar al autor.');
   });
 
   content.querySelector('#btn-cancelar-consulta')?.addEventListener('click', () => {
@@ -492,9 +538,9 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Aprobar esta producción?')) return;
-    const r = await api('panel/board/aprobar', { id });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo aprobar.');
+    const r = await mutar(id, 'panel/board/aprobar', {}, { estado: 'APROBADO' });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo aprobar.');
   });
 
   const estadoSelect = content.querySelector('#cambiar-estado') as HTMLSelectElement | null;
@@ -507,31 +553,31 @@ async function abrirDetalle(id: string) {
       return;
     }
     if (!confirm('¿Cambiar el estado de esta publicación a "' + estado + '"?')) return;
-    const r = await api('panel/board/cambiar-estado', { id, estado });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo cambiar el estado.');
+    const r = await mutar(id, 'panel/board/cambiar-estado', { estado }, { estado });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo cambiar el estado.');
   });
 
   content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {
     if (!confirm('¿Devolver esta producción al editor para retrabajarla?')) return;
-    const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'devolver' });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo devolver al editor.');
+    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'devolver' }, { estado: 'EN_REVISIÓN' });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo devolver al editor.');
   });
 
   content.querySelector('[data-detalle-accion="descartar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Descartar definitivamente esta producción?')) return;
-    const r = await api('panel/board/resolver-rechazo', { id, resolucion: 'descartar' });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo descartar.');
+    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'descartar' }, { estado: 'DESCARTADO' });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo descartar.');
   });
 
   content.querySelector('[data-detalle-accion="marcar-publicable"]')?.addEventListener('click', async () => {
     if (c.url_publicable) {
       if (!confirm('¿Marcar esta producción como publicable?')) return;
-      const r = await api('panel/board/marcar-publicable', { id });
-      if (r.status === 'ok') { modal.close(); await cargar(); }
-      else alert(r.message || 'No se pudo marcar publicable.');
+      const r = await mutar(id, 'panel/board/marcar-publicable', {}, { estado: 'PUBLICADO' });
+      modal.close();
+      if (r.status !== 'ok') alert(r.message || 'No se pudo marcar publicable.');
       return;
     }
     const group = document.getElementById('publicableGroup');
@@ -551,9 +597,12 @@ async function abrirDetalle(id: string) {
     const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
     if (!select || !select.value) { alert('Elegí un archivo.'); return; }
     if (!confirm('¿Copiar este archivo a PUBLICABLES y marcar la producción como publicable?')) return;
-    const r = await api('panel/board/marcar-publicable', { id, fileId: select.value });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo marcar publicable.');
+    const btn = content.querySelector('#btn-confirmar-publicable') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    const r = await mutar(id, 'panel/board/marcar-publicable', { fileId: select.value }, { estado: 'PUBLICADO' });
+    btnCargando(btn, false);
+    if (r.status === 'ok') { modal.close(); return; }
+    alert(r.message || 'No se pudo marcar publicable.');
   });
 
   content.querySelector('#btn-cancelar-publicable')?.addEventListener('click', () => {
@@ -563,9 +612,11 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('[data-detalle-accion="borrar"]')?.addEventListener('click', async () => {
     if (!confirm('¿Borrar este envío por completo? Se eliminará la carpeta de Drive, la copia en PUBLICABLES, la fila y su historial. Esta acción no se puede deshacer.')) return;
-    const r = await api('panel/board/borrar', { id });
-    if (r.status === 'ok') { modal.close(); await cargar(); }
-    else alert(r.message || 'No se pudo borrar el envío.');
+    const r = await mutar(id, 'panel/board/borrar', {}, (c) => {
+      producciones = producciones.filter((p) => p.id !== c.id);
+    });
+    modal.close();
+    if (r.status !== 'ok') alert(r.message || 'No se pudo borrar el envío.');
   });
 }
 

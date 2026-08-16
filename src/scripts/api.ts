@@ -67,6 +67,20 @@ export function clearSession() {
   sessionStorage.removeItem('tds_user');
 }
 
+// Deshabilita un botón y muestra "Guardando…" mientras corre una acción,
+// y restaura su texto original al terminar (o al fallar).
+export function btnCargando(btn: HTMLElement | null, on: boolean, texto = 'Guardando…') {
+  if (!(btn instanceof HTMLButtonElement)) return;
+  if (on) {
+    btn.dataset.textoOriginal = btn.textContent || '';
+    btn.disabled = true;
+    btn.textContent = texto;
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.textoOriginal || '';
+  }
+}
+
 // Llamada a la API: el idToken de sesión va en el body (evita preflight CORS).
 export async function api(action: string, body: Record<string, unknown> = {}): Promise<Record<string, any>> {
   const res = await fetch(APPS_SCRIPT_URL, {

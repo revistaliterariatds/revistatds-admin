@@ -1,6 +1,6 @@
 // agenda.ts — vista de la Agenda: calendario mensual, citas, hilo de comentarios.
 
-import { api, clearSession, getUser, getIdToken } from './api';
+import { api, btnCargando, clearSession, getUser, getIdToken } from './api';
 
 interface Cita {
   id: string;
@@ -294,6 +294,8 @@ function renderFormulario(cita: Cita | null, key: string) {
       meet_link: (document.getElementById('cita-meet') as HTMLInputElement).value.trim(),
     };
     const notificar = esNueva ? (document.getElementById('cita-notificar') as HTMLInputElement).checked : false;
+    const btn = content.querySelector('#cita-form button[type="submit"]') as HTMLButtonElement | null;
+    btnCargando(btn, true);
     try {
       const data = esNueva
         ? await api('panel/agenda/crear', { ...payload, notificar })
@@ -302,7 +304,7 @@ function renderFormulario(cita: Cita | null, key: string) {
       modal.close();
       clearCachedCitas();
       await recargar();
-    } catch (err) { showAlert(err instanceof Error ? err.message : 'No se pudo guardar.', true); }
+    } catch (err) { btnCargando(btn, false); showAlert(err instanceof Error ? err.message : 'No se pudo guardar.', true); }
   });
 }
 
@@ -351,22 +353,26 @@ async function abrirDetalle(id: string) {
 
   content.querySelector('#cita-borrar')?.addEventListener('click', async () => {
     if (!confirm(`¿Borrar la cita "${c.titulo}" y sus comentarios?`)) return;
+    const btn = content.querySelector('#cita-borrar') as HTMLButtonElement | null;
+    btnCargando(btn, true);
     const r = await api('panel/agenda/borrar', { id: c.id });
     if (r.status === 'ok') { modal.close(); clearCachedCitas(); await recargar(); }
-    else showAlert(r.message || 'No se pudo borrar.', true);
+    else { btnCargando(btn, false); showAlert(r.message || 'No se pudo borrar.', true); }
   });
 
   content.querySelector('#cita-comentar-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const texto = (document.getElementById('cita-nuevo-comentario') as HTMLTextAreaElement).value.trim();
     if (!texto) return;
+    const btn = content.querySelector('#cita-comentar-form button[type="submit"]') as HTMLButtonElement | null;
+    btnCargando(btn, true);
     const r = await api('panel/agenda/comentar', { id: c.id, comentario: texto });
     if (r.status === 'ok') {
       modal.close();
       clearCachedCitas();
       await recargar();
     }
-    else showAlert(r.message || 'No se pudo comentar.', true);
+    else { btnCargando(btn, false); showAlert(r.message || 'No se pudo comentar.', true); }
   });
 }
 

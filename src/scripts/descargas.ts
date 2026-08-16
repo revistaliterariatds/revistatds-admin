@@ -43,12 +43,35 @@ function render(rows: Fila[], acciones: Acciones, total: number, totalHistorico:
   </tr>`).join('');
 }
 
+// Caché local por rango de días (stale-while-revalidate): sin mutaciones,
+// solo sirve para pintar al instante al volver a la pestaña.
+function cacheKey(days: number | string): string {
+  return 'tds-descargas-cache-' + days;
+}
+
+function readCached(days: number | string): { porArchivo: Fila[]; acciones: Acciones; total: number; totalHistorico: number } | null {
+  try { return JSON.parse(localStorage.getItem(cacheKey(days)) || 'null'); } catch { return null; }
+}
+
+function saveCached(days: number | string, value: { porArchivo: Fila[]; acciones: Acciones; total: number; totalHistorico: number }) {
+  try { localStorage.setItem(cacheKey(days), JSON.stringify(value)); } catch { /* sin caché local */ }
+}
+
 async function load() {
   const selected = (document.getElementById('descargas-days') as HTMLSelectElement).value;
   const days: number | string = selected === 'all' ? 'all' : Number(selected);
+  const cached = readCached(days);
+  if (cached) render(cached.porArchivo, cached.acciones, cached.total, cached.totalHistorico);
   const data = await api('panel/descargas/list', { days });
-  if (data.status !== 'ok') { showAlert(data.message || 'No se pudieron cargar las descargas.'); return; }
-  render(data.porArchivo || [], data.acciones || {}, Number(data.total || 0), Number(data.total_historico || 0));
+  if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudieron cargar las descargas.'); return; }
+  const resultado = {
+    porArchivo: data.porArchivo || [],
+    acciones: data.acciones || {},
+    total: Number(data.total || 0),
+    totalHistorico: Number(data.total_historico || 0),
+  };
+  render(resultado.porArchivo, resultado.acciones, resultado.total, resultado.totalHistorico);
+  saveCached(days, resultado);
 }
 
 function init() {
