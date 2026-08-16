@@ -288,9 +288,9 @@ function sendRecordatorioEditor(editorEmail, items) {
   sendHtmlMail(editorEmail, subject, html);
 }
 
-// ── Digest semanal a gestores (COORDINADOR + SUPERVISOR) ──
+// ── Digest (COORDINADOR o SUPERVISOR, según la frecuencia configurada) ──
 
-function sendDigestGestores(secciones) {
+function sendDigestGestores(rol, secciones) {
   var subject = getMailSubject('mail_subject_digest', 'Digest semanal del tablero — {{fecha}}', { fecha: secciones.fecha });
   var cuerpo = getMailBody('mail_body_digest', 'Resumen semanal del circuito editorial:', {});
   var bloques = secciones.bloques.map(function (b) {
@@ -312,13 +312,13 @@ function sendDigestGestores(secciones) {
     '  <p style="font-size:13px;color:#8a837a;margin:16px 0 0;">Tramas del Sur — Redacción</p>',
     '</div>',
   ].join('');
-  var emails = getEmailsByRoles(ROLES_NOTIF_GESTORES);
+  var emails = getEmailsByRoles([rol]);
   emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }
 
-// ── Alerta de tokens de autor vencidos (COORDINADOR + SUPERVISOR) ──
+// ── Alerta de tokens de autor vencidos (COORDINADOR o SUPERVISOR) ──
 
-function sendAlertaTokensVencidos(items) {
+function sendAlertaTokensVencidos(rol, items) {
   var subject = getMailSubject('mail_subject_token_vencido', 'Tokens de autor vencidos — {{cantidad}}', { cantidad: items.length });
   var cuerpo = getMailBody('mail_body_token_vencido', 'Hay {{cantidad}} token/s de autor vencidos que requieren reenvío:', { cantidad: items.length });
   var filas = items.map(function (it) {
@@ -337,6 +337,6 @@ function sendAlertaTokensVencidos(items) {
     '  <p style="font-size:13px;color:#8a837a;margin:16px 0 0;">Tramas del Sur — Redacción</p>',
     '</div>',
   ].join('');
-  var emails = getEmailsByRoles(ROLES_NOTIF_GESTORES);
+  var emails = getEmailsByRoles([rol]);
   emails.forEach(function (e) { sendHtmlMail(e, subject, html); });
 }

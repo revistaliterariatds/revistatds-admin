@@ -53,6 +53,26 @@ import Layout from '../layouts/Layout.astro';
         </div>
       </section>
 
+      <section class="config-section">
+        <div class="config-section-head"><div><p class="config-kicker">Recordatorios</p><h2>Frecuencia de envíos por rol</h2><p class="config-section-copy">Cada rol recibe sus mails con su propia frecuencia: días de intervalo + día de la semana. Si el intervalo es 1 día, se envía todos los días (ignora el día elegido).</p></div><span class="config-mark">04</span></div>
+        <div class="config-settings-grid">
+          <div class="form-group"><label for="frec-recordatorio-editor">Recordatorio a editores <span>(días)</span></label><input id="frec-recordatorio-editor" type="number" min="1" max="30" required /><small>Producciones en revisión sin actividad.</small></div>
+          <div class="form-group"><label for="frec-recordatorio-editor-dia">…y día de la semana</label><select id="frec-recordatorio-editor-dia" class="filter-select"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+
+          <div class="form-group"><label for="frec-digest-coordinador">Digest — COORDINADOR <span>(días)</span></label><input id="frec-digest-coordinador" type="number" min="1" max="30" required /></div>
+          <div class="form-group"><label for="frec-digest-coordinador-dia">…y día de la semana</label><select id="frec-digest-coordinador-dia" class="filter-select"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+
+          <div class="form-group"><label for="frec-digest-supervisor">Digest — SUPERVISOR <span>(días)</span></label><input id="frec-digest-supervisor" type="number" min="1" max="30" required /></div>
+          <div class="form-group"><label for="frec-digest-supervisor-dia">…y día de la semana</label><select id="frec-digest-supervisor-dia" class="filter-select"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+
+          <div class="form-group"><label for="frec-tokens-coordinador">Tokens vencidos — COORDINADOR <span>(días)</span></label><input id="frec-tokens-coordinador" type="number" min="1" max="30" required /></div>
+          <div class="form-group"><label for="frec-tokens-coordinador-dia">…y día de la semana</label><select id="frec-tokens-coordinador-dia" class="filter-select"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+
+          <div class="form-group"><label for="frec-tokens-supervisor">Tokens vencidos — SUPERVISOR <span>(días)</span></label><input id="frec-tokens-supervisor" type="number" min="1" max="30" required /></div>
+          <div class="form-group"><label for="frec-tokens-supervisor-dia">…y día de la semana</label><select id="frec-tokens-supervisor-dia" class="filter-select"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+        </div>
+      </section>
+
       <div class="config-actions"><p>Los cambios se aplican a los próximos mails.</p><button class="btn-primary" type="submit">Guardar configuración</button></div>
     </form>
   </section>

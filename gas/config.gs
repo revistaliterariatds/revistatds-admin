@@ -25,6 +25,12 @@ var CONFIG_DEFAULTS = {
   mail_body_recordatorio: 'Tenés {{cantidad}} producción/es pendientes de revisión en el tablero:',
   mail_body_digest: 'Resumen semanal del circuito editorial:',
   mail_body_token_vencido: 'Hay {{cantidad}} token/s de autor vencidos que requieren reenvío:',
+  // Frecuencias por rol y tipo (días + día de semana; día = getDay() JS, 1=lunes).
+  frec_recordatorio_editor: '7', frec_recordatorio_editor_dia: '1',
+  frec_digest_coordinador: '7', frec_digest_coordinador_dia: '1',
+  frec_digest_supervisor: '7', frec_digest_supervisor_dia: '1',
+  frec_tokens_coordinador: '1', frec_tokens_coordinador_dia: '1',
+  frec_tokens_supervisor: '1', frec_tokens_supervisor_dia: '1',
 };
 
 var CONFIG_EDITABLES = [
@@ -36,6 +42,11 @@ var CONFIG_EDITABLES = [
   'mail_body_confirmation', 'mail_body_correcciones', 'mail_body_revision',
   'mail_body_consulta', 'mail_body_version', 'mail_body_devolucion',
   'mail_body_recordatorio', 'mail_body_digest', 'mail_body_token_vencido',
+  'frec_recordatorio_editor', 'frec_recordatorio_editor_dia',
+  'frec_digest_coordinador', 'frec_digest_coordinador_dia',
+  'frec_digest_supervisor', 'frec_digest_supervisor_dia',
+  'frec_tokens_coordinador', 'frec_tokens_coordinador_dia',
+  'frec_tokens_supervisor', 'frec_tokens_supervisor_dia',
 ];
 
 function scriptProps() {
@@ -128,6 +139,16 @@ function handleConfigSave(idToken, key, value) {
   }
   if (key.indexOf('mail_body_') === 0 && (!value || value.length > 2000)) {
     throw new ApiError('El cuerpo debe tener entre 1 y 2000 caracteres.');
+  }
+  if (key.indexOf('frec_') === 0 && key.slice(-4) === '_dia') {
+    var dia = parseInt(value, 10);
+    if (!/^\d$/.test(value) || dia < 0 || dia > 6) throw new ApiError('El día debe estar entre 0 (domingo) y 6 (sábado).');
+    value = String(dia);
+  }
+  if (key.indexOf('frec_') === 0 && key.slice(-4) !== '_dia') {
+    var diasFrec = parseInt(value, 10);
+    if (!/^\d+$/.test(value) || diasFrec < 1 || diasFrec > 30) throw new ApiError('La frecuencia debe estar entre 1 y 30 días.');
+    value = String(diasFrec);
   }
   setConfig(key, value);
   CacheService.getScriptCache().remove('config-list');

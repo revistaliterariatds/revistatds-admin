@@ -1,5 +1,15 @@
-// reminders.gs — Fase 5: recordatorio semanal a editores, digest semanal a
-// gestores y alerta diaria de tokens de autor vencidos (con dedupe).
+// reminders.gs — Fase 5: recordatorio a editores, digest a gestores y alerta de
+// tokens de autor vencidos, cada uno con frecuencia configurable por rol y tipo
+// (días + día de semana) desde Configuración.
+
+// Combos (rol × tipo) con su par de claves de Config y su función de envío.
+var REMINDER_COMBOS = [
+  { clave: 'recordatorio_editor', rol: ROLES.EDITOR, enviar: 'enviarRecordatorioSemanal' },
+  { clave: 'digest_coordinador', rol: ROLES.COORDINADOR, enviar: 'enviarDigestGestores' },
+  { clave: 'digest_supervisor', rol: ROLES.SUPERVISOR, enviar: 'enviarDigestGestores' },
+  { clave: 'tokens_coordinador', rol: ROLES.COORDINADOR, enviar: 'alertarTokensVencidos' },
+  { clave: 'tokens_supervisor', rol: ROLES.SUPERVISOR, enviar: 'alertarTokensVencidos' },
+];
 
 // Ejecutar una vez: trigger diario 09:00 a runDailyReminders (idempotente).
 function setupRemindersTrigger() {
@@ -9,14 +19,33 @@ function setupRemindersTrigger() {
   ScriptApp.newTrigger('runDailyReminders').timeBased().everyDays(1).atHour(9).create();
 }
 
-// Lunes: recordatorio a editores + digest a gestores. Todos los días: tokens vencidos.
+// Cada combo se envía solo si: pasaron >= N días desde el último envío Y
+// (N == 1 → todos los días, ignorando el día; N > 1 → solo el día configurado).
+function deberiaEnviar(clave, hoy) {
+  var intervalo = parseInt(getConfig('frec_' + clave) || '7', 10);
+  var dia = parseInt(getConfig('frec_' + clave + '_dia') || '1', 10);
+  if (isNaN(intervalo) || intervalo < 1) intervalo = 7;
+  if (isNaN(dia) || dia < 0 || dia > 6) dia = 1;
+  var ultimo = parseInt(getSecret('last_sent_' + clave) || '0', 10);
+  if (Date.now() - ultimo < intervalo * 86400000) return false;
+  if (intervalo > 1 && hoy.getDay() !== dia) return false;
+  return true;
+}
+
+function marcarEnviado(clave) {
+  setSecret('last_sent_' + clave, String(Date.now()));
+}
+
 function runDailyReminders() {
-  alertarTokensVencidos();
   var hoy = new Date();
-  if (hoy.getDay() === 1) {
-    enviarRecordatorioSemanal();
-    enviarDigestGestores();
-  }
+  REMINDER_COMBOS.forEach(function (combo) {
+    if (deberiaEnviar(combo.clave, hoy)) {
+      if (combo.enviar === 'enviarRecordatorioSemanal') enviarRecordatorioSemanal();
+      else if (combo.enviar === 'enviarDigestGestores') enviarDigestGestores(combo.rol);
+      else alertarTokensVencidos(combo.rol);
+      marcarEnviado(combo.clave);
+    }
+  });
 }
 
 function diasDesde(fecha) {
@@ -57,8 +86,8 @@ function enviarRecordatorioSemanal() {
   });
 }
 
-// Digest semanal: resumen del circuito para COORDINADOR + SUPERVISOR.
-function enviarDigestGestores() {
+// Digest: resumen del circuito para un rol concreto (COORDINADOR o SUPERVISOR).
+function enviarDigestGestores(rol) {
   var desde = new Date(Date.now() - 7 * 86400000);
   var filas = leerTableroCompleto();
   var semana = function (fecha) {
@@ -109,29 +138,24 @@ function enviarDigestGestores() {
   if (!bloques.length) return;
 
   var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
-  sendDigestGestores({ fecha: fecha, bloques: bloques });
+  sendDigestGestores(rol, { fecha: fecha, bloques: bloques });
 }
 
-// Alerta de tokens vencidos (CORRECCIONES_SOLICITADAS/CONSULTA_AUTOR enviados).
-// Dedupe: se registra ALERTA_TOKEN_VENCIDO en el Historial y solo se re-alerta
-// si el último aviso de esa producción tiene más de 7 días.
-function alertarTokensVencidos() {
+// Alerta de tokens vencidos (CORRECCIONES_SOLICITADAS/CONSULTA_AUTOR enviados)
+// para un rol concreto (COORDINADOR o SUPERVISOR). Registra ALERTA_TOKEN_VENCIDO
+// en el Historial (trazabilidad); la frecuencia la controla la Config.
+function alertarTokensVencidos(rol) {
   var items = [];
   var producciones = [];
   leerTableroCompleto().forEach(function (c) {
     if (!c.token_autor || !c.token_expira) return;
     if (new Date(c.token_expira).getTime() >= Date.now()) return;
     if (c.estado !== ESTADOS.CORRECCIONES_SOLICITADAS && c.estado !== ESTADOS.CONSULTA_AUTOR) return;
-    var avisoReciente = getHistorial(c.id).some(function (h) {
-      return h.accion === 'ALERTA_TOKEN_VENCIDO' &&
-        new Date(h.timestamp).getTime() >= Date.now() - 7 * 86400000;
-    });
-    if (avisoReciente) return;
     items.push({ titulo: c.titulo, autor: c.autor, diasVencido: diasDesde(c.token_expira) });
     producciones.push(c);
   });
   if (!items.length) return;
-  sendAlertaTokensVencidos(items);
+  sendAlertaTokensVencidos(rol, items);
   producciones.forEach(function (c) {
     addHistory(c.id, 'Sistema', 'ALERTA_TOKEN_VENCIDO', 'Token vencido notificado al equipo.');
   });

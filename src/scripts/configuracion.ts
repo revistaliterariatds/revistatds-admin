@@ -23,10 +23,22 @@ function showAlert(message: string, error = false) {
   el.textContent = message;
 }
 
-const CONFIG_CACHE_KEY = 'tds-config-cache-v2';
+const CONFIG_CACHE_KEY = 'tds-config-cache-v3';
 
 const SUBJECT_KEYS = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda', 'recordatorio', 'digest', 'token_vencido'];
 const BODY_KEYS = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'recordatorio', 'digest', 'token_vencido'];
+const FREC_COMBOS = [
+  ['frec_recordatorio_editor', 'frec-recordatorio-editor'],
+  ['frec_recordatorio_editor_dia', 'frec-recordatorio-editor-dia'],
+  ['frec_digest_coordinador', 'frec-digest-coordinador'],
+  ['frec_digest_coordinador_dia', 'frec-digest-coordinador-dia'],
+  ['frec_digest_supervisor', 'frec-digest-supervisor'],
+  ['frec_digest_supervisor_dia', 'frec-digest-supervisor-dia'],
+  ['frec_tokens_coordinador', 'frec-tokens-coordinador'],
+  ['frec_tokens_coordinador_dia', 'frec-tokens-coordinador-dia'],
+  ['frec_tokens_supervisor', 'frec-tokens-supervisor'],
+  ['frec_tokens_supervisor_dia', 'frec-tokens-supervisor-dia'],
+];
 
 function fillForm(config: Record<string, string>) {
   (document.getElementById('config-expira') as HTMLInputElement).value = config.expira_token_dias || '30';
@@ -37,6 +49,9 @@ function fillForm(config: Record<string, string>) {
   });
   BODY_KEYS.forEach((key) => {
     (document.getElementById(`mail-body-${key}`) as HTMLInputElement).value = config[`mail_body_${key}`] || '';
+  });
+  FREC_COMBOS.forEach(([cfgKey, id]) => {
+    (document.getElementById(id) as HTMLInputElement).value = config[cfgKey] || '';
   });
   (document.getElementById('config-form') as HTMLFormElement).hidden = false;
 }
@@ -74,6 +89,9 @@ async function submit(event: SubmitEvent) {
     }
     for (const key of BODY_KEYS) {
       await save(`mail_body_${key}`, (document.getElementById(`mail-body-${key}`) as HTMLInputElement).value);
+    }
+    for (const [cfgKey, id] of FREC_COMBOS) {
+      await save(cfgKey, (document.getElementById(id) as HTMLInputElement).value);
     }
     try { localStorage.removeItem(CONFIG_CACHE_KEY); } catch { /* sin caché local */ }
     showAlert('Configuración guardada.');

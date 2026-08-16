@@ -125,16 +125,23 @@ El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
 
 ## Recordatorios, digest y tokens vencidos (Fase 5)
 
-- `setupRemindersTrigger()` instala un trigger diario 09:00 a `runDailyReminders()`:
-  - **Lunes**: recordatorio a cada editor con `EN_REVISIÓN` inactiva ≥
-    `recordatorio_editores_dias` (default 3) + digest semanal a COORDINADOR/SUPERVISOR
-    (recibidos, en revisión por editor, correcciones sin enviar, en aprobación,
-    rechazados, aprobados/publicables de la semana).
-  - **Todos los días**: alerta de tokens de autor vencidos (estados
-    `CORRECCIONES_SOLICITADAS`/`CONSULTA_AUTOR` con token enviado), con dedupe:
-    registra `ALERTA_TOKEN_VENCIDO` en `Historial` y solo re-alerta tras 7 días.
-- Claves de `Config`: `recordatorio_editores_dias`, `mail_subject_recordatorio|digest|token_vencido`
-  y `mail_body_*` (texto interior editable, Opción A — el wrapper TDS queda en código).
+- `setupRemindersTrigger()` instala un trigger diario 09:00 a `runDailyReminders()`.
+- **Frecuencia configurable por rol y tipo** desde Configuración (`frec_*`): cada
+  combo (recordatorio→EDITOR, digest→COORDINADOR, digest→SUPERVISOR,
+  tokens→COORDINADOR, tokens→SUPERVISOR) tiene intervalo en días (1-30) + día de
+  la semana (0=domingo…6=sábado). Regla: pasa el intervalo → y si el intervalo es
+  > 1, además debe ser el día configurado; con intervalo 1 se envía todos los días.
+- El último envío de cada combo se guarda en Script Properties (`last_sent_*`);
+  el primer envío ocurre al día siguiente de instalar el trigger.
+- Contenidos:
+  - **Recordatorio a editores**: `EN_REVISIÓN` inactiva ≥ `recordatorio_editores_dias` (default 3).
+  - **Digest**: recibidos, en revisión por editor, correcciones sin enviar, en
+    aprobación, rechazados, aprobados/publicables de la semana.
+  - **Tokens vencidos**: estados `CORRECCIONES_SOLICITADAS`/`CONSULTA_AUTOR` con
+    token enviado y vencido; registra `ALERTA_TOKEN_VENCIDO` en `Historial` (trazabilidad).
+- Claves de `Config`: `recordatorio_editores_dias`, `frec_*`,
+  `mail_subject_recordatorio|digest|token_vencido` y `mail_body_*` (texto interior
+  editable, Opción A — el wrapper TDS queda en código).
 
 ## Descargas de ediciones
 
