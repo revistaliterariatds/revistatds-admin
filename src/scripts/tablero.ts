@@ -366,16 +366,28 @@ async function abrirSelectorConsulta(id: string) {
 }
 
 // ── detalle ──
+let detalleReq = 0;
+
 async function abrirDetalle(id: string) {
   const modal = document.getElementById('detailModal') as HTMLDialogElement;
   const content = document.getElementById('detailContent')!;
+  const req = ++detalleReq;
+
+  // Abre al instante con los datos que ya están en el tablero (caché local)
+  // y refresca el detalle completo (historial incluido) en segundo plano.
+  const local = producciones.find((p) => p.id === id);
+  if (local) renderDetalle(content, modal, local, [], id);
+
   const data = await api('panel/board/detail', { id });
+  if (req !== detalleReq) return; // ya se abrió otro detalle mientras tanto
   if (data.status !== 'ok') {
-    alert(data.message || 'No se pudo cargar el detalle.');
+    if (!local) alert(data.message || 'No se pudo cargar el detalle.');
     return;
   }
-  const c: Produccion = data.produccion;
-  const hist: { timestamp: string; actor: string; accion: string; detalle: string }[] = data.historial || [];
+  renderDetalle(content, modal, data.produccion, data.historial || [], id);
+}
+
+function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produccion, hist: { timestamp: string; actor: string; accion: string; detalle: string }[], id: string) {
   const soyTitular = c.editor_asignado === user?.email;
 
   const acciones: string[] = [];
