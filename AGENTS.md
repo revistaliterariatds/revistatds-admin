@@ -26,7 +26,9 @@ el string viejo da 403. `migrateRoles()` (`users.gs`) renombra las filas viejas 
 
 - Routing por el campo **`action` del body**, no por path (agregar path a `/exec` rompe CORS en Apps Script). Ver `gas/Code.gs`.
 - El **ID token viaja en el body** (`idToken`), no en header `Authorization` (evita preflight).
-- Secretos solo en Script Properties (nunca en el repo): `OAUTH_CLIENT_ID`, `ADMIN_EMAIL`, `EMITTER_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_TAG`.
+- Secretos solo en Script Properties (nunca en el repo): `OAUTH_CLIENT_ID`, `ADMIN_EMAIL`, `EMITTER_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_TAG`, `GITHUB_TOKEN_REVISTA`, `MAIL_FROM_AUTORES`.
+- `GITHUB_TOKEN_REVISTA`: fine-grained PAT de GitHub (solo repo `revistaliterariatds/revistatds`, permiso `Contents: write`) para disparar el workflow `publicar-edicion` (subida de ediciones nuevas desde el panel).
+- `MAIL_FROM_AUTORES` (opcional): alias Gmail ("Enviar correo como") desde el que salen los avisos a autores; requiere `GmailApp` (re-autorización del script). Sin la propiedad, los avisos salen desde la cuenta del script (MailApp).
 - `ADMIN_EMAIL` es el email del coordinador (Script Property), **no** es un rol: no renombrarlo.
 - Migraciones idempotentes que se corren una vez desde el editor: `migrateEdiciones()`, `migrateRoles()`, `migrateEstructuraDrive()`, `migrateEdicionesPorFecha()`, `migrateHistorialIdColumna()`.
 - **Advanced Drive Service** (Drive API **v2**, en `appsscript.json` `enabledAdvancedServices`) para `convertirAPdf` (Word/ODT/RTF/TXT → PDF). Debe habilitarse también en Servicios del editor.
@@ -42,6 +44,15 @@ Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
 - Etiquetado por fecha: `edicionDestino()` asigna el envío a la edición cuyo rango apertura–cierre contiene hoy (abierta → última → `SIN_EDICION`).
 - El nombre de edición lleva cero a la izquierda (`EDICION N° 03`).
 - Columna `url_publicable` en `Tablero`; columna `id_produccion` en `Historial`.
+
+## Revistas (ediciones publicadas) — 17/08/2026
+
+- **Solapa Revistas** (todos los roles): grilla + lector PDF en modal + "Subir edición nueva" (COORDINADOR/WEBMASTER). Lee el índice del sitio (`tramasdelsur.com.ar/assets/docs/index.json`) por proxy GAS (`panel/revistas/list`, cache 10 min) + cache local `tds-revistas-cache-v1`.
+- **Subida** (`revistas.gs`): PDF en chunks de 5 MB (`panel/revistas/subir-chunk` / `subir-estado` / `finalizar`) → reconstruido en Drive con subida **resumable** de Drive API v3 (misma cuenta, sin scopes nuevos; aceptar 200 o 201 como cierre) → acceso público → `repository_dispatch` al repo de la revista.
+- **Workflow** `publicar-edicion` (repo `revistaliterariatds/revistatds`, `on: repository_dispatch types: [publicar-edicion]` + `workflow_dispatch`): baja archivos de Drive, valida número contra `index.json` (auto = último + 1), commitea `rtds{n}.pdf`/`.jpeg` y actualiza `index.json`, pushea (GITHUB_TOKEN del propio workflow).
+- **Avisos por mail al publicar** (triggers de una sola ejecución, reintento 3 min, limpieza de triggers al terminar):
+  - Equipo editorial (`ROLES_NOTIF_INTERNOS`, sin WEBMASTER) a los **2 min** → `enviarAvisoEdicionPublicada` (pendiente en `aviso-edicion-pendiente`).
+  - Autores publicados a los **10 min** → `enviarAvisoAutoresPublicados` (pendiente en `aviso-autores-pendiente`): filas de Tablero con `estado = PUBLICADO` y `edicion = nombreEdicion(num)` al momento de publicar; un mail por autor agrupado por `email_autor`; link personal solo si hay `token_autor`; registro idempotente en hoja `Avisos` (`num_edicion | produccion_id | email_autor | fecha`, creada por `ensureSchema`); remitente `MAIL_FROM_AUTORES` si está seteada (`sendMailAutores`).
 
 ## Development
 

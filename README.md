@@ -58,6 +58,7 @@ src/
 ├── pages/descargas.astro   ← descargas/lecturas de ediciones PDF
 ├── pages/agenda.astro      ← calendario de citas (crear/comentar/editar)
 ├── pages/ediciones.astro   ← ciclo de apertura/cierre de ediciones
+├── pages/revistas.astro    ← ediciones publicadas + lector + subida de edición nueva
 ├── scripts/login.ts        ← GIS popup + decode ID token
 ├── scripts/tablero.ts      ← filtros, asignaciones y transiciones
 ├── scripts/usuarios.ts     ← gestión RBAC de usuarios
@@ -66,6 +67,7 @@ src/
 ├── scripts/descargas.ts    ← contadores por edición
 ├── scripts/agenda.ts       ← calendario, citas, comentarios, caché local
 ├── scripts/ediciones.ts    ← abrir/cerrar ediciones con fecha elegida
+└── scripts/revistas.ts     ← grilla, lector y subida por chunks (solo gestores)
 └── styles/
     ├── tokens.css         ← design tokens (copia de variables.css del sitio)
     └── global.css
@@ -121,6 +123,23 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - **Modificar cierre / reabrir**: COORDINADOR/WEBMASTER pueden cambiar la `fecha_cierre` de una edición cerrada o reabrirla (dejarla abierta), validando que no se superponga con la edición siguiente.
 - Migraciones idempotentes `migrateEdiciones()` (hoja + columna `edicion`) y `migrateEdicionesPorFecha()` (reetiqueta envíos según `fecha_recibido`).
 
+## Revistas (ediciones publicadas)
+
+- Solapa **Revistas** (todos los roles): grilla con portada, título y botones **Leer** (modal con lector PDF integrado) y **Descargar**. Lee el mismo índice que el sitio público (`tramasdelsur.com.ar/assets/docs/index.json`) vía proxy GAS (`panel/revistas/list`, cache 10 min) + cache local (`tds-revistas-cache-v1`): una edición subida a la revista aparece sola en el panel.
+- **Subir edición nueva** (COORDINADOR/WEBMASTER): formulario con PDF (hasta 40 MB) y portada opcional (4 MB), número opcional (auto = último + 1, valida duplicados). El PDF viaja por **chunks de 5 MB** (`panel/revistas/subir-chunk`, reanudable vía `panel/revistas/subir-estado`) y se reconstruye en Drive con la **subida resumable de Drive API v3** (misma cuenta del script, sin scopes nuevos). `panel/revistas/finalizar` cierra: portada, acceso público y **dispatch a GitHub**.
+- **Publicación automática**: el repo `revistaliterariatds/revistatds` tiene el workflow `publicar-edicion` (repository_dispatch): baja el PDF/portada del link de Drive, valida que el número no exista en `index.json`, commitea `assets/docs/rtds{n}.pdf` (+ `.jpeg`) y **actualiza `index.json`** (agrega `{num, titulo}` y ordena), y pushea — el deploy de Pages publica el sitio.
+- **Avisos por mail al publicar** (triggers de una sola ejecución, reintento a los 3 min si falla):
+  - **Equipo editorial** a los **2 min** (`ROLES_NOTIF_INTERNOS`, sin WEBMASTER): invita a leer y difundir, con botones al sitio y al PDF.
+  - **Autores publicados** de esa edición a los **10 min** (filas de `Tablero` con `estado = PUBLICADO` y `edicion` = la publicada, lista congelada al publicar): felicitaciones, gracias por participar e invitación a leer/difundir. Un solo mail por autor (agrupado por `email_autor`), solo su info; link personal de estado solo si existe token (nunca se expone). Registro **idempotente** en la hoja `Avisos` (`num_edicion | produccion_id | email_autor | fecha`).
+  - Los avisos a autores pueden salir desde **otra casilla Gmail** (alias "Send mail as", Script Property `MAIL_FROM_AUTORES`); sin configurar usan la cuenta del script.
+
+### Script Properties del backend (además de las de siempre)
+
+| Clave | Uso |
+|---|---|
+| `GITHUB_TOKEN_REVISTA` | Fine-grained PAT de GitHub (solo el repo `revistaliterariatds/revistatds`, permiso `Contents: write`) que permite disparar el workflow `publicar-edicion`. |
+| `MAIL_FROM_AUTORES` | (opcional) Alias Gmail ("Enviar correo como") desde el que salen los avisos a autores; requiere `GmailApp` (re-autorización del script la primera vez). |
+
 ## Mails al autor
 
 - El contacto con el autor lo hacen **solo los gestores** (COORDINADOR/WEBMASTER/SUPERVISOR); el EDITOR solo **marca** las correcciones.
@@ -148,5 +167,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Contacto con el autor centralizado en gestores; el editor solo marca.
 - Circuito productivo actual de `enviar.js` y `enviar-docentes.js` preservado sin cambios.
 - QA automatizado ejecutado (24/24 PASS contra producción, sin login) — ver log en `revistatds/docs/plan-editorial.md`.
+- Solapa Revistas: listado de ediciones publicadas (proxy del índice del sitio), lector PDF en modal, y **publicación de ediciones nuevas desde el panel** (chunks → Drive → dispatch → workflow `publicar-edicion` del repo de la revista), verificada en producción (edición 3).
+- Avisos automáticos al publicar: mail al equipo editorial (2 min) y felicitaciones a autores publicados (10 min, hoja `Avisos` idempotente), con alias Gmail opcional para los autores.
 
 Ver el plan completo en `revistatds/docs/plan-editorial.md` y el contrato GAS en `gas/README.md`.
