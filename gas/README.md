@@ -26,6 +26,23 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `descargas.gs` | Registro y consulta de descargas/lecturas de ediciones PDF |
 | `appsscript.json` | Manifest: scopes + webapp (executeAs `USER_DEPLOYING`, access `ANYONE_ANONYMOUS`) |
 
+## Generar `PanelTDS.gs` (un solo archivo para pegar)
+
+Todos los `.gs` (incluido `Code.gs`, que contiene `doPost`/`doGet`) se concatenan
+en un único `PanelTDS.gs`. El orden no afecta la ejecución (scope global de Apps
+Script), pero **no debe faltar ningún archivo** — omitir `Code.gs` deja el
+deployment sin `doPost` y responde "No se encontró la función de la secuencia de
+comandos: doPost".
+
+```bash
+ORDER="Code enums utils sheets config auth files history mail envio board agenda ediciones users analytics descargas autor reminders revistas"
+for f in $ORDER; do cat "gas/$f.gs"; echo; done > /tmp/revistatds-panel-gas/PanelTDS.gs
+# Verificar que nada falte:
+for f in gas/*.gs; do rg -o "function [A-Za-z_][A-Za-z0-9_]*" "$f"; done | sed 's/function //' | sort -u > /tmp/f_src.txt
+rg -o "function [A-Za-z_][A-Za-z0-9_]*" /tmp/revistatds-panel-gas/PanelTDS.gs | sed 's/function //' | sort -u > /tmp/f_cmb.txt
+comm -23 /tmp/f_src.txt /tmp/f_cmb.txt   # vacío = OK
+```
+
 ## Puesta en marcha (manual, sin clasp)
 
 1. Ir a https://script.google.com → **Nuevo proyecto** (renombrar a `PanelTDS`).
