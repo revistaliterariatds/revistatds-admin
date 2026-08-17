@@ -7,6 +7,7 @@ y versionado semántico (SemVer).
 ## [0.1.0] — unreleased
 
 ### Added
+- Tablero: la última decisión del autor (aprobar / no aprobar / subir versión) queda registrada como dato en cada producción (`accion_autor` + fecha + detalle en `Tablero`), visible como badge en la fila y en el detalle. Escrita por `registrarAccionAutor()` en los handlers de token (`autor.gs`); las columnas se auto-agregan vía `ensureTableroSchema()`.
 - Scaffold Astro static SSG (`site: https://redaccion.tramasdelsur.com.ar`, `base: /`).
 - Identidad visual TDS: tokens (`src/styles/tokens.css`), logo, nav y footer idénticos al sitio.
 - Layout base con CSP y fuentes (Playfair Display + Lato).

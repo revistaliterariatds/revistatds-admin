@@ -20,6 +20,9 @@ interface Produccion {
   fecha_recibido: string;
   enviado_autor: boolean;
   titular: string;
+  accion_autor: string;
+  accion_autor_fecha: string;
+  accion_autor_detalle: string;
 }
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
@@ -115,6 +118,25 @@ function fmtRelativa(iso: string): string {
 
 function convocatoriaLabel(c: string): string {
   return c === 'docentes' ? 'Docentes' : 'General';
+}
+
+// Última decisión del autor registrada en el tablero (accion_autor).
+function accionAutorInfo(c: Produccion): { label: string; color: string } | null {
+  const map: Record<string, { label: string; color: string }> = {
+    'APROBADO': { label: 'Autor aprobó', color: 'green' },
+    'NO_APROBADO': { label: 'Autor no aprobó', color: 'red' },
+    'NUEVA_VERSION': { label: 'Autor subió versión', color: 'blue' },
+  };
+  const info = c.accion_autor ? map[c.accion_autor] : null;
+  return info || null;
+}
+
+function accionAutorBadge(c: Produccion): string {
+  const info = accionAutorInfo(c);
+  if (!info) return '';
+  const fecha = c.accion_autor_fecha ? ' · ' + fmtRelativa(c.accion_autor_fecha) : '';
+  const detalle = c.accion_autor_detalle ? ' · ' + esc(c.accion_autor_detalle) : '';
+  return `<span class="badge badge-${info.color}" title="${esc('Última decisión del autor')}">${info.label}${fecha}${detalle}</span>`;
 }
 
 // ── filtros ──
@@ -221,6 +243,7 @@ function renderTable() {
       <td data-label="Producción" class="td-titulo">
         <strong>${esc(c.titulo)}</strong>
         <span class="td-cat">${esc(c.categoria || 'Sin clasificar')}${c.edad ? ' · ' + esc(c.edad) : ''}</span>
+        ${accionAutorBadge(c)}
       </td>
       <td data-label="Autor">${esc(c.autor)}</td>
       <td data-label="Convocatoria">${convocatoriaLabel(c.convocatoria)}</td>
@@ -441,6 +464,7 @@ function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produc
       <div><dt>Convocatoria</dt><dd>${convocatoriaLabel(c.convocatoria)}</dd></div>
       <div><dt>Versión</dt><dd>${esc(c.version_actual || '1')}</dd></div>
       <div><dt>Titular</dt><dd>${c.titular ? esc(c.titular) : '<em>libre</em>'}</dd></div>
+      ${accionAutorInfo(c) ? `<div><dt>Última decisión del autor</dt><dd>${accionAutorBadge(c)}${c.accion_autor_detalle ? ' <span class="td-cat">' + esc(c.accion_autor_detalle) + '</span>' : ''}</dd></div>` : ''}
     </dl>
     ${esGestor ? `
       <div class="form-group" style="margin-bottom:1rem;">

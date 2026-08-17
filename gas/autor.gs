@@ -43,6 +43,18 @@ function consumeToken(produccion) {
   produccion.token_autor = '';
 }
 
+// Registra la última decisión del autor como dato visible en el tablero
+// (el historial completo sigue en la hoja Historial).
+function registrarAccionAutor(produccion, accion, detalle) {
+  var sheet = getSheet('Tablero');
+  setCell(sheet, produccion._rowIndex, 'accion_autor', accion);
+  setCell(sheet, produccion._rowIndex, 'accion_autor_fecha', new Date());
+  setCell(sheet, produccion._rowIndex, 'accion_autor_detalle', detalle || '');
+  produccion.accion_autor = accion;
+  produccion.accion_autor_fecha = new Date();
+  produccion.accion_autor_detalle = detalle || '';
+}
+
 function getHistorial(idProduccion) {
   var sheet = getSheet('Historial');
   var idx = headerIndex(sheet);
@@ -87,6 +99,7 @@ function handleAutorApprove(token) {
     }
     // La copia aprobada queda persistida antes de cambiar el estado.
     guardarVersionAprobada(c);
+    registrarAccionAutor(c, 'APROBADO', '');
     setEstado(c, ESTADOS.APROBADO);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'APROBADO', 'El autor aprobó la versión.');
@@ -106,6 +119,7 @@ function handleAutorReject(token, motivo) {
     if (c.estado !== ESTADOS.CONSULTA_AUTOR) {
       throw new ApiError('No hay una consulta pendiente.');
     }
+    registrarAccionAutor(c, 'NO_APROBADO', motivo);
     setEstado(c, ESTADOS.RECHAZADO_POR_AUTOR);
     consumeToken(c);
     addHistory(c.id, 'AUTOR', 'NO_APROBADO', (motivo || '') ? 'Motivo: ' + motivo : 'Sin motivo.');
@@ -137,6 +151,7 @@ function handleAutorEdit(token, archivos) {
     var sheet = getSheet('Tablero');
     setCell(sheet, c._rowIndex, 'version_actual', String(version));
     c.version_actual = String(version);
+    registrarAccionAutor(c, 'NUEVA_VERSION', 'v' + version);
     if (c.editor_asignado) {
       var docUrl = createDocCorreccion(c, c.editor_asignado, subfolder);
       setCell(sheet, c._rowIndex, 'url_doc_correccion', docUrl);

@@ -7,6 +7,7 @@ var SHEETS = {
     'editor_asignado', 'url_carpeta_drive', 'url_doc_correccion',
     'version_actual', 'token_autor', 'token_expira', 'convocatoria',
     'fecha_recibido', 'fecha_actualizacion', 'edicion', 'url_publicable',
+    'accion_autor', 'accion_autor_fecha', 'accion_autor_detalle',
   ],
   Historial: ['id_produccion', 'timestamp', 'actor', 'accion', 'detalle'],
   Config: ['clave', 'valor'],
