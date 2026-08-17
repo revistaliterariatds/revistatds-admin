@@ -381,7 +381,7 @@ function registrarAviso(num, produccionId, email) {
 function sendMailAutores(to, subject, html) {
   var desde = getSecret('MAIL_FROM_AUTORES');
   if (desde) {
-    GmailApp.sendEmail({ to: to, subject: subject, htmlBody: html, from: desde, name: MAIL_FROM_NAME });
+    GmailApp.sendEmail(to, subject, '', { htmlBody: html, from: desde, name: MAIL_FROM_NAME });
   } else {
     sendHtmlMail(to, subject, html);
   }
