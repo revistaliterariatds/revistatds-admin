@@ -93,7 +93,9 @@ function scheduleFeriadosTrigger() {
     if (t.getHandlerFunction() === HANDLER) ScriptApp.deleteTrigger(t);
   });
   var ahora = new Date();
-  var year = ahora.getMonth() >= 11 ? ahora.getFullYear() + 1 : ahora.getFullYear();
+  var year = ahora.getFullYear();
+  var limite = new Date(year, 0, 2); // 2 de enero de este año
+  if (ahora.getTime() >= limite.getTime()) year += 1; // ya pasó enero → próximo enero
   ScriptApp.newTrigger(HANDLER)
     .timeBased()
     .atDate(year, 1, 2)
