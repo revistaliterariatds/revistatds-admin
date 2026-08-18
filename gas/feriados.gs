@@ -9,7 +9,11 @@ var FERIADOS_API = 'https://date.nager.at/api/v3/PublicHolidays/{year}/AR';
 // de ese año. Devuelve {año, cantidad}.
 function sincronizarFeriados(año) {
   var sheet = getSheet('Feriados');
-  if (!sheet) throw new ApiError('Falta la hoja Feriados. Ejecutá setup() o ensureSchema().');
+  if (!sheet) {
+    ensureSchema(); // crea la hoja si falta (idempotente)
+    sheet = getSheet('Feriados');
+  }
+  if (!sheet) throw new ApiError('No se pudo crear la hoja Feriados.');
 
   var url = FERIADOS_API.replace('{year}', String(año));
   var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
