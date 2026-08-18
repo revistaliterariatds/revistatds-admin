@@ -96,9 +96,9 @@ function scheduleFeriadosTrigger() {
   var year = ahora.getFullYear();
   var limite = new Date(year, 0, 2); // 2 de enero de este año
   if (ahora.getTime() >= limite.getTime()) year += 1; // ya pasó enero → próximo enero
+  var fecha = Utilities.parseDate(year + '-01-02 02:00:00', Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   ScriptApp.newTrigger(HANDLER)
     .timeBased()
-    .atDate(year, 1, 2)
-    .atHour(2)
+    .at(fecha)
     .create();
 }
