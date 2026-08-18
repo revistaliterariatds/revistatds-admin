@@ -364,8 +364,8 @@ footer {
 .cal-nav .btn-ghost { padding: 0.45rem 0.9rem; font-size: 1rem; line-height: 1; }
 .cal-titulo { font-family: 'Playfair Display', serif; font-size: var(--text-xl); font-weight: 400; text-transform: capitalize; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.cal-head { border-bottom: 1px solid var(--rule-soft); }
-.cal-head span { padding: 0.6rem 0.25rem; text-align: center; font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+.cal-head { border-bottom: 1px solid var(--rule-soft); background: var(--orange-soft); }
+.cal-head span { padding: 0.6rem 0.25rem; text-align: center; font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
 .cal-cell { position: relative; min-height: 88px; padding: 0.5rem; border: none; border-right: 1px solid var(--rule-soft); border-bottom: 1px solid var(--rule-soft); background: transparent; color: var(--ink); font-family: 'Lato', sans-serif; text-align: left; cursor: pointer; transition: background var(--duration-fast) var(--ease); }
 .cal-cell:nth-child(7n) { border-right: none; }
 .cal-cell:hover { background: var(--paper-warm); }
