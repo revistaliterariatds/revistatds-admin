@@ -46,6 +46,8 @@ function sincronizarFeriadosAnio() {
   var años = [];
   años.push(sincronizarFeriados(ahora.getFullYear()));
   años.push(sincronizarFeriados(ahora.getFullYear() + 1));
+  clearFeriadosCache();
+  clearAgendaCache(); // invalida el listado cacheado (trae feriados vacíos si se cacheó antes del sync)
   scheduleFeriadosTrigger();
   return ok({ message: 'Feriados actualizados.', años: años });
 }
