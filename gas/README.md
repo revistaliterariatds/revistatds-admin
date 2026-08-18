@@ -22,6 +22,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `agenda.gs` | Agenda: citas, comentarios y auto-citas de ediciones |
 | `ediciones.gs` | Ciclo de ediciones (abrir/cerrar con fecha elegida, sin solapamiento) |
 | `users.gs` | Gestión de usuarios y roles |
+| `feriados.gs` | Feriados nacionales AR: sincronización con date.nager.at (persistidos en la hoja `Feriados`) + trigger anual |
 | `analytics.gs` | Snapshots diarios y consulta histórica de visitas |
 | `descargas.gs` | Registro y consulta de descargas/lecturas de ediciones PDF |
 | `appsscript.json` | Manifest: scopes + webapp (executeAs `USER_DEPLOYING`, access `ANYONE_ANONYMOUS`) |
@@ -35,7 +36,7 @@ deployment sin `doPost` y responde "No se encontró la función de la secuencia 
 comandos: doPost".
 
 ```bash
-ORDER="Code enums utils sheets config auth files history mail envio board agenda ediciones users analytics descargas autor reminders revistas"
+ORDER="Code enums utils sheets config auth files history mail envio board agenda ediciones users analytics descargas autor reminders revistas feriados"
 for f in $ORDER; do cat "gas/$f.gs"; echo; done > /tmp/revistatds-panel-gas/PanelTDS.gs
 # Verificar que nada falte:
 for f in gas/*.gs; do rg -o "function [A-Za-z_][A-Za-z0-9_]*" "$f"; done | sed 's/function //' | sort -u > /tmp/f_src.txt
@@ -55,7 +56,7 @@ comm -23 /tmp/f_src.txt /tmp/f_cmb.txt   # vacío = OK
    Drive API v2) para convertir Word/ODT/RTF/TXT a PDF en "Consultar al autor".
    Hay que **habilitarlo también en el editor** (Servicios → Drive API).
 4. **Ejecutar `setup()` una vez** (autorizar los permisos):
-    - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`, `Agenda`, `AgendaComentarios`, `Ediciones` (la hoja `Analiticas` se crea al primer snapshot);
+    - crea el Spreadsheet `PanelTDS` con las hojas `Roles`, `Tablero`, `Historial`, `Config`, `Agenda`, `AgendaComentarios`, `Ediciones`, `Feriados` (la hoja `Analiticas` se crea al primer snapshot);
    - siembra `Config` y los roles iniciales (COORDINADOR + emisor).
 5. **Script Properties** (Configuración del proyecto → Propiedades de secuencia de
    comandos) — agregar:
@@ -114,6 +115,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/agenda/comentar` | idToken | agrega comentario al hilo |
 | `panel/agenda/editar` | idToken + COORDINADOR/WEBMASTER | edita cita |
 | `panel/agenda/borrar` | idToken + COORDINADOR/WEBMASTER | borra cita y sus comentarios |
+| `panel/feriados/sync` | idToken + COORDINADOR/WEBMASTER | refresca los feriados nacionales desde date.nager.at (año actual + siguiente) |
 | `panel/users/list` | idToken + COORDINADOR/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
 | `panel/users/save` | idToken + COORDINADOR/WEBMASTER | alta/edición de una fila de `Roles` |
 | `panel/config/list` | idToken + COORDINADOR/SUPERVISOR | valores no secretos de `Config` |
@@ -130,6 +132,14 @@ histórico indefinido mientras exista espacio en Sheets. Ejecutar una vez
 `setupAnalyticsTrigger()` para instalar el trigger diario. Configurar en Script Properties
 `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ZONE_TAG` (el ID de zona del dominio).
 El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
+
+## Feriados nacionales (Agenda)
+
+- La hoja `Feriados` (`fecha | nombre | tipo`) guarda los feriados nacionales argentinos, persistidos para no depender de la API en runtime.
+- `sincronizarFeriados(año)` los trae de `date.nager.at/api/v3/PublicHolidays/{año}/AR` y reemplaza las filas de ese año; `sincronizarFeriadosAnio()` sincroniza el año actual + el siguiente.
+- Trigger anual `sincronizarFeriadosAnio` (2 de enero, 02:00) que se **re-agenda solo** al correr: `setupFeriadosTrigger()` lo instala la primera vez.
+- A demanda desde el panel: botón "Actualizar feriados" (COORDINADOR/WEBMASTER) → `panel/feriados/sync`.
+- `panel/agenda/list` incluye `feriados` (cache 6 h, `feriadosPersistidos()`); el calendario los marca con fondo suave y ✶ + tooltip con el nombre.
 
 ## Keep-warm y caché
 

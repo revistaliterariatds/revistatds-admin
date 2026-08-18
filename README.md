@@ -112,6 +112,7 @@ El sitio público registra clics en los PDF de ediciones (`descarga`, público).
 - Mail al crear (checkbox "Notificar por mail"): a todos los roles activos, con botones **"Ver agenda"** y **"Agregar a mi calendario"** (Google Calendar `action=TEMPLATE`, con horario o día completo) y link de Meet.
 - Caché: `CacheService` 30 s + `localStorage` (`tds-agenda-cache-v2`) con render instantáneo e invalidación en cada mutación.
 - Auto-citas al **cerrar/abrir ediciones** (tipo `cierre_edicion`/`evento`, sin mail).
+- **Feriados nacionales** marcados en el calendario: se traen de `date.nager.at` una vez por año y quedan persistidos en la hoja `Feriados` (trigger anual en enero que se re-agenda solo + botón "Actualizar feriados" para COORDINADOR/WEBMASTER); `panel/agenda/list` los incluye (cache 6 h).
 - Normalización al leer: Sheets convierte `YYYY-MM-DD`/`HH:mm` a `Date`; se normaliza a texto en el backend (las citas existentes quedan correctas sin migrar).
 
 ## Ediciones

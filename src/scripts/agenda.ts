@@ -27,11 +27,16 @@ const TIPOS: Record<string, { label: string; color: string }> = {
   otro: { label: 'Otro', color: '#8a837a' },
 };
 
+const FERIADO_COLOR = '#c0392b';
+
+interface Feriado { fecha: string; nombre: string; tipo: string; }
+
 const user = getUser();
 const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let citas: Cita[] = [];
+let feriados = new Map<string, Feriado>();
 let mesVisible = new Date();
 let diaActivo = '';
 let citaActiva: Cita | null = null;
@@ -139,14 +144,16 @@ function renderCalendario() {
     }
     const key = `${anio}-${pad(mes + 1)}-${pad(diaNum)}`;
     const delDia = citasDelDia(key);
+    const fer = feriados.get(key);
     const esHoy = key === hoy;
-    const tituloTip = delDia.length
+    const ferTxt = fer ? `Feriado: ${fer.nombre}` : '';
+    const tituloTip = (ferTxt ? ferTxt + ' · ' : '') + (delDia.length
       ? `${delDia.length} cita${delDia.length > 1 ? 's' : ''} · cread${delDia.length > 1 ? 'as' : 'a'} por ${delDia[0].creado_por_nombre || delDia[0].creado_por} · ${delDia.reduce((n, c) => n + (c.comentarios || 0), 0)} comentario${delDia.reduce((n, c) => n + (c.comentarios || 0), 0) !== 1 ? 's' : ''}`
-      : 'Sin citas. Clic para crear.';
+      : 'Sin citas. Clic para crear.');
     const dots = delDia.slice(0, 3).map((c) => `<i class="cal-dot" style="background:${tipoInfo(c.tipo).color}" aria-hidden="true"></i>`).join('');
     const badge = delDia.length ? `<span class="cal-count">${delDia.length}</span>` : '';
-    celdasHtml.push(`<button type="button" class="cal-cell${esHoy ? ' cal-cell-today' : ''}${delDia.length ? ' cal-cell-has' : ''}" data-key="${key}" title="${esc(tituloTip)}">
-      <span class="cal-day">${diaNum}</span>${badge}<span class="cal-dots">${dots}${delDia.length > 3 ? `<em>+${delDia.length - 3}</em>` : ''}</span>
+    celdasHtml.push(`<button type="button" class="cal-cell${esHoy ? ' cal-cell-today' : ''}${delDia.length ? ' cal-cell-has' : ''}${fer ? ' cal-cell-feriado' : ''}" data-key="${key}" title="${esc(tituloTip)}">
+      <span class="cal-day">${diaNum}</span>${fer ? `<span class="cal-feriado" aria-label="${esc(ferTxt)}">✶</span>` : ''}${badge}<span class="cal-dots">${dots}${delDia.length > 3 ? `<em>+${delDia.length - 3}</em>` : ''}</span>
     </button>`);
   }
   grid.innerHTML = celdasHtml.join('');
@@ -184,7 +191,8 @@ function renderProximas() {
 
 function renderLeyenda() {
   document.getElementById('tipo-leyenda')!.innerHTML = Object.entries(TIPOS).map(([k, v]) =>
-    `<li><i style="background:${v.color}" aria-hidden="true"></i>${esc(v.label)}</li>`).join('');
+    `<li><i style="background:${v.color}" aria-hidden="true"></i>${esc(v.label)}</li>`).join('')
+    + `<li><i style="background:${FERIADO_COLOR}" aria-hidden="true"></i>Feriado nacional</li>`;
 }
 
 // ── modal: vista por día ──
@@ -391,6 +399,7 @@ async function recargar() {
     return;
   }
   citas = data.citas || [];
+  feriados = new Map((data.feriados || []).map((f: Feriado) => [f.fecha, f]));
   renderCalendario();
   renderProximas();
   saveCachedCitas(citas);
@@ -418,6 +427,20 @@ function init() {
     renderCalendario();
   });
   document.getElementById('agenda-refrescar')?.addEventListener('click', recargar);
+
+  const btnFeriados = document.getElementById('agenda-feriados') as HTMLButtonElement | null;
+  if (btnFeriados) {
+    btnFeriados.hidden = !esAdmin;
+    btnFeriados.addEventListener('click', async () => {
+      btnCargando(btnFeriados, true, 'Actualizando…');
+      const r = await api('panel/feriados/sync');
+      btnCargando(btnFeriados, false);
+      if (r.status !== 'ok') { showAlert(r.message || 'No se pudieron actualizar los feriados.', true); return; }
+      showAlert(r.message || 'Feriados actualizados.');
+      clearCachedCitas();
+      await recargar();
+    });
+  }
 
   recargar();
 }

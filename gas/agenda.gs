@@ -109,7 +109,11 @@ function handleAgendaList(idToken) {
     c.creado_por_nombre = displayName(c.creado_por);
     citas.push(c);
   }
-  var result = ok({ citas: citas, yo: { email: user.email, rol: user.rol, es_admin: esAdmin(user) } });
+  var result = ok({
+    citas: citas,
+    yo: { email: user.email, rol: user.rol, es_admin: esAdmin(user) },
+    feriados: feriadosPersistidos(),
+  });
   cache.put('agenda-list', JSON.stringify(result), 30);
   return result;
 }

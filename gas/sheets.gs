@@ -19,6 +19,7 @@ var SHEETS = {
   ],
   AgendaComentarios: ['id', 'cita_id', 'autor', 'comentario', 'creado_at'],
   Avisos: ['num_edicion', 'produccion_id', 'email_autor', 'fecha'],
+  Feriados: ['fecha', 'nombre', 'tipo'],
 };
 
 function getSpreadsheet() {

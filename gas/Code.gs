@@ -79,6 +79,8 @@ function doPost(e) {
       result = handleAgendaEditar(tokenFrom(data, e), data && data.id, data);
     } else if (action === 'panel/agenda/borrar') {
       result = handleAgendaBorrar(tokenFrom(data, e), data && data.id);
+    } else if (action === 'panel/feriados/sync') {
+      result = handleFeriadosSync(tokenFrom(data, e));  // refrescar feriados (COORDINADOR/WEBMASTER)
     } else if (action === 'panel/users/list') {
       result = handleUsersList(tokenFrom(data, e));
     } else if (action === 'panel/users/save') {

@@ -45,6 +45,13 @@ Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
 - El nombre de edición lleva cero a la izquierda (`EDICION N° 03`).
 - Columna `url_publicable` en `Tablero`; columna `id_produccion` en `Historial`.
 
+## Agenda — feriados nacionales (18/08/2026)
+
+- El calendario marca los **feriados nacionales argentinos** (fondo suave + ✶ + tooltip con el nombre).
+- Se sincronizan desde `date.nager.at` (API de terceros) **una vez por año** y quedan **persistidos en la hoja `Feriados`** (`fecha | nombre | tipo`): el runtime no depende de la API.
+- Trigger anual `sincronizarFeriadosAnio` (2 de enero 02:00, `setupFeriadosTrigger()`) que **se re-agenda solo** al correr; a demanda: botón "Actualizar feriados" (COORDINADOR/WEBMASTER) → `panel/feriados/sync`.
+- `panel/agenda/list` devuelve `feriados` (cache 6 h, `feriadosPersistidos()`).
+
 ## Revistas (ediciones publicadas) — 17/08/2026
 
 - **Solapa Revistas** (todos los roles): grilla + lector PDF en modal + "Subir edición nueva" (COORDINADOR/WEBMASTER). Lee el índice del sitio (`tramasdelsur.com.ar/assets/docs/index.json`) por proxy GAS (`panel/revistas/list`, cache 10 min) + cache local `tds-revistas-cache-v1`.
