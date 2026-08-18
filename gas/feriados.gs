@@ -5,6 +5,12 @@
 
 var FERIADOS_API = 'https://date.nager.at/api/v3/PublicHolidays/{year}/AR';
 
+// Sheets convierte "YYYY-MM-DD" a Date al guardarlo; se normaliza a texto acá.
+function feriadoFechaStr(valor) {
+  if (valor instanceof Date) return Utilities.formatDate(valor, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(valor || '').slice(0, 10);
+}
+
 // Persiste los feriados de un año en la hoja `Feriados`, reemplazando las filas
 // de ese año. Devuelve {año, cantidad}.
 function sincronizarFeriados(año) {
@@ -27,7 +33,7 @@ function sincronizarFeriados(año) {
   var data = sheet.getDataRange().getValues();
   var filas = [];
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][idx.fecha]).slice(0, 4) === String(año)) filas.push(i + 1);
+    if (feriadoFechaStr(data[i][idx.fecha]).slice(0, 4) === String(año)) filas.push(i + 1);
   }
   filas.sort(function (a, b) { return b - a; });
   filas.forEach(function (f) { sheet.deleteRow(f); });
@@ -65,7 +71,7 @@ function feriadosPersistidos() {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       out.push({
-        fecha: String(data[i][idx.fecha] || ''),
+        fecha: feriadoFechaStr(data[i][idx.fecha]),
         nombre: String(data[i][idx.nombre] || ''),
         tipo: String(data[i][idx.tipo] || 'feriado'),
       });
