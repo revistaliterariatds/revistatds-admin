@@ -131,7 +131,7 @@ function renderCalendario() {
   const mes = mesVisible.getMonth();
   const primero = new Date(anio, mes, 1);
   const diasMes = new Date(anio, mes + 1, 0).getDate();
-  const offset = (primero.getDay() + 6) % 7; // lunes = 0
+  const offset = primero.getDay(); // domingo = 0
   const celdas = Math.ceil((offset + diasMes) / 7) * 7;
   const hoy = hoyKey();
 
