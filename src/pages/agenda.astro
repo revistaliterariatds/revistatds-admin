@@ -14,6 +14,7 @@ import Layout from '../layouts/Layout.astro';
         <button id="agenda-hoy" class="btn-ghost" type="button">Hoy</button>
         <button id="agenda-refrescar" class="btn-ghost" type="button">Refrescar</button>
         <button id="agenda-feriados" class="btn-ghost" type="button" hidden>Actualizar feriados</button>
+        <button id="agenda-feriado-nuevo" class="btn-ghost" type="button" hidden>Agregar feriado</button>
       </div>
     </header>
 
@@ -39,6 +40,7 @@ import Layout from '../layouts/Layout.astro';
         <div class="cal-legend">
           <p class="config-kicker">Tipos</p>
           <ul id="tipo-leyenda" class="tipo-leyenda"></ul>
+          <div id="feriados-propios" class="feriados-propios" hidden></div>
         </div>
       </aside>
     </div>

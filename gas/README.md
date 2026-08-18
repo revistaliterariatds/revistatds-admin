@@ -116,6 +116,8 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/agenda/editar` | idToken + COORDINADOR/WEBMASTER | edita cita |
 | `panel/agenda/borrar` | idToken + COORDINADOR/WEBMASTER | borra cita y sus comentarios |
 | `panel/feriados/sync` | idToken + COORDINADOR/WEBMASTER | refresca los feriados nacionales desde date.nager.at (año actual + siguiente) |
+| `panel/feriados/agregar` | idToken + COORDINADOR/WEBMASTER | agrega un feriado propio (p. ej. Día del Maestro); si la fecha coincide con uno nacional lo marca como manual |
+| `panel/feriados/quitar` | idToken + COORDINADOR/WEBMASTER | quita el feriado de una fecha (los nacionales vuelven con el próximo sync) |
 | `panel/users/list` | idToken + COORDINADOR/SUPERVISOR/WEBMASTER | `{ status, users: [...], puede_editar }` |
 | `panel/users/save` | idToken + COORDINADOR/WEBMASTER | alta/edición de una fila de `Roles` |
 | `panel/config/list` | idToken + COORDINADOR/SUPERVISOR | valores no secretos de `Config` |
@@ -135,8 +137,8 @@ El trigger requiere el scope `https://www.googleapis.com/auth/script.scriptapp`.
 
 ## Feriados nacionales (Agenda)
 
-- La hoja `Feriados` (`fecha | nombre | tipo`) guarda los feriados nacionales argentinos, persistidos para no depender de la API en runtime.
-- `sincronizarFeriados(año)` los trae de `date.nager.at/api/v3/PublicHolidays/{año}/AR` y reemplaza las filas de ese año; `sincronizarFeriadosAnio()` sincroniza el año actual + el siguiente.
+- La hoja `Feriados` (`fecha | nombre | tipo | origen`) guarda los feriados nacionales argentinos, persistidos para no depender de la API en runtime. `origen` distingue los de la API (`api`) de los propios agregados a mano (`manual`): el sync anual **no borra los manuales**.
+- `sincronizarFeriados(año)` los trae de `date.nager.at/api/v3/PublicHolidays/{año}/AR` y reemplaza las filas de ese año (solo las de origen `api`); `sincronizarFeriadosAnio()` sincroniza el año actual + el siguiente.
 - Trigger anual `sincronizarFeriadosAnio` (2 de enero, 02:00) que se **re-agenda solo** al correr: `setupFeriadosTrigger()` lo instala la primera vez.
 - A demanda desde el panel: botón "Actualizar feriados" (COORDINADOR/WEBMASTER) → `panel/feriados/sync`.
 - `panel/agenda/list` incluye `feriados` (cache 6 h, `feriadosPersistidos()`); el calendario los marca con fondo suave y ✶ + tooltip con el nombre.

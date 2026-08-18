@@ -48,7 +48,8 @@ Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
 ## Agenda — feriados nacionales (18/08/2026)
 
 - El calendario marca los **feriados nacionales argentinos** (fondo suave + ✶ + tooltip con el nombre).
-- Se sincronizan desde `date.nager.at` (API de terceros) **una vez por año** y quedan **persistidos en la hoja `Feriados`** (`fecha | nombre | tipo`): el runtime no depende de la API.
+- Se sincronizan desde `date.nager.at` (API de terceros) **una vez por año** y quedan **persistidos en la hoja `Feriados`** (`fecha | nombre | tipo | origen`): el runtime no depende de la API.
+- `origen` distingue `api` (nacionales) de `manual` (propios, p. ej. Día del Maestro): el sync anual **no borra los manuales**. Alta/baja a demanda: `panel/feriados/agregar|quitar` (COORDINADOR/WEBMASTER), botones "Agregar feriado" y "✕" en la Agenda.
 - Trigger anual `sincronizarFeriadosAnio` (2 de enero 02:00, `setupFeriadosTrigger()`) que **se re-agenda solo** al correr; a demanda: botón "Actualizar feriados" (COORDINADOR/WEBMASTER) → `panel/feriados/sync`.
 - `panel/agenda/list` devuelve `feriados` (cache 6 h, `feriadosPersistidos()`).
 

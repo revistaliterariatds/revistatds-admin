@@ -81,6 +81,10 @@ function doPost(e) {
       result = handleAgendaBorrar(tokenFrom(data, e), data && data.id);
     } else if (action === 'panel/feriados/sync') {
       result = handleFeriadosSync(tokenFrom(data, e));  // refrescar feriados (COORDINADOR/WEBMASTER)
+    } else if (action === 'panel/feriados/agregar') {
+      result = handleFeriadosAgregar(tokenFrom(data, e), data && data.fecha, data && data.nombre);  // feriado propio
+    } else if (action === 'panel/feriados/quitar') {
+      result = handleFeriadosQuitar(tokenFrom(data, e), data && data.fecha);  // quitar feriado
     } else if (action === 'panel/users/list') {
       result = handleUsersList(tokenFrom(data, e));
     } else if (action === 'panel/users/save') {

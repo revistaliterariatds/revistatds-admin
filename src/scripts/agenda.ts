@@ -29,7 +29,7 @@ const TIPOS: Record<string, { label: string; color: string }> = {
 
 const FERIADO_COLOR = '#c0392b';
 
-interface Feriado { fecha: string; nombre: string; tipo: string; }
+interface Feriado { fecha: string; nombre: string; tipo: string; origen?: string; }
 
 const user = getUser();
 const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
@@ -37,6 +37,7 @@ const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let citas: Cita[] = [];
 let feriados = new Map<string, Feriado>();
+let feriadosList: Feriado[] = [];
 let mesVisible = new Date();
 let diaActivo = '';
 let citaActiva: Cita | null = null;
@@ -193,6 +194,83 @@ function renderLeyenda() {
   document.getElementById('tipo-leyenda')!.innerHTML = Object.entries(TIPOS).map(([k, v]) =>
     `<li><i style="background:${v.color}" aria-hidden="true"></i>${esc(v.label)}</li>`).join('')
     + `<li><i style="background:${FERIADO_COLOR}" aria-hidden="true"></i>Feriado nacional</li>`;
+}
+
+// Lista de feriados propios (manuales) con botón para quitarlos (solo gestores).
+function renderFeriadosPropios() {
+  const box = document.getElementById('feriados-propios');
+  if (!box) return;
+  if (!esAdmin) { box.hidden = true; return; }
+  const manuales = feriadosList
+    .filter((f) => f.origen === 'manual')
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  box.hidden = false;
+  box.innerHTML = manuales.length
+    ? `<p class="config-kicker">Feriados propios</p><ul class="feriados-propios-list">${manuales.map((f) => `
+      <li>
+        <span>${esc(fmtFechaCorta(f.fecha))} · ${esc(f.nombre)}</span>
+        <button type="button" class="btn-mini" data-feriado-quitar="${esc(f.fecha)}" title="Quitar feriado">✕</button>
+      </li>`).join('')}</ul>`
+    : `<p class="config-kicker">Feriados propios</p><p class="proximas-empty">Sin feriados propios. Usá "Agregar feriado".</p>`;
+  box.querySelectorAll('[data-feriado-quitar]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const fecha = (btn as HTMLElement).dataset.feriadoQuitar || '';
+      if (!confirm(`¿Quitar el feriado del ${fecha}?`)) return;
+      btnCargando(btn as HTMLButtonElement, true, '…');
+      const r = await api('panel/feriados/quitar', { fecha });
+      btnCargando(btn as HTMLButtonElement, false);
+      if (r.status !== 'ok') { showAlert(r.message || 'No se pudo quitar el feriado.', true); return; }
+      showAlert(r.message);
+      clearCachedCitas();
+      await recargar();
+    });
+  });
+}
+
+// Formulario para agregar un feriado propio (p. ej. Día del Maestro).
+function renderFeriadoForm() {
+  const modal = document.getElementById('citaModal') as HTMLDialogElement;
+  const content = document.getElementById('citaContent')!;
+  content.innerHTML = `
+    <h2 class="detail-titulo">Agregar feriado</h2>
+    <p class="config-intro">Feriado propio del calendario (no nacional). Si la fecha coincide con un feriado nacional, lo marca como propio.</p>
+    <form id="feriado-form" class="cita-form">
+      <div class="form-group">
+        <label for="feriado-fecha">Fecha <span>(obligatorio)</span></label>
+        <input id="feriado-fecha" type="date" required />
+      </div>
+      <div class="form-group">
+        <label for="feriado-nombre">Nombre <span>(obligatorio)</span></label>
+        <input id="feriado-nombre" type="text" maxlength="100" required placeholder="p. ej. Día del Maestro" />
+      </div>
+      <div class="detail-acciones">
+        <button type="submit" class="btn-enviar btn-enviar-solid">Guardar</button>
+        <button type="button" class="btn-ghost" id="feriado-cancelar">Cancelar</button>
+      </div>
+    </form>`;
+  modal.showModal();
+
+  content.querySelector('#feriado-cancelar')?.addEventListener('click', () => modal.close());
+
+  content.querySelector('#feriado-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fecha = (document.getElementById('feriado-fecha') as HTMLInputElement).value;
+    const nombre = (document.getElementById('feriado-nombre') as HTMLInputElement).value.trim();
+    if (!fecha || !nombre) return;
+    const btn = content.querySelector('#feriado-form button[type="submit"]') as HTMLButtonElement | null;
+    btnCargando(btn, true);
+    try {
+      const r = await api('panel/feriados/agregar', { fecha, nombre });
+      if (r.status !== 'ok') throw new Error(r.message || 'No se pudo agregar el feriado.');
+      modal.close();
+      showAlert(r.message);
+      clearCachedCitas();
+      await recargar();
+    } catch (err) {
+      btnCargando(btn, false);
+      showAlert(err instanceof Error ? err.message : 'No se pudo agregar el feriado.', true);
+    }
+  });
 }
 
 // ── modal: vista por día ──
@@ -399,9 +477,11 @@ async function recargar() {
     return;
   }
   citas = data.citas || [];
-  feriados = new Map((data.feriados || []).map((f: Feriado) => [f.fecha, f]));
+  feriadosList = data.feriados || [];
+  feriados = new Map(feriadosList.map((f: Feriado) => [f.fecha, f]));
   renderCalendario();
   renderProximas();
+  renderFeriadosPropios();
   saveCachedCitas(citas);
 }
 
@@ -440,6 +520,12 @@ function init() {
       clearCachedCitas();
       await recargar();
     });
+  }
+
+  const btnFeriadoNuevo = document.getElementById('agenda-feriado-nuevo') as HTMLButtonElement | null;
+  if (btnFeriadoNuevo) {
+    btnFeriadoNuevo.hidden = !esAdmin;
+    btnFeriadoNuevo.addEventListener('click', renderFeriadoForm);
   }
 
   recargar();

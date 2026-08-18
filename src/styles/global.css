@@ -377,6 +377,10 @@ footer {
 .cal-cell-feriado { background: var(--error-bg); }
 .cal-cell-feriado:hover { background: var(--error-bg); }
 .cal-feriado { color: var(--error); font-size: var(--text-sm); font-weight: 700; line-height: 1; }
+.feriados-propios { margin-top: 0.75rem; border-top: 1px solid var(--rule-soft); padding-top: 0.75rem; }
+.feriados-propios-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+.feriados-propios-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: var(--text-sm); color: var(--ink-soft); }
+.feriados-propios-list .btn-mini { padding: 0.1rem 0.4rem; line-height: 1; }
 .cal-count { position: absolute; top: 0.5rem; right: 0.5rem; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--orange-soft); color: var(--orange-deep); font-size: var(--text-xs); font-weight: 400; }
 .cal-dots { display: flex; gap: 3px; align-items: center; margin-top: 0.35rem; flex-wrap: wrap; }
 .cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
