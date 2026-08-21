@@ -2,7 +2,7 @@
 // Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
 import { api, getUser, getIdToken } from './api';
-import { esc, esAdmin, renderNav } from './ui';
+import { esc, esAdmin as esAdminRol, renderNav } from './ui';
 
 interface Edicion {
   numero: string;
@@ -12,6 +12,9 @@ interface Edicion {
 }
 
 const user = getUser();
+
+// Booleano de rol (la función de ui.ts es siempre truthy en un if).
+const esAdmin = esAdminRol(user);
 
 let ediciones: Edicion[] = [];
 

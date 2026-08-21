@@ -1,7 +1,7 @@
 // revistas.ts — Ediciones publicadas de la revista (todos los roles).
 
 import { api, btnCargando, getIdToken, getUser } from './api';
-import { esc, esAdmin, renderNav } from './ui';
+import { esc, esAdmin as esAdminRol, renderNav } from './ui';
 
 interface Revista {
   num: string;
@@ -11,6 +11,9 @@ interface Revista {
 }
 
 const user = getUser();
+
+// Booleano de rol (la función de ui.ts es siempre truthy en un if).
+const esAdmin = esAdminRol(user);
 
 function showAlert(message: string) {
   const el = document.getElementById('revistas-alert')!;

@@ -3,7 +3,7 @@
 // solo a nivel de función (nunca durante la evaluación de los módulos).
 
 import { api, getUser } from './api';
-import { esc, esGestor, esAdmin, confirmar } from './ui';
+import { esc, esGestor as esGestorRol, esAdmin as esAdminRol, confirmar } from './ui';
 import {
   type Produccion,
   ESTADOS,
@@ -17,6 +17,10 @@ import {
   buscarProduccion,
   quitarProduccion,
 } from './tablero';
+
+// Booleanos de rol para las plantillas (la función de ui.ts es siempre truthy).
+const esGestor = esGestorRol(getUser());
+const esAdmin = esAdminRol(getUser());
 
 // Abre el selector de archivo para "Enviar correcciones al autor" (adjuntar PDF + mensaje).
 async function abrirSelectorEnviarCorrecciones(id: string) {

@@ -1,7 +1,7 @@
 // tablero.ts — vista del tablero editorial (Fase 3).
 
 import { api, getUser, getIdToken } from './api';
-import { esc, esGestor, esAdmin, renderNav, confirmar } from './ui';
+import { esc, esGestor as esGestorRol, esAdmin as esAdminRol, renderNav, confirmar } from './ui';
 import { abrirDetalle } from './tablero-detalle';
 
 export interface Produccion {
@@ -67,6 +67,9 @@ function clearCachedBoard() {
 
 // ── sesión ──
 const user = getUser();
+// Booleanos de rol (¡no usar las funciones de ui.ts directamente en ifs!).
+const esGestor = esGestorRol(user);
+const esAdmin = esAdminRol(user);
 
 // Accesos para tablero-detalle.ts (los bindings importados son de solo lectura).
 export function getEdiciones(): { numero: string; estado: string }[] { return ediciones; }

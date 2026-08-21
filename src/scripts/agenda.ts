@@ -1,7 +1,7 @@
 // agenda.ts — vista de la Agenda: calendario mensual, citas, hilo de comentarios.
 
 import { api, btnCargando, getUser, getIdToken } from './api';
-import { esc, esAdmin, renderNav, confirmar } from './ui';
+import { esc, esAdmin as esAdminRol, renderNav, confirmar } from './ui';
 
 interface Cita {
   id: string;
@@ -33,6 +33,8 @@ const FERIADO_COLOR = '#c0392b';
 interface Feriado { fecha: string; nombre: string; tipo: string; origen?: string; }
 
 const user = getUser();
+// Booleano de rol (la función de ui.ts es siempre truthy en un if).
+const esAdmin = esAdminRol(user);
 
 let citas: Cita[] = [];
 let feriados = new Map<string, Feriado>();
