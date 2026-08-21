@@ -1,8 +1,10 @@
 // tablero.ts — vista del tablero editorial (Fase 3).
 
-import { api, getUser, clearSession, getIdToken } from './api';
+import { api, getUser, getIdToken } from './api';
+import { esc, esGestor, esAdmin, renderNav, confirmar } from './ui';
+import { abrirDetalle } from './tablero-detalle';
 
-interface Produccion {
+export interface Produccion {
   id: string;
   titulo: string;
   autor: string;
@@ -25,7 +27,7 @@ interface Produccion {
   accion_autor_detalle: string;
 }
 
-const ESTADOS: Record<string, { label: string; color: string }> = {
+export const ESTADOS: Record<string, { label: string; color: string }> = {
   'RECIBIDO': { label: 'Recibido', color: 'grey' },
   'PRESELECCIONADO': { label: 'Preseleccionado', color: 'blue' },
   'EN_REVISIÓN': { label: 'En revisión', color: 'orange' },
@@ -65,44 +67,24 @@ function clearCachedBoard() {
 
 // ── sesión ──
 const user = getUser();
-const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
-function renderNav() {
-  const navUser = document.getElementById('nav-user');
-  const navName = document.getElementById('nav-user-name');
-  const navRole = document.getElementById('nav-user-role');
-  const navLogout = document.getElementById('nav-logout');
-  const navUsers = document.getElementById('nav-users');
-  const navConfig = document.getElementById('nav-config');
-  const navAnalytics = document.getElementById('nav-analytics');
-  const navDescargas = document.getElementById('nav-descargas');
-  if (!navUser || !user) return;
-  navUser.hidden = false;
-  navName.textContent = user.nombre || user.email;
-  navRole.textContent = user.rol;
-  if (navUsers) navUsers.hidden = !esGestor;
-  if (navConfig) navConfig.hidden = !esGestor;
-  if (navAnalytics) navAnalytics.hidden = !esGestor;
-  if (navDescargas) navDescargas.hidden = !esGestor;
-  navLogout?.addEventListener('click', () => {
-    clearSession();
-    window.location.href = '/';
-  });
+// Accesos para tablero-detalle.ts (los bindings importados son de solo lectura).
+export function getEdiciones(): { numero: string; estado: string }[] { return ediciones; }
+export function buscarProduccion(id: string): Produccion | undefined {
+  return producciones.find((p) => p.id === id);
+}
+export function quitarProduccion(id: string) {
+  producciones = producciones.filter((p) => p.id !== id);
 }
 
 // ── utilidades ──
-function badge(estado: string): string {
+export function badge(estado: string): string {
   const info = ESTADOS[estado] || { label: estado, color: 'grey' };
   // El estado puede venir de la hoja (editable a mano): se escapa siempre.
   return `<span class="badge badge-${esc(info.color)}">${esc(info.label)}</span>`;
 }
 
-function esc(s: unknown): string {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
-}
-
-function fmtRelativa(iso: string): string {
+export function fmtRelativa(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
@@ -117,12 +99,12 @@ function fmtRelativa(iso: string): string {
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 }
 
-function convocatoriaLabel(c: string): string {
+export function convocatoriaLabel(c: string): string {
   return c === 'docentes' ? 'Docentes' : 'General';
 }
 
 // Última decisión del autor registrada en el tablero (accion_autor).
-function accionAutorInfo(c: Produccion): { label: string; color: string } | null {
+export function accionAutorInfo(c: Produccion): { label: string; color: string } | null {
   const map: Record<string, { label: string; color: string }> = {
     'APROBADO': { label: 'Autor aprobó', color: 'green' },
     'NO_APROBADO': { label: 'Autor no aprobó', color: 'red' },
@@ -132,7 +114,7 @@ function accionAutorInfo(c: Produccion): { label: string; color: string } | null
   return info || null;
 }
 
-function accionAutorBadge(c: Produccion): string {
+export function accionAutorBadge(c: Produccion): string {
   const info = accionAutorInfo(c);
   if (!info) return '';
   const fecha = c.accion_autor_fecha ? ' · ' + fmtRelativa(c.accion_autor_fecha) : '';
@@ -323,7 +305,7 @@ async function cargar() {
 // Aplica una mutación con feedback optimista: invalida la caché local,
 // aplica el cambio visual al instante y re-sincroniza con el servidor
 // (si falla, la recarga revierte el optimismo).
-async function mutar(id: string, action: string, body: Record<string, unknown> = {}, patch?: Partial<Produccion> | ((c: Produccion) => void)) {
+export async function mutar(id: string, action: string, body: Record<string, unknown> = {}, patch?: Partial<Produccion> | ((c: Produccion) => void)) {
   clearCachedBoard();
   const c = producciones.find((p) => p.id === id);
   if (patch) {
@@ -352,307 +334,11 @@ async function reasignar(id: string, editorEmail: string) {
 }
 
 async function desasignar(id: string) {
-  if (!confirm('¿Desasignar esta producción?')) return;
+  if (!(await confirmar('¿Desasignar esta producción?'))) return;
   const c = producciones.find((p) => p.id === id);
   const estado = c && (c.estado === 'CONSULTA_AUTOR' || c.estado === 'RECHAZADO_POR_AUTOR') ? undefined : 'PRESELECCIONADO';
   const r = await mutar(id, 'panel/board/desasignar', {}, { editor_asignado: '', ...(estado ? { estado } : {}) });
   if (r.status !== 'ok') alert(r.message || 'No se pudo desasignar.');
-}
-
-// Abre el selector de archivo para "Enviar correcciones al autor" (adjuntar PDF + mensaje).
-async function abrirSelectorEnviarCorrecciones(id: string) {
-  const group = document.getElementById('enviarCorreccionesGroup');
-  const select = document.getElementById('enviar-archivo') as HTMLSelectElement | null;
-  if (!group || !select) return;
-  const r = await api('panel/board/archivos', { id });
-  if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
-  const archivos = r.archivos || [];
-  if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
-  select.innerHTML = archivos
-    .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
-    .join('');
-  group.hidden = false;
-}
-
-// Abre el selector de archivo para "Consultar al autor" (adjuntar PDF).
-async function abrirSelectorConsulta(id: string) {
-  const group = document.getElementById('consultaGroup');
-  const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
-  if (!group || !select) return;
-  const r = await api('panel/board/archivos', { id });
-  if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
-  const archivos = r.archivos || [];
-  if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
-  select.innerHTML = archivos
-    .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
-    .join('');
-  group.hidden = false;
-}
-
-// ── detalle ──
-let detalleReq = 0;
-
-async function abrirDetalle(id: string) {
-  const modal = document.getElementById('detailModal') as HTMLDialogElement;
-  const content = document.getElementById('detailContent')!;
-  const req = ++detalleReq;
-
-  // Abre al instante con los datos que ya están en el tablero (caché local)
-  // y refresca el detalle completo (historial incluido) en segundo plano.
-  const local = producciones.find((p) => p.id === id);
-  if (local) renderDetalle(content, modal, local, [], id);
-
-  const data = await api('panel/board/detail', { id });
-  if (req !== detalleReq) return; // ya se abrió otro detalle mientras tanto
-  if (data.status !== 'ok') {
-    if (!local) alert(data.message || 'No se pudo cargar el detalle.');
-    return;
-  }
-  renderDetalle(content, modal, data.produccion, data.historial || [], id);
-}
-
-function renderDetalle(content: HTMLElement, modal: HTMLDialogElement, c: Produccion, hist: { timestamp: string; actor: string; accion: string; detalle: string }[], id: string) {
-  const soyTitular = c.editor_asignado === user?.email;
-
-  const acciones: string[] = [];
-  if (soyTitular && c.estado === 'EN_REVISIÓN') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="pedir">Pedir correcciones</button>`);
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="terminar">Revisión terminada</button>`);
-  }
-  if (esGestor && c.estado === 'CORRECCIONES_SOLICITADAS' && !c.enviado_autor) {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="enviar-correcciones">Enviar correcciones al autor</button>`);
-  }
-  if (esGestor && c.estado === 'ESPERANDO_APROBACIÓN') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="consultar">Consultar al autor</button>`);
-    acciones.push(`<button type="button" class="btn-enviar btn-enviar-solid" data-detalle-accion="aprobar">Aprobar</button>`);
-  }
-  if (esGestor && c.estado === 'RECHAZADO_POR_AUTOR') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="devolver">Devolver al editor</button>`);
-    acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="descartar">Descartar</button>`);
-  }
-  if (c.url_doc_correccion) {
-    acciones.push(`<a class="btn-enviar" href="${esc(c.url_doc_correccion)}" target="_blank" rel="noopener noreferrer">Abrir Doc</a>`);
-  }
-  if (c.url_carpeta_drive) {
-    acciones.push(`<a class="btn-ghost" href="${esc(c.url_carpeta_drive)}" target="_blank" rel="noopener noreferrer">Carpeta Drive</a>`);
-  }
-  if (esAdmin && c.estado !== 'PUBLICADO') {
-    acciones.push(`<button type="button" class="btn-enviar" data-detalle-accion="marcar-publicable">Marcar publicable</button>`);
-    acciones.push(`<button type="button" class="btn-ghost" data-detalle-accion="borrar">Borrar envío</button>`);
-  }
-  if (c.url_publicable) {
-    acciones.push(`<a class="btn-ghost" href="${esc(c.url_publicable)}" target="_blank" rel="noopener noreferrer">Publicable</a>`);
-  }
-
-  const timeline = hist.map((h) => `
-    <li><span class="tl-fecha">${fmtRelativa(h.timestamp)}</span>
-        <span class="tl-accion">${esc(h.accion || 'Actualización')}</span>
-        ${h.detalle ? `<span class="tl-detalle">${esc(h.detalle)}</span>` : ''}</li>`,
-  ).join('');
-
-  const edicionesOpts = ['<option value="">Sin edición</option>']
-    .concat(ediciones.map((e) => `<option value="${esc(e.numero)}"${String(c.edicion ?? '').trim() === String(e.numero) ? ' selected' : ''}>Edición ${esc(e.numero)}</option>`))
-    .join('');
-
-  const histAbierto = (content.querySelector('.detail-historial') as HTMLDetailsElement | null)?.open ?? false;
-
-  content.innerHTML = `
-    <h2 class="detail-titulo">${esc(c.titulo)}</h2>
-    <div class="detail-badge">${badge(c.estado)}${c.estado !== 'PUBLICADO' && c.url_publicable ? ` <span class="badge badge-green">Publicable</span>` : ''}</div>
-    <dl class="detail-meta">
-      <div><dt>Autor</dt><dd>${esc(c.autor)} <span class="td-cat">(${esc(c.email_autor)})</span></dd></div>
-      <div><dt>Categoría</dt><dd>${esc(c.categoria || 'Sin clasificar')}</dd></div>
-      <div><dt>Convocatoria</dt><dd>${convocatoriaLabel(c.convocatoria)}</dd></div>
-      <div><dt>Versión</dt><dd>${esc(c.version_actual || '1')}</dd></div>
-      <div><dt>Titular</dt><dd>${c.titular ? esc(c.titular) : '<em>libre</em>'}</dd></div>
-      ${accionAutorInfo(c) ? `<div><dt>Última decisión del autor</dt><dd>${accionAutorBadge(c)}${c.accion_autor_detalle ? ' <span class="td-cat">' + esc(c.accion_autor_detalle) + '</span>' : ''}</dd></div>` : ''}
-    </dl>
-    ${esGestor ? `
-      <div class="form-group" style="margin-bottom:1rem;">
-        <label for="cambiar-edicion">Edición de esta publicación</label>
-        <select id="cambiar-edicion" class="filter-select" aria-label="Cambiar la edición de esta publicación">${edicionesOpts}</select>
-      </div>` : ''}
-    ${esAdmin ? `
-      <div class="form-group" style="margin-bottom:1rem;">
-        <label for="cambiar-estado">Cambiar estado (administración)</label>
-        <select id="cambiar-estado" class="filter-select" aria-label="Cambiar el estado de esta publicación">
-          ${Object.keys(ESTADOS).filter((k) => k !== 'PUBLICADO').map((k) => `<option value="${k}"${c.estado === k ? ' selected' : ''}>${esc(ESTADOS[k].label)}</option>`).join('')}
-        </select>
-        <button type="button" class="btn-mini" id="btn-cambiar-estado" style="margin-top:0.5rem;">Aplicar estado</button>
-      </div>` : ''}
-    <details class="detail-historial" style="margin-bottom:0.75rem;">
-      <summary class="detail-sub" style="cursor:pointer;user-select:none;">Historial${hist.length ? ` · ${hist.length} registro${hist.length === 1 ? '' : 's'}` : ''}</summary>
-      <ol class="timeline">${timeline || '<li>Sin actividad.</li>'}</ol>
-    </details>
-    <div class="detail-acciones">${acciones.join(' ')}</div>
-    ${esGestor ? `
-      <div class="form-group" id="enviarCorreccionesGroup" hidden>
-        <label for="enviar-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
-        <select id="enviar-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
-        <label for="enviar-mensaje" style="margin-top:0.75rem;">Mensaje adicional (opcional)</label>
-        <textarea id="enviar-mensaje" rows="3" placeholder="Qué cambiar…"></textarea>
-        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-          <button type="button" class="btn-mini" id="btn-confirmar-enviar">Enviar al autor</button>
-          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-enviar">Cancelar</button>
-        </div>
-      </div>` : ''}
-    ${esAdmin ? `
-      <div class="form-group" id="publicableGroup" hidden>
-        <label for="publicable-archivo">Elegí el archivo para copiar a PUBLICABLES</label>
-        <select id="publicable-archivo" class="filter-select" aria-label="Archivo para publicable"></select>
-        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-          <button type="button" class="btn-mini" id="btn-confirmar-publicable">Confirmar</button>
-          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-publicable">Cancelar</button>
-        </div>
-      </div>` : ''}
-    ${esGestor ? `
-      <div class="form-group" id="consultaGroup" hidden>
-        <label for="consulta-archivo">Elegí el archivo a adjuntar al autor (se envía como PDF)</label>
-        <select id="consulta-archivo" class="filter-select" aria-label="Archivo a adjuntar al autor"></select>
-        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-          <button type="button" class="btn-mini" id="btn-confirmar-consulta">Enviar al autor</button>
-          <button type="button" class="btn-mini btn-ghost" id="btn-cancelar-consulta">Cancelar</button>
-        </div>
-      </div>` : ''}
-  `;
-
-  modal.showModal();
-
-  const det = content.querySelector('.detail-historial') as HTMLDetailsElement | null;
-  if (det && histAbierto) det.open = true;
-
-  const edicionSelect = content.querySelector('#cambiar-edicion') as HTMLSelectElement | null;
-  edicionSelect?.addEventListener('change', async () => {
-    const r = await mutar(id, 'panel/board/cambiar-edicion', { edicion: edicionSelect.value }, { edicion: edicionSelect.value });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo cambiar la edición.');
-  });
-
-  content.querySelector('[data-detalle-accion="pedir"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Marcar que el autor debe hacer correcciones? El coordinador le enviará luego el mail.')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/pedir-correcciones', {}, { estado: 'CORRECCIONES_SOLICITADAS' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo marcar.');
-  });
-
-  content.querySelector('[data-detalle-accion="enviar-correcciones"]')?.addEventListener('click', () => abrirSelectorEnviarCorrecciones(id));
-
-  content.querySelector('#btn-confirmar-enviar')?.addEventListener('click', async () => {
-    const select = document.getElementById('enviar-archivo') as HTMLSelectElement | null;
-    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
-    const mensaje = (document.getElementById('enviar-mensaje') as HTMLTextAreaElement).value.trim();
-    if (!confirm('¿Enviar las correcciones al autor (con el archivo como PDF)?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/enviar-correcciones', { fileId: select.value, mensaje }, { enviado_autor: true, estado: 'CORRECCIONES_SOLICITADAS' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo enviar.');
-  });
-
-  content.querySelector('#btn-cancelar-enviar')?.addEventListener('click', () => {
-    const group = document.getElementById('enviarCorreccionesGroup');
-    if (group) group.hidden = true;
-  });
-
-  content.querySelector('[data-detalle-accion="terminar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Marcar la revisión como terminada?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/revision-terminada', {}, { estado: 'ESPERANDO_APROBACIÓN' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo.');
-  });
-
-  content.querySelector('[data-detalle-accion="consultar"]')?.addEventListener('click', () => abrirSelectorConsulta(id));
-
-  content.querySelector('#btn-confirmar-consulta')?.addEventListener('click', async () => {
-    const select = document.getElementById('consulta-archivo') as HTMLSelectElement | null;
-    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
-    if (!confirm('¿Enviar este archivo (como PDF) al autor para aprobación?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/consultar-autor', { fileId: select.value }, { estado: 'CONSULTA_AUTOR' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo consultar al autor.');
-  });
-
-  content.querySelector('#btn-cancelar-consulta')?.addEventListener('click', () => {
-    const group = document.getElementById('consultaGroup');
-    if (group) group.hidden = true;
-  });
-
-  content.querySelector('[data-detalle-accion="aprobar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Aprobar esta producción?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/aprobar', {}, { estado: 'APROBADO' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo aprobar.');
-  });
-
-  const estadoSelect = content.querySelector('#cambiar-estado') as HTMLSelectElement | null;
-  content.querySelector('#btn-cambiar-estado')?.addEventListener('click', async () => {
-    const estado = estadoSelect?.value;
-    if (!estado) return;
-    if (estado === 'CONSULTA_AUTOR') {
-      // Consultar al autor requiere elegir el archivo a adjuntar como PDF.
-      await abrirSelectorConsulta(id);
-      return;
-    }
-    if (!confirm('¿Cambiar el estado de esta publicación a "' + estado + '"?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/cambiar-estado', { estado }, { estado });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo cambiar el estado.');
-  });
-
-  content.querySelector('[data-detalle-accion="devolver"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Devolver esta producción al editor para retrabajarla?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'devolver' }, { estado: 'EN_REVISIÓN' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo devolver al editor.');
-  });
-
-  content.querySelector('[data-detalle-accion="descartar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Descartar definitivamente esta producción?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/resolver-rechazo', { resolucion: 'descartar' }, { estado: 'DESCARTADO' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo descartar.');
-  });
-
-  content.querySelector('[data-detalle-accion="marcar-publicable"]')?.addEventListener('click', async () => {
-    if (c.url_publicable) {
-      if (!confirm('¿Marcar esta producción como publicable?')) return;
-      modal.close();
-      const r = await mutar(id, 'panel/board/marcar-publicable', {}, { estado: 'PUBLICADO' });
-      if (r.status !== 'ok') alert(r.message || 'No se pudo marcar publicable.');
-      return;
-    }
-    const group = document.getElementById('publicableGroup');
-    const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
-    if (!group || !select) return;
-    const r = await api('panel/board/archivos', { id });
-    if (r.status !== 'ok') { alert(r.message || 'No se pudieron listar los archivos.'); return; }
-    const archivos = r.archivos || [];
-    if (!archivos.length) { alert('No hay archivos en la carpeta de esta producción.'); return; }
-    select.innerHTML = archivos
-      .map((a: { fileId: string; nombre: string; carpeta: string }) => `<option value="${esc(a.fileId)}">${esc(a.nombre)} — ${esc(a.carpeta)}</option>`)
-      .join('');
-    group.hidden = false;
-  });
-
-  content.querySelector('#btn-confirmar-publicable')?.addEventListener('click', async () => {
-    const select = document.getElementById('publicable-archivo') as HTMLSelectElement | null;
-    if (!select || !select.value) { alert('Elegí un archivo.'); return; }
-    if (!confirm('¿Copiar este archivo a PUBLICABLES y marcar la producción como publicable?')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/marcar-publicable', { fileId: select.value }, { estado: 'PUBLICADO' });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo marcar publicable.');
-  });
-
-  content.querySelector('#btn-cancelar-publicable')?.addEventListener('click', () => {
-    const group = document.getElementById('publicableGroup');
-    if (group) group.hidden = true;
-  });
-
-  content.querySelector('[data-detalle-accion="borrar"]')?.addEventListener('click', async () => {
-    if (!confirm('¿Borrar este envío por completo? Se eliminará la carpeta de Drive, la copia en PUBLICABLES, la fila y su historial. Esta acción no se puede deshacer.')) return;
-    modal.close();
-    const r = await mutar(id, 'panel/board/borrar', {}, (c) => {
-      producciones = producciones.filter((p) => p.id !== c.id);
-    });
-    if (r.status !== 'ok') alert(r.message || 'No se pudo borrar el envío.');
-  });
 }
 
 // ── init ──
@@ -704,7 +390,7 @@ function init() {
     renderTable();
   });
 
-  renderNav();
+  renderNav(user);
   cargar();
 }
 

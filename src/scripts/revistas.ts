@@ -1,6 +1,7 @@
 // revistas.ts — Ediciones publicadas de la revista (todos los roles).
 
-import { api, btnCargando, clearSession, getIdToken, getUser } from './api';
+import { api, btnCargando, getIdToken, getUser } from './api';
+import { esc, esAdmin, renderNav } from './ui';
 
 interface Revista {
   num: string;
@@ -10,30 +11,11 @@ interface Revista {
 }
 
 const user = getUser();
-const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
-
-function renderNav() {
-  const nav = document.getElementById('nav-user');
-  if (!nav || !user) return;
-  nav.hidden = false;
-  document.getElementById('nav-user-name')!.textContent = user.nombre || user.email;
-  document.getElementById('nav-user-role')!.textContent = user.rol;
-  (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-descargas') as HTMLElement).hidden = !esGestor;
-  document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
-}
 
 function showAlert(message: string) {
   const el = document.getElementById('revistas-alert')!;
   el.hidden = false;
   el.textContent = message;
-}
-
-function esc(value: unknown): string {
-  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
 function render(revistas: Revista[]) {
@@ -214,7 +196,7 @@ function initSubida() {
 
 function init() {
   if (!user || !getIdToken()) { window.location.replace('/'); return; }
-  renderNav();
+  renderNav(user);
   document.getElementById('btn-cerrar-revista')?.addEventListener('click', () => {
     (document.getElementById('revistaModal') as HTMLDialogElement).close();
   });

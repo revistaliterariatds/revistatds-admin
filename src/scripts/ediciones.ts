@@ -1,7 +1,8 @@
 // ediciones.ts — vista de Ediciones: cerrar/abrir el ciclo de recepción (COORDINADOR/WEBMASTER).
 // Las fechas de apertura y cierre se eligen siempre; el backend valida que no se superpongan.
 
-import { api, clearSession, getUser, getIdToken } from './api';
+import { api, getUser, getIdToken } from './api';
+import { esc, esAdmin, renderNav } from './ui';
 
 interface Edicion {
   numero: string;
@@ -11,7 +12,6 @@ interface Edicion {
 }
 
 const user = getUser();
-const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let ediciones: Edicion[] = [];
 
@@ -30,20 +30,6 @@ function clearCachedEdiciones() {
   try { localStorage.removeItem(EDICIONES_CACHE_KEY); } catch { /* sin caché local */ }
 }
 
-function renderNav() {
-  const navUser = document.getElementById('nav-user');
-  if (!navUser || !user) return;
-  const esGestor = user.rol === 'COORDINADOR' || user.rol === 'WEBMASTER' || user.rol === 'SUPERVISOR';
-  navUser.hidden = false;
-  document.getElementById('nav-user-name')!.textContent = user.nombre || user.email;
-  document.getElementById('nav-user-role')!.textContent = user.rol;
-  (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-descargas') as HTMLElement).hidden = !esGestor;
-  document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
-}
-
 function showAlert(message: string, error = false) {
   const el = document.getElementById('ediciones-alert')!;
   el.hidden = false;
@@ -53,10 +39,6 @@ function showAlert(message: string, error = false) {
 
 function hideAlert() {
   document.getElementById('ediciones-alert')!.hidden = true;
-}
-
-function esc(s: unknown): string {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
 function fmtFecha(key: string): string {
@@ -144,7 +126,7 @@ function abrirDialogoCerrar(numero: string) {
     modal.close();
     const r = await mutarEdicion('panel/ediciones/cerrar', { numero, fecha_cierre: fecha }, () => {
       const e = ediciones.find((x) => x.numero === numero);
-      if (e) { e.fecha_cierre = fecha; e.estado = 'CERRADA'; }
+      if (e) { e.fecha_cierre = fecha; e.estado = 'cerrada'; }
       renderLista();
     });
     if (r.status === 'ok') showAlert(r.message || 'Edición cerrada.');
@@ -180,7 +162,7 @@ function abrirDialogoEditarCierre(numero: string) {
     modal.close();
     const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: fecha }, () => {
       const x = ediciones.find((y) => y.numero === numero);
-      if (x) { x.fecha_cierre = fecha; x.estado = 'CERRADA'; }
+      if (x) { x.fecha_cierre = fecha; x.estado = 'cerrada'; }
       renderLista();
     });
     if (r.status === 'ok') showAlert(r.message || 'Cierre actualizado.');
@@ -191,7 +173,7 @@ function abrirDialogoEditarCierre(numero: string) {
     modal.close();
     const r = await mutarEdicion('panel/ediciones/editar-cierre', { numero, fecha_cierre: '' }, () => {
       const x = ediciones.find((y) => y.numero === numero);
-      if (x) { x.fecha_cierre = ''; x.estado = 'ABIERTA'; }
+      if (x) { x.fecha_cierre = ''; x.estado = 'abierta'; }
       renderLista();
     });
     if (r.status === 'ok') showAlert(r.message || 'Edición reabierta.');
@@ -258,7 +240,7 @@ async function cargar() {
 
 function init() {
   if (!user || !getIdToken() || !esAdmin) { window.location.replace('/tablero/'); return; }
-  renderNav();
+  renderNav(user);
   document.getElementById('btn-cerrar-edicion-modal')?.addEventListener('click', () => {
     (document.getElementById('edicionModal') as HTMLDialogElement).close();
   });

@@ -1,33 +1,10 @@
-import { api, btnCargando, clearSession, getIdToken, getUser } from './api';
+import { api, btnCargando, getIdToken, getUser } from './api';
+import { esc, esGestor, renderNav } from './ui';
 
 interface UsuarioPanel { email: string; rol: string; nombre: string; alias: string; usar_alias_notif: boolean; activo: boolean; }
 const user = getUser();
-const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
 let puedeEditar = false;
 let usuarios: UsuarioPanel[] = [];
-
-function esc(value: unknown): string {
-  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
-}
-
-function renderNav() {
-  const nav = document.getElementById('nav-user');
-  const name = document.getElementById('nav-user-name');
-  const role = document.getElementById('nav-user-role');
-  const usersLink = document.getElementById('nav-users');
-  const configLink = document.getElementById('nav-config');
-  const analyticsLink = document.getElementById('nav-analytics');
-  const descargasLink = document.getElementById('nav-descargas');
-  if (!user || !nav || !name || !role) return;
-  nav.hidden = false;
-  name.textContent = user.nombre || user.email;
-  role.textContent = user.rol;
-  if (usersLink) usersLink.hidden = !esGestor;
-  if (configLink) configLink.hidden = !esGestor;
-  if (analyticsLink) analyticsLink.hidden = !esGestor;
-  if (descargasLink) descargasLink.hidden = !esGestor;
-  document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
-}
 
 function alertUser(message: string, error = false) {
   const el = document.getElementById('users-alert');
@@ -119,8 +96,8 @@ async function guardar(event: SubmitEvent) {
 }
 
 function init() {
-  if (!user || !getIdToken() || !esGestor) { window.location.replace('/tablero/'); return; }
-  renderNav();
+  if (!user || !getIdToken() || !esGestor(user)) { window.location.replace('/tablero/'); return; }
+  renderNav(user);
   document.getElementById('btn-nuevo-usuario')?.addEventListener('click', () => editar(null));
   document.getElementById('btn-cancelar-usuario')?.addEventListener('click', () => { (document.getElementById('user-form') as HTMLFormElement).hidden = true; });
   document.getElementById('user-form')?.addEventListener('submit', guardar);

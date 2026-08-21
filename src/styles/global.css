@@ -354,6 +354,12 @@ footer {
 .editor-select { padding: 0.3rem 0.5rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--paper-white); color: var(--ink); font-family: 'Lato', sans-serif; font-size: var(--text-xs); max-width: 150px; }
 .editor-select:focus { outline: none; box-shadow: var(--focus-ring); border-color: var(--orange); }
 
+/* ── Confirmación (ui.ts) ── */
+.confirm-modal { border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-md); max-width: 440px; width: 88%; background: var(--paper); margin: auto; box-shadow: var(--shadow-lg); }
+.confirm-modal::backdrop { background: rgba(30, 26, 23, 0.45); }
+.confirm-msg { font-size: var(--text-base); line-height: var(--leading-snug); margin-bottom: 1.25rem; }
+.confirm-actions { margin-top: 0; }
+
 /* ── AGENDA ── */
 .agenda-page { max-width: var(--content-max); margin: 0 auto; padding: var(--space-lg) var(--content-pad) var(--space-xl); }
 .agenda-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.25rem; align-items: start; }
@@ -365,7 +371,7 @@ footer {
 .cal-titulo { font-family: 'Playfair Display', serif; font-size: var(--text-xl); font-weight: 400; text-transform: capitalize; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .cal-head { border-bottom: 1px solid var(--rule-soft); background: var(--orange-soft); }
-.cal-head span { padding: 0.6rem 0.25rem; text-align: center; font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
+.cal-head span { padding: 0.6rem 0.25rem; text-align: center; font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 400; background: rgba(240, 129, 58, 0.14); border-bottom: 2px solid var(--orange-soft); }
 .cal-cell { position: relative; min-height: 88px; padding: 0.5rem; border: none; border-right: 1px solid var(--rule-soft); border-bottom: 1px solid var(--rule-soft); background: transparent; color: var(--ink); font-family: 'Lato', sans-serif; text-align: left; cursor: pointer; transition: background var(--duration-fast) var(--ease); }
 .cal-cell:nth-child(7n) { border-right: none; }
 .cal-cell:hover { background: var(--paper-warm); }
@@ -376,7 +382,7 @@ footer {
 .cal-cell-today .cal-day { background: var(--orange); color: #fff; border-radius: 50%; }
 .cal-cell-feriado { background: var(--error-bg); }
 .cal-cell-feriado:hover { background: var(--error-bg); }
-.cal-feriado { color: var(--error); font-size: var(--text-sm); font-weight: 700; line-height: 1; }
+.cal-feriado { color: var(--error); font-size: var(--text-sm); font-weight: 400; line-height: 1; }
 .feriados-propios { margin-top: 0.75rem; border-top: 1px solid var(--rule-soft); padding-top: 0.75rem; }
 .feriados-propios-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
 .feriados-propios-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: var(--text-sm); color: var(--ink-soft); }

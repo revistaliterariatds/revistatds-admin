@@ -1,6 +1,7 @@
 // agenda.ts — vista de la Agenda: calendario mensual, citas, hilo de comentarios.
 
-import { api, btnCargando, clearSession, getUser, getIdToken } from './api';
+import { api, btnCargando, getUser, getIdToken } from './api';
+import { esc, esAdmin, renderNav, confirmar } from './ui';
 
 interface Cita {
   id: string;
@@ -32,8 +33,6 @@ const FERIADO_COLOR = '#c0392b';
 interface Feriado { fecha: string; nombre: string; tipo: string; origen?: string; }
 
 const user = getUser();
-const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-const esAdmin = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER';
 
 let citas: Cita[] = [];
 let feriados = new Map<string, Feriado>();
@@ -57,19 +56,6 @@ function clearCachedCitas() {
 }
 
 // ── sesión ──
-function renderNav() {
-  const navUser = document.getElementById('nav-user');
-  if (!navUser || !user) return;
-  navUser.hidden = false;
-  document.getElementById('nav-user-name')!.textContent = user.nombre || user.email;
-  document.getElementById('nav-user-role')!.textContent = user.rol;
-  (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-descargas') as HTMLElement).hidden = !esGestor;
-  document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
-}
-
 function showAlert(message: string, error = false) {
   const el = document.getElementById('agenda-alert')!;
   el.hidden = false;
@@ -103,10 +89,6 @@ function fmtHora(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-function esc(s: unknown): string {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
 function citasDelDia(key: string): Cita[] {
@@ -215,7 +197,7 @@ function renderFeriadosPropios() {
   box.querySelectorAll('[data-feriado-quitar]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const fecha = (btn as HTMLElement).dataset.feriadoQuitar || '';
-      if (!confirm(`¿Quitar el feriado del ${fecha}?`)) return;
+      if (!(await confirmar(`¿Quitar el feriado del ${fecha}?`))) return;
       btnCargando(btn as HTMLButtonElement, true, '…');
       const r = await api('panel/feriados/quitar', { fecha });
       btnCargando(btn as HTMLButtonElement, false);
@@ -438,7 +420,7 @@ async function abrirDetalle(id: string) {
   content.querySelector('#cita-editar')?.addEventListener('click', () => abrirEditar(c));
 
   content.querySelector('#cita-borrar')?.addEventListener('click', async () => {
-    if (!confirm(`¿Borrar la cita "${c.titulo}" y sus comentarios?`)) return;
+    if (!(await confirmar(`¿Borrar la cita "${c.titulo}" y sus comentarios?`))) return;
     const btn = content.querySelector('#cita-borrar') as HTMLButtonElement | null;
     btnCargando(btn, true);
     const r = await api('panel/agenda/borrar', { id: c.id });
@@ -487,7 +469,7 @@ async function recargar() {
 
 function init() {
   if (!user || !getIdToken()) { window.location.href = '/'; return; }
-  renderNav();
+  renderNav(user);
   renderLeyenda();
 
   document.getElementById('btn-cerrar-cita')?.addEventListener('click', () => {

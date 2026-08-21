@@ -2,6 +2,7 @@
 // Al autenticar, guarda la sesión y redirige al tablero.
 
 import { setSession } from './api';
+import { esc } from './ui';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -55,16 +56,10 @@ function setStatus(kind: 'ok' | 'error', html: string) {
   card.innerHTML = html;
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[char] as string));
-}
-
 async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   const email = payload.email ?? 'email desconocido';
   const name = payload.name ?? '';
-  const safeEmail = escapeHtml(email);
+  const safeEmail = esc(email);
 
   const navUser = document.getElementById('nav-user');
   const navName = document.getElementById('nav-user-name');
@@ -86,9 +81,9 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
   // nombre del perfil de Google; si tampoco hay, no duplica el email.
   const whoName = who.ok ? (who.nombre || '') : '';
   const displayName = (whoName && whoName !== email) ? whoName : name;
-  const safeDisplayName = escapeHtml(displayName);
-  const safeRole = rol ? escapeHtml(rol) : '';
-  const safeMessage = escapeHtml(who.message || 'desconocido');
+  const safeDisplayName = esc(displayName);
+  const safeRole = rol ? esc(rol) : '';
+  const safeMessage = esc(who.message || 'desconocido');
   const roleHtml = rol
     ? `<span class="role">${safeRole}</span>`
     : `<span class="role">error: ${safeMessage}</span>`;

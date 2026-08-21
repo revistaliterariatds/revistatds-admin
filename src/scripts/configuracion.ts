@@ -1,20 +1,7 @@
-import { api, clearSession, getIdToken, getUser } from './api';
+import { api, getIdToken, getUser } from './api';
+import { esGestor, renderNav } from './ui';
 
 const user = getUser();
-const esGestor = user?.rol === 'COORDINADOR' || user?.rol === 'WEBMASTER' || user?.rol === 'SUPERVISOR';
-
-function renderNav() {
-  const nav = document.getElementById('nav-user');
-  if (!nav || !user) return;
-  nav.hidden = false;
-  document.getElementById('nav-user-name')!.textContent = user.nombre || user.email;
-  document.getElementById('nav-user-role')!.textContent = user.rol;
-  (document.getElementById('nav-users') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-config') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-analytics') as HTMLElement).hidden = !esGestor;
-  (document.getElementById('nav-descargas') as HTMLElement).hidden = !esGestor;
-  document.getElementById('nav-logout')?.addEventListener('click', () => { clearSession(); window.location.replace('/'); });
-}
 
 function showAlert(message: string, error = false) {
   const el = document.getElementById('config-alert')!;
@@ -99,8 +86,8 @@ async function submit(event: SubmitEvent) {
 }
 
 function init() {
-  if (!user || !getIdToken() || !esGestor) { window.location.replace('/tablero/'); return; }
-  renderNav();
+  if (!user || !getIdToken() || !esGestor(user)) { window.location.replace('/tablero/'); return; }
+  renderNav(user);
   document.getElementById('config-form')?.addEventListener('submit', submit);
   load();
 }
