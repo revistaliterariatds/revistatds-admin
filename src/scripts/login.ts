@@ -3,6 +3,7 @@
 
 import { setSession, decodeJwtPayload } from './api';
 import { esc } from './ui';
+import { saveCachedBoard } from './tablero-cache';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -78,8 +79,15 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
 
   if (rol) {
     setSession(idToken, { email, rol, nombre: displayName || name || email });
-    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${safeRole}</span>`);
-    setTimeout(() => { window.location.href = '/tablero/'; }, 600);
+    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${safeRole}</span> <p class="email">Cargando tu tablero…</p>`);
+    // Precarga en paralelo con la redirección: si llega a tiempo (backend
+    // tibio), el tablero pinta al instante; si no, corta por LIMITE_MS y el
+    // tablero carga con su estado "Cargando producciones…" como fallback.
+    await Promise.race([
+      precargarTablero(idToken, rol).catch(() => {}),
+      new Promise((r) => setTimeout(r, PRECARGA_LIMITE_MS)),
+    ]);
+    window.location.href = '/tablero/';
     return;
   }
 
@@ -97,10 +105,40 @@ interface WhoamiResult {
   message?: string;
 }
 
+// ── precarga del tablero desde la pantalla de login ──
+// Dispara las mismas llamadas que hará /tablero/ y escribe su caché local:
+// al llegar, los datos ya están pintados y solo queda revalidar. Si el
+// backend está frío y tarda más de LIMITE_MS, se redirige igual (el tablero
+// muestra su estado de carga y trae los datos como siempre).
+const PRECARGA_LIMITE_MS = 800;
+
+async function llamarPanel(action: string, idToken: string): Promise<Record<string, any>> {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, idToken }),
+  });
+  return res.json();
+}
+
+async function precargarTablero(idToken: string, rol: string): Promise<void> {
+  const gestor = ['COORDINADOR', 'WEBMASTER', 'SUPERVISOR'].includes(rol);
+  const [board, eds, ediciones] = await Promise.all([
+    llamarPanel('panel/board/list', idToken),
+    gestor ? llamarPanel('panel/board/editors', idToken) : Promise.resolve({ status: 'ok', editores: [] }),
+    gestor ? llamarPanel('panel/ediciones/list', idToken) : Promise.resolve({ status: 'ok', ediciones: [] }),
+  ]);
+  if (!board || board.status !== 'ok') return; // sin caché → el tablero carga normal
+  saveCachedBoard({
+    producciones: board.producciones || [],
+    editores: eds.editores || [],
+    ediciones: ediciones.ediciones || [],
+  });
+}
+
 // POST a panel/auth/whoami. El `action` va en el body (no en el path):
 // agregar path a la URL de GAS rompe CORS (ver Code.gs).
-async function fetchWhoami(idToken: string): Promise<WhoamiResult> {
-  if (!APPS_SCRIPT_URL) return { ok: false, message: 'falta PUBLIC_APPS_SCRIPT_URL' };
+async function fetchWhoami(idToken: string): Promise<WhoamiResult> {  if (!APPS_SCRIPT_URL) return { ok: false, message: 'falta PUBLIC_APPS_SCRIPT_URL' };
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',

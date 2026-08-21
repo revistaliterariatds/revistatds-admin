@@ -164,17 +164,21 @@ function seedConfig() {
   setConfig('site_base_url', 'https://tramasdelsur.com.ar');
 }
 
-// Mantiene el runtime caliente para evitar el cold start de Apps Script.
+// Mantiene el runtime caliente para evitar el cold start de Apps Script
+// (1–3 s extra en la primera llamada tras un período de inactividad).
+// Cada 1 min con TTL de 300 s: sin huecos entre ejecuciones. Cuesta ~1440
+// ejecuciones/día, muy por debajo de la cuota.
 function keepAlive() {
   CacheService.getScriptCache().put('keepalive', String(Date.now()), 300);
 }
 
-// Ejecutar una vez: trigger cada 5 minutos a keepAlive (idempotente).
+// Ejecutar una vez: trigger cada 1 minuto a keepAlive (idempotente).
+// Volver a correrlo si se cambia la cadencia (borra el trigger anterior).
 function setupKeepAliveTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
     if (trigger.getHandlerFunction() === 'keepAlive') ScriptApp.deleteTrigger(trigger);
   });
-  ScriptApp.newTrigger('keepAlive').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('keepAlive').timeBased().everyMinutes(1).create();
 }
 
 function seedRoles() {

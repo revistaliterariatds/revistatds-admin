@@ -253,6 +253,12 @@ footer {
 
 .board-empty { padding: var(--space-lg); text-align: center; color: var(--ink-muted); border: 1px dashed var(--rule); border-radius: var(--radius-md); }
 
+/* Estado de carga del tablero (arranque sin caché local) */
+.board-loading { display: flex; align-items: center; gap: 0.6rem; padding: var(--space-md) 1rem !important; color: var(--ink-muted); font-size: var(--text-sm); }
+.spinner { width: 14px; height: 14px; flex-shrink: 0; border: 2px solid var(--rule); border-top-color: var(--orange); border-radius: 50%; animation: girar 0.8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 0.01ms !important; } }
+
 /* ── DETALLE (dialog) ── */
 .detail-modal { border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 0; max-width: 640px; width: 92%; background: var(--paper); margin: auto; }
 .detail-modal::backdrop { background: rgba(30, 26, 23, 0.45); }

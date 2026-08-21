@@ -39,3 +39,9 @@ y versionado semántico (SemVer).
   - `clearSession()` barre también los cachés localStorage `tds-*`: antes sobrevivían al logout (el siguiente usuario en la misma máquina veía tablero/usuarios del anterior).
   - Headers de la hoja `Auditoria` unificados en `SHEETS.Auditoria` (única fuente de verdad).
   - Helper compartido `decodeJwtPayload()` en `api.ts`; `login.ts` ya no duplica el parseo base64url del ID token.
+- Performance de login:
+  - **Precarga del tablero desde la pantalla de login** (`precargarTablero()`): tras el whoami se disparan en paralelo las mismas llamadas que hará `/tablero/` y se escribe su caché local → al llegar, los datos pintan al instante y solo queda revalidar. Con backend tibio limita a 800 ms y hace fallback al estado de carga normal.
+  - Eliminado el delay fijo de 600 ms antes de redirigir post-login.
+  - Nuevo módulo `tablero-cache.ts` (helpers de caché sin side effects, compartido por login y tablero).
+  - Estado de carga visible: fila con spinner "Cargando producciones…" cuando no hay caché local (antes: tabla vacía sin señal).
+  - `keepAlive` pasa de cada 5 min a **cada 1 min** (TTL 300 s) para eliminar cold starts — correr `setupKeepAliveTrigger()` una vez tras pegar el nuevo código.

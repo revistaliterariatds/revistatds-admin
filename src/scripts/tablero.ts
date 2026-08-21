@@ -3,6 +3,7 @@
 import { api, getUser, getIdToken } from './api';
 import { esc, esGestor as esGestorRol, esAdmin as esAdminRol, renderNav, confirmar } from './ui';
 import { abrirDetalle } from './tablero-detalle';
+import { readCachedBoard, saveCachedBoard, clearCachedBoard } from './tablero-cache';
 
 export interface Produccion {
   id: string;
@@ -51,20 +52,8 @@ let ediciones: { numero: string; estado: string }[] = [];
 // ── caché local (stale-while-revalidate) ──
 // Guarda la última respuesta del tablero para pintar al instante al entrar
 // y refrescar en segundo plano; se invalida en cada mutación.
-const BOARD_CACHE_KEY = 'tds-board-cache-v1';
-
-function readCachedBoard(): { producciones: Produccion[]; editores: { email: string; nombre: string }[]; ediciones: { numero: string; estado: string }[] } | null {
-  try { return JSON.parse(localStorage.getItem(BOARD_CACHE_KEY) || 'null'); } catch { return null; }
-}
-
-function saveCachedBoard(cache: { producciones: Produccion[]; editores: { email: string; nombre: string }[]; ediciones: { numero: string; estado: string }[] }) {
-  try { localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify(cache)); } catch { /* sin caché local */ }
-}
-
-function clearCachedBoard() {
-  try { localStorage.removeItem(BOARD_CACHE_KEY); } catch { /* sin caché local */ }
-}
-
+// Los helpers viven en tablero-cache.ts: login.ts los usa para PRECARGAR el
+// tablero antes de redirigir (mismo formato, sin importar este módulo).
 // ── sesión ──
 const user = getUser();
 // Booleanos de rol (¡no usar las funciones de ui.ts directamente en ifs!).
@@ -287,6 +276,15 @@ async function cargar() {
     renderConvocatoriaSelect();
     renderEdicionSelect();
     renderTable();
+  } else {
+    // Arranque en frío (post-login o caché barrida): feedback inmediato
+    // mientras viajan los datos, en vez de una tabla vacía sin señal.
+    const body = document.getElementById('boardBody');
+    const empty = document.getElementById('emptyState');
+    if (body && empty) {
+      empty.hidden = true;
+      body.innerHTML = `<tr><td colspan="8" class="board-loading"><span class="spinner" aria-hidden="true"></span>Cargando producciones…</td></tr>`;
+    }
   }
   const edPromise = esGestor ? api('panel/board/editors') : Promise.resolve({ status: 'ok', editores: [] });
   const edicionesPromise = esGestor ? api('panel/ediciones/list') : Promise.resolve({ status: 'ok', ediciones: [] });
