@@ -4,28 +4,34 @@ function handleUsersList(idToken) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
 
+  // La caché guarda SOLO la parte compartida (users); puede_editar se calcula
+  // por request: si se cacheara, dentro de la ventana un SUPERVISOR recibía
+  // el puede_editar del COORDINADOR que llenó la caché (y viceversa).
   var cache = CacheService.getScriptCache();
   var cached = cache.get('users-list');
-  if (cached) return JSON.parse(cached);
-
-  var sheet = getSheet('Roles');
-  var idx = headerIndex(sheet);
-  var data = sheet.getDataRange().getValues();
-  var users = [];
-  for (var i = 1; i < data.length; i++) {
-    if (!data[i][idx.email]) continue;
-    users.push({
-      email: String(data[i][idx.email]),
-      rol: String(data[i][idx.rol] || ''),
-      nombre: String(data[i][idx.nombre] || ''),
-      alias: String(data[i][idx.alias] || ''),
-      usar_alias_notif: String(data[i][idx.usar_alias_notif]).toUpperCase() === 'TRUE',
-      activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
-    });
+  var users;
+  if (cached) {
+    users = JSON.parse(cached);
+  } else {
+    users = [];
+    var sheet = getSheet('Roles');
+    var idx = headerIndex(sheet);
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][idx.email]) continue;
+      users.push({
+        email: String(data[i][idx.email]),
+        rol: String(data[i][idx.rol] || ''),
+        nombre: String(data[i][idx.nombre] || ''),
+        alias: String(data[i][idx.alias] || ''),
+        usar_alias_notif: String(data[i][idx.usar_alias_notif]).toUpperCase() === 'TRUE',
+        activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
+      });
+    }
+    cache.put('users-list', JSON.stringify(users), 60);
   }
-  var result = ok({ users: users, puede_editar: user.rol === ROLES.COORDINADOR || user.rol === ROLES.WEBMASTER });
-  cache.put('users-list', JSON.stringify(result), 60);
-  return result;
+
+  return ok({ users: users, puede_editar: user.rol === ROLES.COORDINADOR || user.rol === ROLES.WEBMASTER });
 }
 
 function handleUserSave(idToken, payload) {

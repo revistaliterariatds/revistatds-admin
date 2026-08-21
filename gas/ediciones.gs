@@ -97,15 +97,20 @@ function handleEdicionesList(idToken) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
   var cache = CacheService.getScriptCache();
+  // Caché solo de la parte compartida; puede_gestionar es por-request.
   var cached = cache.get('ediciones-list');
-  if (cached) return JSON.parse(cached);
-  var result = ok({
-    ediciones: listarEdiciones(),
-    actual: edicionActual(),
+  var base;
+  if (cached) {
+    base = JSON.parse(cached);
+  } else {
+    base = { ediciones: listarEdiciones(), actual: edicionActual() };
+    cache.put('ediciones-list', JSON.stringify(base), 30);
+  }
+  return ok({
+    ediciones: base.ediciones,
+    actual: base.actual,
     puede_gestionar: esAdmin(user),
   });
-  cache.put('ediciones-list', JSON.stringify(result), 30);
-  return result;
 }
 
 // ── cerrar edición N con fecha elegida (COORDINADOR/WEBMASTER) ──

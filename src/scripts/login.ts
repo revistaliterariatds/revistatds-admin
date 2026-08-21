@@ -1,7 +1,7 @@
 // Login con Google Identity Services (popup) + perfil de Google.
 // Al autenticar, guarda la sesión y redirige al tablero.
 
-import { setSession } from './api';
+import { setSession, decodeJwtPayload } from './api';
 import { esc } from './ui';
 
 interface GoogleCredentialResponse {
@@ -20,22 +20,6 @@ interface GoogleIdTokenPayload {
 
 const CLIENT_ID = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID;
 const APPS_SCRIPT_URL = import.meta.env.PUBLIC_APPS_SCRIPT_URL;
-
-function decodeIdToken(token: string): GoogleIdTokenPayload | null {
-  try {
-    const payload = token.split('.')[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const json = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    );
-    return JSON.parse(json) as GoogleIdTokenPayload;
-  } catch {
-    return null;
-  }
-}
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -132,7 +116,7 @@ async function fetchWhoami(idToken: string): Promise<WhoamiResult> {
 }
 
 async function handleCredential(response: GoogleCredentialResponse) {
-  const payload = decodeIdToken(response.credential);
+  const payload = decodeJwtPayload(response.credential) as GoogleIdTokenPayload | null;
   if (!payload) {
     setStatus('error', '<p class="email">No se pudo leer el ID token.</p>');
     return;

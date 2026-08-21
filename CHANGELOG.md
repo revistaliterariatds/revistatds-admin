@@ -33,3 +33,9 @@ y versionado semántico (SemVer).
   - `tablero.ts` dividido: el modal de detalle vive ahora en `tablero-detalle.ts` (710 → 397 + 312 líneas), con acceso al estado vía bindings exportados (ciclo solo a nivel de función, verificado en build y runtime).
   - Fix de tipografía: la cabecera del calendario usaba `font-weight: 700` con Lato cargada solo en 300/400 (faux bold) → 400 con fondo suave.
   - Fix de estados en el update optimista de Ediciones (`'CERRADA'`/`'ABIERTA'` → `'cerrada'`/`'abierta'`, como los guarda el backend).
+  - Hotfix: `esGestor`/`esAdmin` se usaban como función (siempre truthy) en los `if` de rol de tablero, detalle, agenda, ediciones y revistas — un EDITOR disparaba endpoints de gestor y era eyectado; además la UI le mostraba botones de admin. Corregido con booleanos por vista.
+- Revisión post-deploy (seguridad + consistencia):
+  - Cachés server-side sin datos personales: `users-list`, `ediciones-list` y `agenda-list` cacheaban `puede_editar`/`puede_gestionar`/`yo{email,rol}` del primer llamador — dentro de la ventana otro usuario recibía su identidad/permiso. Ahora la caché guarda solo la parte compartida y lo personalizado se calcula por request.
+  - `clearSession()` barre también los cachés localStorage `tds-*`: antes sobrevivían al logout (el siguiente usuario en la misma máquina veía tablero/usuarios del anterior).
+  - Headers de la hoja `Auditoria` unificados en `SHEETS.Auditoria` (única fuente de verdad).
+  - Helper compartido `decodeJwtPayload()` en `api.ts`; `login.ts` ya no duplica el parseo base64url del ID token.

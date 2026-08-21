@@ -14,9 +14,11 @@ export function getIdToken(): string | null {
   return sessionStorage.getItem('tds_idToken');
 }
 
-function tokenExp(token: string): number | null {
+// Decodifica el payload de un JWT (sin verificar firma: solo lectura client-side).
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split('.')[1];
+    if (!payload) return null;
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const json = decodeURIComponent(
       atob(base64)
@@ -24,11 +26,15 @@ function tokenExp(token: string): number | null {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join(''),
     );
-    const exp = JSON.parse(json).exp;
-    return typeof exp === 'number' ? exp : null;
+    return JSON.parse(json);
   } catch {
     return null;
   }
+}
+
+function tokenExp(token: string): number | null {
+  const exp = decodeJwtPayload(token)?.exp;
+  return typeof exp === 'number' ? exp : null;
 }
 
 function redirectToLogin() {
@@ -65,6 +71,14 @@ export function clearSession() {
   if (expiryTimer !== undefined) window.clearTimeout(expiryTimer);
   sessionStorage.removeItem('tds_idToken');
   sessionStorage.removeItem('tds_user');
+  // Los cachés locales de datos también mueren con la sesión: si no, el
+  // siguiente usuario en la misma máquina vería tablero/usuarios/roles
+  // (incl. puede_editar) de quien cerró sesión.
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.indexOf('tds-') === 0)
+      .forEach((k) => localStorage.removeItem(k));
+  } catch { /* sin localStorage */ }
 }
 
 // Deshabilita un botón y muestra "Guardando…" mientras corre una acción,

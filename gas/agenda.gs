@@ -92,30 +92,39 @@ function handleAgendaList(idToken) {
   var user = requireInternalUser(idToken);
   migrarAgendaHoraFin();
   var cache = CacheService.getScriptCache();
+  // Caché solo de la parte compartida: `yo` es identidad del llamador y no
+  // debe servirse desde una caché que pudo llenar otro usuario.
   var cached = cache.get('agenda-list');
-  if (cached) return JSON.parse(cached);
-
-  var sheet = getSheet('Agenda');
-  if (!sheet) return ok({ citas: [], yo: { email: user.email, rol: user.rol, es_admin: esAdmin(user) } });
-  var idx = headerIndex(sheet);
-  var data = sheet.getDataRange().getValues();
-  var cont = contarComentarios();
-  var citas = [];
-  for (var i = 1; i < data.length; i++) {
-    var c = citaPublica({});
-    SHEETS.Agenda.forEach(function (h) { c[h] = data[i][idx[h]]; });
-    normalizarCita(c);
-    c.comentarios = cont[String(c.id)] || 0;
-    c.creado_por_nombre = displayName(c.creado_por);
-    citas.push(c);
+  var citas, feriados;
+  if (cached) {
+    var base = JSON.parse(cached);
+    citas = base.citas;
+    feriados = base.feriados;
+  } else {
+    citas = [];
+    feriados = feriadosPersistidos();
+    var sheet = getSheet('Agenda');
+    if (sheet) {
+      var idx = headerIndex(sheet);
+      var data = sheet.getDataRange().getValues();
+      var cont = contarComentarios();
+      for (var i = 1; i < data.length; i++) {
+        var c = citaPublica({});
+        SHEETS.Agenda.forEach(function (h) { c[h] = data[i][idx[h]]; });
+        normalizarCita(c);
+        c.comentarios = cont[String(c.id)] || 0;
+        c.creado_por_nombre = displayName(c.creado_por);
+        citas.push(c);
+      }
+    }
+    cache.put('agenda-list', JSON.stringify({ citas: citas, feriados: feriados }), 30);
   }
-  var result = ok({
+
+  return ok({
     citas: citas,
     yo: { email: user.email, rol: user.rol, es_admin: esAdmin(user) },
-    feriados: feriadosPersistidos(),
+    feriados: feriados,
   });
-  cache.put('agenda-list', JSON.stringify(result), 30);
-  return result;
 }
 
 // ── detalle de una cita + hilo ──
