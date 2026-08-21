@@ -45,3 +45,7 @@ y versionado semántico (SemVer).
   - Nuevo módulo `tablero-cache.ts` (helpers de caché sin side effects, compartido por login y tablero).
   - Estado de carga visible: fila con spinner "Cargando producciones…" cuando no hay caché local (antes: tabla vacía sin señal).
   - `keepAlive` pasa de cada 5 min a **cada 1 min** (TTL 300 s) para eliminar cold starts — correr `setupKeepAliveTrigger()` una vez tras pegar el nuevo código.
+- Performance de agenda (mismo patrón):
+  - El caché local de la agenda ahora guarda **citas + feriados juntos** (`tds-agenda-cache-v3`): el calendario pinta completo sin red, incluidos los feriados (antes no se cacheaban).
+  - La precarga del login cubre también agenda y revistas: al entrar a cualquiera de las tres vistas principales los datos ya están en localStorage y solo se revalidan en background.
+  - Estado de carga del calendario: "Cargando calendario…" con spinner cuando no hay caché.

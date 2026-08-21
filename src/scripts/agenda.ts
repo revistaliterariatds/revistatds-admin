@@ -43,18 +43,35 @@ let mesVisible = new Date();
 let diaActivo = '';
 let citaActiva: Cita | null = null;
 
-const AGENDA_CACHE_KEY = 'tds-agenda-cache-v2';
+// ── caché local (stale-while-revalidate) ──
+// Guarda citas Y feriados juntos: el calendario necesita ambos para pintar
+// completo sin esperar la red. v3 cambia el shape ({citas, feriados}).
+const AGENDA_CACHE_KEY = 'tds-agenda-cache-v3';
+const AGENDA_CACHE_LEGACY = 'tds-agenda-cache-v2';
 
-function readCachedCitas(): Cita[] | null {
-  try { return JSON.parse(localStorage.getItem(AGENDA_CACHE_KEY) || 'null'); } catch { return null; }
+interface AgendaCache { citas: Cita[]; feriados: Feriado[] }
+
+function readCachedAgenda(): AgendaCache | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(AGENDA_CACHE_KEY) || 'null');
+    return raw && Array.isArray(raw.citas) ? raw : null;
+  } catch { return null; }
 }
 
-function saveCachedCitas(list: Cita[]) {
-  try { localStorage.setItem(AGENDA_CACHE_KEY, JSON.stringify(list)); } catch { /* sin caché local */ }
+function saveCachedAgenda(cache: AgendaCache) {
+  try { localStorage.setItem(AGENDA_CACHE_KEY, JSON.stringify(cache)); } catch { /* sin caché local */ }
 }
 
-function clearCachedCitas() {
-  try { localStorage.removeItem(AGENDA_CACHE_KEY); } catch { /* sin caché local */ }
+function clearCachedAgenda() {
+  try { localStorage.removeItem(AGENDA_CACHE_KEY); localStorage.removeItem(AGENDA_CACHE_LEGACY); } catch { /* sin caché local */ }
+}
+
+// Estado de carga del calendario cuando no hay caché (arranque en frío).
+function mostrarCalendarioCargando() {
+  const grid = document.getElementById('cal-grid');
+  const proximas = document.getElementById('proximas-list');
+  if (grid) grid.innerHTML = '<div class="cal-cargando"><span class="spinner" aria-hidden="true"></span>Cargando calendario…</div>';
+  if (proximas) proximas.innerHTML = '<li class="proximas-empty">Cargando…</li>';
 }
 
 // ── sesión ──
@@ -205,7 +222,7 @@ function renderFeriadosPropios() {
       btnCargando(btn as HTMLButtonElement, false);
       if (r.status !== 'ok') { showAlert(r.message || 'No se pudo quitar el feriado.', true); return; }
       showAlert(r.message);
-      clearCachedCitas();
+      clearCachedAgenda();
       await recargar();
     });
   });
@@ -248,7 +265,7 @@ function renderFeriadoForm() {
       if (r.status !== 'ok') throw new Error(r.message || 'No se pudo agregar el feriado.');
       modal.close();
       showAlert(r.message);
-      clearCachedCitas();
+      clearCachedAgenda();
       await recargar();
     } catch (err) {
       btnCargando(btn, false);
@@ -372,7 +389,7 @@ function renderFormulario(cita: Cita | null, key: string) {
         : await api('panel/agenda/editar', { id: cita.id, ...payload });
       if (data.status !== 'ok') throw new Error(data.message || 'No se pudo guardar.');
       modal.close();
-      clearCachedCitas();
+      clearCachedAgenda();
       await recargar();
     } catch (err) { btnCargando(btn, false); showAlert(err instanceof Error ? err.message : 'No se pudo guardar.', true); }
   });
@@ -426,7 +443,7 @@ async function abrirDetalle(id: string) {
     const btn = content.querySelector('#cita-borrar') as HTMLButtonElement | null;
     btnCargando(btn, true);
     const r = await api('panel/agenda/borrar', { id: c.id });
-    if (r.status === 'ok') { modal.close(); clearCachedCitas(); await recargar(); }
+    if (r.status === 'ok') { modal.close(); clearCachedAgenda(); await recargar(); }
     else { btnCargando(btn, false); showAlert(r.message || 'No se pudo borrar.', true); }
   });
 
@@ -439,7 +456,7 @@ async function abrirDetalle(id: string) {
     const r = await api('panel/agenda/comentar', { id: c.id, comentario: texto });
     if (r.status === 'ok') {
       modal.close();
-      clearCachedCitas();
+      clearCachedAgenda();
       await recargar();
     }
     else { btnCargando(btn, false); showAlert(r.message || 'No se pudo comentar.', true); }
@@ -449,11 +466,16 @@ async function abrirDetalle(id: string) {
 // ── datos ──
 async function recargar() {
   hideAlert();
-  const cached = readCachedCitas();
+  const cached = readCachedAgenda();
   if (cached) {
-    citas = cached;
+    citas = cached.citas;
+    feriadosList = cached.feriados || [];
+    feriados = new Map(feriadosList.map((f: Feriado) => [f.fecha, f]));
     renderCalendario();
     renderProximas();
+    renderFeriadosPropios();
+  } else {
+    mostrarCalendarioCargando();
   }
   const data = await api('panel/agenda/list');
   if (data.status !== 'ok') {
@@ -466,7 +488,7 @@ async function recargar() {
   renderCalendario();
   renderProximas();
   renderFeriadosPropios();
-  saveCachedCitas(citas);
+  saveCachedAgenda({ citas, feriados: feriadosList });
 }
 
 function init() {
@@ -501,7 +523,7 @@ function init() {
       btnCargando(btnFeriados, false);
       if (r.status !== 'ok') { showAlert(r.message || 'No se pudieron actualizar los feriados.', true); return; }
       showAlert(r.message || 'Feriados actualizados.');
-      clearCachedCitas();
+      clearCachedAgenda();
       await recargar();
     });
   }

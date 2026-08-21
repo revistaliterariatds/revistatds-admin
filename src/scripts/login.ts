@@ -79,12 +79,12 @@ async function showIdentity(payload: GoogleIdTokenPayload, idToken: string) {
 
   if (rol) {
     setSession(idToken, { email, rol, nombre: displayName || name || email });
-    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${safeRole}</span> <p class="email">Cargando tu tablero…</p>`);
-    // Precarga en paralelo con la redirección: si llega a tiempo (backend
-    // tibio), el tablero pinta al instante; si no, corta por LIMITE_MS y el
-    // tablero carga con su estado "Cargando producciones…" como fallback.
+    setStatus('ok', `<p class="email">${greet}</p> <span class="role">${safeRole}</span> <p class="email">Preparando tu panel…</p>`);
+    // Precarga en paralelo con la redirección (tablero + agenda + revistas):
+    // si llega a tiempo (backend tibio), cada vista pinta al instante; si no,
+    // corta por LIMITE_MS y cada una carga con su estado de carga normal.
     await Promise.race([
-      precargarTablero(idToken, rol).catch(() => {}),
+      precargarVistas(idToken, rol).catch(() => {}),
       new Promise((r) => setTimeout(r, PRECARGA_LIMITE_MS)),
     ]);
     window.location.href = '/tablero/';
@@ -105,11 +105,12 @@ interface WhoamiResult {
   message?: string;
 }
 
-// ── precarga del tablero desde la pantalla de login ──
-// Dispara las mismas llamadas que hará /tablero/ y escribe su caché local:
-// al llegar, los datos ya están pintados y solo queda revalidar. Si el
-// backend está frío y tarda más de LIMITE_MS, se redirige igual (el tablero
-// muestra su estado de carga y trae los datos como siempre).
+// ── precarga de vistas desde la pantalla de login ──
+// Dispara en paralelo las llamadas que harán tablero, agenda y revistas y
+// escribe sus cachés locales: al entrar a cada vista los datos ya pintan al
+// instante y solo queda revalidar. Si el backend está frío y el conjunto no
+// termina en LIMITE_MS, se redirige igual (cada vista muestra su estado de
+// carga y trae los datos como siempre).
 const PRECARGA_LIMITE_MS = 800;
 
 async function llamarPanel(action: string, idToken: string): Promise<Record<string, any>> {
@@ -121,19 +122,33 @@ async function llamarPanel(action: string, idToken: string): Promise<Record<stri
   return res.json();
 }
 
-async function precargarTablero(idToken: string, rol: string): Promise<void> {
+async function precargarVistas(idToken: string, rol: string): Promise<void> {
   const gestor = ['COORDINADOR', 'WEBMASTER', 'SUPERVISOR'].includes(rol);
-  const [board, eds, ediciones] = await Promise.all([
+  const [board, eds, ediciones, agenda, revistas] = await Promise.all([
     llamarPanel('panel/board/list', idToken),
     gestor ? llamarPanel('panel/board/editors', idToken) : Promise.resolve({ status: 'ok', editores: [] }),
     gestor ? llamarPanel('panel/ediciones/list', idToken) : Promise.resolve({ status: 'ok', ediciones: [] }),
+    llamarPanel('panel/agenda/list', idToken),
+    llamarPanel('panel/revistas/list', idToken),
   ]);
-  if (!board || board.status !== 'ok') return; // sin caché → el tablero carga normal
-  saveCachedBoard({
-    producciones: board.producciones || [],
-    editores: eds.editores || [],
-    ediciones: ediciones.ediciones || [],
-  });
+  if (board && board.status === 'ok') {
+    saveCachedBoard({
+      producciones: board.producciones || [],
+      editores: eds.editores || [],
+      ediciones: ediciones.ediciones || [],
+    });
+  }
+  if (agenda && agenda.status === 'ok') {
+    try {
+      localStorage.setItem(
+        'tds-agenda-cache-v3',
+        JSON.stringify({ citas: agenda.citas || [], feriados: agenda.feriados || [] }),
+      );
+    } catch { /* sin caché local */ }
+  }
+  if (revistas && revistas.status === 'ok') {
+    try { localStorage.setItem('tds-revistas-cache-v1', JSON.stringify(revistas.revistas || [])); } catch { /* sin caché local */ }
+  }
 }
 
 // POST a panel/auth/whoami. El `action` va en el body (no en el path):

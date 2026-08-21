@@ -397,6 +397,8 @@ footer {
 .cal-dots { display: flex; gap: 3px; align-items: center; margin-top: 0.35rem; flex-wrap: wrap; }
 .cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .cal-dots em { font-style: normal; color: var(--ink-muted); font-size: var(--text-xs); }
+
+.cal-cargando { display: flex; align-items: center; justify-content: center; gap: 0.6rem; grid-column: 1 / -1; padding: var(--space-md); min-height: 180px; color: var(--ink-muted); font-size: var(--text-sm); }
 @media (max-width: 620px) { .cal-cell { min-height: 64px; padding: 0.3rem; } }
 
 .cal-aside { padding: 1.25rem; background: var(--paper-white); border: 1px solid var(--rule); box-shadow: var(--shadow-xs); }
