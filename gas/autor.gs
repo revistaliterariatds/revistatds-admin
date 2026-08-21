@@ -18,12 +18,38 @@ function findProduccion(colName, value) {
   return null;
 }
 
-function findProduccionByToken(token) { return findProduccion('token_autor', token); }
 function findProduccionById(id) { return findProduccion('id', id); }
+
+// La hoja guarda el token hasheado ('s1:<sha256>'); acá se compara contra el
+// hash del token recibido. Se acepta también el valor crudo de la fila para:
+// a) filas legacy con UUID plano (pre-migración), y b) links "estado" que el
+// propio backend armó con el valor almacenado (aviso de autores publicados).
+function filaCoincideToken(valorFila, token) {
+  var almacenado = String(valorFila || '');
+  if (!almacenado || !token) return false;
+  if (almacenado.indexOf(TOKEN_HASH_PREFIX) === 0) {
+    return almacenado === hashearTokenAutor(token) || almacenado === String(token);
+  }
+  return almacenado === String(token);
+}
+
+function findProduccionPorToken(token) {
+  var sheet = getSheet('Tablero');
+  var idx = headerIndex(sheet);
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (filaCoincideToken(data[i][idx.token_autor], token)) {
+      var row = { _rowIndex: i };
+      SHEETS.Tablero.forEach(function (h) { row[h] = data[i][idx[h]]; });
+      return row;
+    }
+  }
+  return null;
+}
 
 function requireToken(token) {
   if (!token) throw new ApiError('Falta el token.');
-  var produccion = findProduccionByToken(token);
+  var produccion = findProduccionPorToken(token);
   if (!produccion) throw new ApiError('Link inválido o ya utilizado.');
   if (produccion.token_expira && new Date(produccion.token_expira).getTime() < Date.now()) {
     throw new ApiError('El link venció.');
@@ -184,4 +210,25 @@ function getProduccionFolder(produccion) {
     } catch (e) { /* fallback abajo */ }
   }
   return createProduccionFolder(produccion.id);
+}
+
+// Migración única (idempotente): hashea los tokens de autor guardados en texto
+// plano ('s1:<sha256>'). Ejecutar una vez desde el editor de Apps Script.
+// Los links ya enviados siguen funcionando: la búsqueda acepta el valor legacy
+// mientras exista (ver filaCoincideToken).
+function migrateAutorTokens() {
+  ensureTableroSchema();
+  var sheet = getSheet('Tablero');
+  var idx = headerIndex(sheet);
+  if (idx.token_autor === undefined) throw new ApiError('Columna "token_autor" no encontrada.');
+  var data = sheet.getDataRange().getValues();
+  var hasheados = 0;
+  for (var i = 1; i < data.length; i++) {
+    var valor = String(data[i][idx.token_autor] || '');
+    if (!valor || valor.indexOf(TOKEN_HASH_PREFIX) === 0) continue;
+    sheet.getRange(i + 1, idx.token_autor + 1).setValue(hashearTokenAutor(valor));
+    hasheados++;
+  }
+  Logger.log('migrateAutorTokens: ' + hasheados + ' token(s) hasheado(s).');
+  return 'OK (' + hasheados + ' token(s) hasheado(s))';
 }

@@ -334,7 +334,8 @@ function dispatchearPublicarEdicion(payload) {
 // parte de la edición publicada. Prolijo y seguro:
 //  - un solo mail por autor (agrupado por email), cada uno solo con su info
 //  - registro en la hoja "Avisos" → idempotente, nunca se reenvía
-//  - link personal de estado solo si existe token (nunca se expone el token)
+//  - link personal de estado solo si hay token almacenado (viaja el valor de
+//    la hoja — ya hasheado; la búsqueda del endpoint lo acepta como bearer)
 //  - si falla el envío, reintenta en 3 minutos conservando lo pendiente
 
 var AVISO_AUTORES_KEY = 'aviso-autores-pendiente';

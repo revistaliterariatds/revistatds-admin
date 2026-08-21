@@ -30,7 +30,7 @@ el string viejo da 403. `migrateRoles()` (`users.gs`) renombra las filas viejas 
 - `GITHUB_TOKEN_REVISTA`: fine-grained PAT de GitHub (solo repo `revistaliterariatds/revistatds`, permiso `Contents: write`) para disparar el workflow `publicar-edicion` (subida de ediciones nuevas desde el panel).
 - `MAIL_FROM_AUTORES` (opcional): alias Gmail ("Enviar correo como") desde el que salen los avisos a autores; requiere `GmailApp` (re-autorización del script). Sin la propiedad, los avisos salen desde la cuenta del script (MailApp).
 - `ADMIN_EMAIL` es el email del coordinador (Script Property), **no** es un rol: no renombrarlo.
-- Migraciones idempotentes que se corren una vez desde el editor: `migrateEdiciones()`, `migrateRoles()`, `migrateEstructuraDrive()`, `migrateEdicionesPorFecha()`, `migrateHistorialIdColumna()`.
+- Migraciones idempotentes que se corren una vez desde el editor: `migrateEdiciones()`, `migrateRoles()`, `migrateEstructuraDrive()`, `migrateEdicionesPorFecha()`, `migrateHistorialIdColumna()`, `migrateAutorTokens()` (hashea `token_autor` → `s1:<sha256>`; opcional, la búsqueda acepta legacy).
 - **Advanced Drive Service** (Drive API **v2**, en `appsscript.json` `enabledAdvancedServices`) para `convertirAPdf` (Word/ODT/RTF/TXT → PDF). Debe habilitarse también en Servicios del editor.
 - Término canónico: **"producción"** (antes "cuento"). Los envíos pueden ser cuentos, ilustraciones, historias, etc.
 

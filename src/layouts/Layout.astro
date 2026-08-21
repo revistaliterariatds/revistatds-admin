@@ -22,13 +22,16 @@ const { title, description } = Astro.props;
 
     <!--
       CSP del panel.
-      Fase 5 (hardening): reemplazar 'unsafe-inline' de script-src por nonce/hash
-      cuando el login esté estable (Astro inlinea scripts pequeños, p. ej. con
-      PUBLIC_GOOGLE_CLIENT_ID vacío).
+      script-src SIN 'unsafe-inline': el único script inline es el de la nav
+      (is:inline) y se permite por hash SHA-256. El guard `postbuild`
+      (scripts/verify-csp.mjs) falla el build si aparece un script inline sin
+      su hash — si tocás ese script, regenerá el hash y actualizalo acá.
+      style-src mantiene 'unsafe-inline': el HTML generado desde JS usa
+      atributos style="…" puntuales (hashes de atributo no son prácticos acá).
     -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://accounts.google.com https://static.cloudflareinsights.com;
+      script-src 'self' 'sha256-vH4OhMgfQBYV753gvtwEfe52k/el3tGK8UiGLHT2bOE=' https://accounts.google.com https://static.cloudflareinsights.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https://tramasdelsur.com.ar;

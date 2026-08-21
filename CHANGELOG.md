@@ -24,3 +24,7 @@ y versionado semántico (SemVer).
   - `envio.gs`: honeypot anti-bots (input oculto `website`; éxito falso sin crear nada) + tope global diario de envíos (`ENVIO_GLOBAL_DIARIO = 100`, contador por fecha en CacheService) para frenar flood con emails rotados. Requiere agregar el input oculto al formulario del sitio público para máxima efectividad.
   - `tablero.ts`: `badge()` escapa siempre label y color (la hoja es editable a mano).
   - `revistas.ts`: reemplazado el handler `onerror` inline de portadas (JS construido desde datos externos) por un listener con DOM API.
+- Fase B (hardening):
+  - **CSP sin `'unsafe-inline'` en `script-src`**: el único script inline (nav + SW) se permite por hash SHA-256. Nuevo guard `postbuild` (`scripts/verify-csp.mjs`) que falla el build si aparece un script inline sin hash en la política. `style-src` conserva `'unsafe-inline'` (atributos `style="…"`, documentado).
+  - **Tokens de autor hasheados en la hoja** (`s1:<sha256>`, `hashearTokenAutor()`): el token crudo solo viaja en el mail; la hoja guarda el hash (`envio.gs`, `board.gs`). Búsqueda dual en `autor.gs` (`filaCoincideToken`): acepta token crudo contra hash, filas legacy en texto plano y links "estado" armados con el valor almacenado. Migración idempotente opcional: `migrateAutorTokens()`.
+  - **Auditoría administrativa**: nueva hoja `Auditoria` (`timestamp | actor | entidad | clave | detalle`). `handleUserSave` registra alta/diff del cambio; `handleConfigSave` registra valor anterior → nuevo. Fallo de registro no bloquea la operación.

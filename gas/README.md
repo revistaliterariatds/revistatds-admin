@@ -15,7 +15,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `sheets.gs` | Schema de Sheets + helpers de lectura/escritura |
 | `auth.gs` | Validación ID token (`tokeninfo`) + RBAC + `whoami` |
 | `files.gs` | Carpetas de Drive + guardado de adjuntos |
-| `history.gs` | Historial append-only |
+| `history.gs` | Historial append-only + auditoría de usuarios/configuración (hoja `Auditoria`) |
 | `mail.gs` | Mails con estilo TDS inline |
 | `envio.gs` | Endpoint público `envio` (compatible con el sitio) |
 | `board.gs` | Tablero del panel (lectura) |

@@ -150,8 +150,11 @@ function handleConfigSave(idToken, key, value) {
     if (!/^\d+$/.test(value) || diasFrec < 1 || diasFrec > 30) throw new ApiError('La frecuencia debe estar entre 1 y 30 días.');
     value = String(diasFrec);
   }
+  var anterior = getConfig(key);
   setConfig(key, value);
   CacheService.getScriptCache().remove('config-list');
+  addAuditoria(user.email, 'config', key,
+    String(anterior) === String(value) ? 'Guardado sin cambios efectivos' : '"' + anterior + '" → "' + value + '"');
   return ok({ message: 'Configuración guardada.', key: key, value: value });
 }
 

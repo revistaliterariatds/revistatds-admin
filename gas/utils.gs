@@ -36,3 +36,22 @@ function ApiError(message) {
 function nowIso() {
   return new Date().toISOString();
 }
+
+// SHA-256 hex de un string (para hashear tokens de autor en la hoja).
+function sha256Hex(str) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(str), Utilities.Charset.UTF_8);
+  return digest.map(function (b) {
+    var byte = b < 0 ? b + 256 : b;
+    return ('0' + byte.toString(16)).slice(-2);
+  }).join('');
+}
+
+// Token de autor en la hoja: 's1:<sha256>' del token real que viaja por mail.
+// El prefijo evita que Sheets interprete el hex como número y documenta el
+// esquema para futuras rotaciones. Las filas legacy (UUID plano) se siguen
+// aceptando hasta migrar (ver migrateAutorTokens en autor.gs).
+var TOKEN_HASH_PREFIX = 's1:';
+
+function hashearTokenAutor(token) {
+  return TOKEN_HASH_PREFIX + sha256Hex(token);
+}

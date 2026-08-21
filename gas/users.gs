@@ -52,10 +52,25 @@ function handleUserSave(idToken, payload) {
     if (String(data[i][idx.email]).toLowerCase() === email) { row = i; break; }
   }
 
+  // Auditoría: diff del cambio (o alta) antes de pisar la fila.
+  var cambios;
+  if (row < 0) {
+    cambios = 'Alta (rol ' + rol + ')';
+  } else {
+    var diffs = [];
+    if (String(data[row][idx.rol] || '') !== rol) diffs.push('rol: ' + data[row][idx.rol] + ' → ' + rol);
+    if (String(data[row][idx.nombre] || '') !== nombre) diffs.push('nombre modificado');
+    if (String(data[row][idx.alias] || '') !== alias) diffs.push('alias modificado');
+    if (String(data[row][idx.usar_alias_notif]).toUpperCase() === 'TRUE' !== usarAlias) diffs.push('usar_alias_notif');
+    if ((String(data[row][idx.activo]).toUpperCase() === 'TRUE') !== activo) diffs.push('activo: ' + String(data[row][idx.activo]) + ' → ' + (activo ? 'TRUE' : 'FALSE'));
+    cambios = diffs.length ? diffs.join('; ') : 'Guardado sin cambios efectivos';
+  }
+
   var values = [email, rol, nombre, alias, usarAlias ? 'TRUE' : 'FALSE', activo ? 'TRUE' : 'FALSE'];
   if (row < 0) sheet.appendRow(values);
   else sheet.getRange(row + 1, 1, 1, values.length).setValues([values]);
   CacheService.getScriptCache().remove('users-list');
+  addAuditoria(actor.email, 'usuario', email, cambios);
   return ok({ message: row < 0 ? 'Usuario agregado.' : 'Usuario actualizado.' });
 }
 
