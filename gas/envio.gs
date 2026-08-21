@@ -3,16 +3,46 @@
 // Hallazgo H2: `categoria` no viene del formulario → nace "Sin clasificar".
 
 var ENVIO_RATE_LIMIT = 50;
+var ENVIO_GLOBAL_DIARIO = 100; // tope global por día (anti-flood con emails rotados)
+
+// Honeypot anti-bots: el formulario público debe incluir un input oculto
+// name="website" que una persona nunca completa. Si llega con contenido, se
+// responde éxito falso sin crear nada (no se le revela al bot que falló).
+// Compatible con el contrato actual: los formularios que no lo mandan pasan.
+function esHoneypot(data) {
+  return String((data && data.website) || '').trim() !== '';
+}
+
+// Contador global diario en cache, clave por fecha (se resetea solo).
+// TTL 48 h: garantiza que el contador del día sobreviva hasta medianoche
+// aunque el último intento haya sido temprano.
+function contadorEnviosHoy() {
+  var cache = CacheService.getScriptCache();
+  var key = 'envios-global-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return { key: key, n: parseInt(cache.get(key) || '0', 10) || 0 };
+}
 
 function handleEnvio(data) {
   data = data || {};
+
+  // Honeypot: éxito falso, sin tocar Drive ni las hojas.
+  if (esHoneypot(data)) return ok({ message: 'Envío recibido.' });
 
   var email = String(data.email || '').trim();
   if (!email) return err('Falta el email del autor.');
   if (!isValidEmail(email)) return err('Email del autor inválido.');
 
-  // Límite anti-abuso por email en ventana de 6 horas (cache script).
+  // Tope global diario: se cuenta todo intento con email válido, así la
+  // rotación de emails también consume el cupo (el límite por email de abajo
+  // solo frena a un mismo remitente).
   var cache = CacheService.getScriptCache();
+  var hoy = contadorEnviosHoy();
+  if (hoy.n >= ENVIO_GLOBAL_DIARIO) {
+    return err('Se alcanzó el límite de envíos por día. Intentá mañana o escribinos por mail.');
+  }
+  cache.put(hoy.key, String(hoy.n + 1), 172800);
+
+  // Límite anti-abuso por email en ventana de 6 horas (cache script).
   var rateKey = 'envio:' + email.toLowerCase();
   var envios = parseInt(cache.get(rateKey) || '0', 10);
   if (envios >= ENVIO_RATE_LIMIT) {
@@ -34,7 +64,7 @@ function handleEnvio(data) {
   var convocatoria = data.tipo === 'docente' ? CONVOCATORIAS.DOCENTES : CONVOCATORIAS.GENERAL;
 
   var id = 'C' + Date.now().toString(36) + '-' + Utilities.getUuid().slice(0, 8);
-  var token = Utilities.getUuid();
+  var token = Utilities.getUuid(); // crudo SOLO para el mail; en la hoja va hasheado
   var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
   var tokenExpira = new Date(Date.now() + expiraDias * 24 * 3600 * 1000);
 
@@ -56,7 +86,7 @@ function handleEnvio(data) {
     url_carpeta_drive: folder.getUrl(),
     url_doc_correccion: '',
     version_actual: '1',
-    token_autor: token,
+    token_autor: hashearTokenAutor(token),
     token_expira: tokenExpira,
     convocatoria: convocatoria,
     fecha_recibido: now,

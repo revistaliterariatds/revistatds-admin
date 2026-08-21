@@ -94,7 +94,8 @@ function renderNav() {
 // ── utilidades ──
 function badge(estado: string): string {
   const info = ESTADOS[estado] || { label: estado, color: 'grey' };
-  return `<span class="badge badge-${info.color}">${info.label}</span>`;
+  // El estado puede venir de la hoja (editable a mano): se escapa siempre.
+  return `<span class="badge badge-${esc(info.color)}">${esc(info.label)}</span>`;
 }
 
 function esc(s: unknown): string {

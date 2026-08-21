@@ -43,8 +43,15 @@ function validateIdToken(idToken) {
   if (resp.getResponseCode() !== 200) throw new AuthError('Token no verificado.');
   var info = JSON.parse(resp.getContentText());
 
+  // Audience y emisor son obligatorios: sin OAUTH_CLIENT_ID configurado se
+  // rechaza (un ID token válido de CUALQUIER app de Google no debe servir acá).
+  // iss admite las dos formas que devuelve tokeninfo.
   var clientId = getOAuthClientId();
-  if (clientId && info.aud !== clientId) throw new AuthError('Audience inválido.');
+  if (!clientId) throw new AuthError('OAUTH_CLIENT_ID no configurado.');
+  if (info.aud !== clientId) throw new AuthError('Audience inválido.');
+  if (info.iss !== 'accounts.google.com' && info.iss !== 'https://accounts.google.com') {
+    throw new AuthError('Emisor inválido.');
+  }
   if (info.email_verified !== 'true' && info.email_verified !== true) {
     throw new AuthError('Email no verificado.');
   }

@@ -47,7 +47,6 @@ function render(revistas: Revista[]) {
           src="${esc(r.portada_url)}"
           alt="Portada ${esc(r.titulo)}"
           loading="lazy"
-          onerror="this.parentElement.innerHTML='<div class=\\'revista-cover-placeholder\\'>${esc(r.num)}</div>'"
         />
       </div>
       <div class="revista-info">
@@ -59,6 +58,21 @@ function render(revistas: Revista[]) {
         </div>
       </div>
     </article>`).join('');
+
+  // Placeholder si la portada falla: sin handler inline (el HTML nunca se
+  // construye desde datos externos).
+  grid.querySelectorAll('.revista-card').forEach((card, i) => {
+    const img = card.querySelector('.revista-cover img');
+    if (!img) return;
+    img.addEventListener('error', () => {
+      const cover = img.parentElement;
+      if (!cover) return;
+      const ph = document.createElement('div');
+      ph.className = 'revista-cover-placeholder';
+      ph.textContent = revistas[i]?.num || '';
+      cover.replaceChildren(ph);
+    });
+  });
 
   grid.querySelectorAll('[data-leer]').forEach((btn) => {
     btn.addEventListener('click', () => {

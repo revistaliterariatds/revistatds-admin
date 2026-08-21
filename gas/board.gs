@@ -48,9 +48,15 @@ function handleBoardList(idToken) {
 
 // ── detalle de una producción + historial ──
 function handleBoardDetail(idToken, id) {
-  requireInternalUser(idToken);
+  var user = requireInternalUser(idToken);
   var c = findProduccionById(id);
   if (!c) throw new ApiError('Producción no encontrada.');
+  // Misma política de visibilidad que el listado: RECIBIDO solo lo ven los
+  // gestores. Se responde "no encontrada" (y no AuthError) para que el cliente
+  // no interprete la regla de visibilidad como sesión expirada.
+  if (user.rol === ROLES.EDITOR && c.estado === ESTADOS.RECIBIDO) {
+    throw new ApiError('Producción no encontrada.');
+  }
   return ok({ produccion: produccionPublica(c), historial: getHistorial(c.id) });
 }
 
@@ -244,10 +250,10 @@ function handleEnviarCorrecciones(idToken, id, fileId, mensaje) {
 
     var pdfBlob = convertirAPdf(String(fileId));
 
-    var token = Utilities.getUuid();
+    var token = Utilities.getUuid(); // crudo SOLO para el mail; en la hoja va hasheado
     var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
     var sheet = getSheet('Tablero');
-    setCell(sheet, c._rowIndex, 'token_autor', token);
+    setCell(sheet, c._rowIndex, 'token_autor', hashearTokenAutor(token));
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
     try {
@@ -315,10 +321,10 @@ function handleConsultarAutor(idToken, id, fileId) {
     // Se convierte a PDF antes de generar el token: si falla, no queda nada a medias.
     var pdfBlob = convertirAPdf(String(fileId));
 
-    var token = Utilities.getUuid();
+    var token = Utilities.getUuid(); // crudo SOLO para el mail; en la hoja va hasheado
     var expiraDias = parseInt(getConfig('expira_token_dias') || '30', 10);
     var sheet = getSheet('Tablero');
-    setCell(sheet, c._rowIndex, 'token_autor', token);
+    setCell(sheet, c._rowIndex, 'token_autor', hashearTokenAutor(token));
     setCell(sheet, c._rowIndex, 'token_expira', new Date(Date.now() + expiraDias * 24 * 3600 * 1000));
 
     try {
