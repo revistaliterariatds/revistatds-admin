@@ -124,13 +124,25 @@ async function llamarPanel(action: string, idToken: string): Promise<Record<stri
 
 async function precargarVistas(idToken: string, rol: string): Promise<void> {
   const gestor = ['COORDINADOR', 'WEBMASTER', 'SUPERVISOR'].includes(rol);
-  const [board, eds, ediciones, agenda, revistas] = await Promise.all([
+  const esAdminRolLocal = rol === 'COORDINADOR' || rol === 'WEBMASTER';
+  const [board, eds, ediciones, agenda, revistas, users, config, analytics, descargas] = await Promise.all([
     llamarPanel('panel/board/list', idToken),
     gestor ? llamarPanel('panel/board/editors', idToken) : Promise.resolve({ status: 'ok', editores: [] }),
     gestor ? llamarPanel('panel/ediciones/list', idToken) : Promise.resolve({ status: 'ok', ediciones: [] }),
     llamarPanel('panel/agenda/list', idToken),
     llamarPanel('panel/revistas/list', idToken),
+    // Secciones de gestión (solo existen para gestores; para otros roles el
+    // backend responde "Sin permisos" y no se cachea nada).
+    gestor ? llamarPanel('panel/users/list', idToken) : Promise.resolve({ status: 'error' }),
+    gestor ? llamarPanel('panel/config/list', idToken) : Promise.resolve({ status: 'error' }),
+    gestor ? llamarPanel('panel/analytics/daily', idToken).then((r) => ({ ...r, __days: '7' })) : Promise.resolve({ status: 'error' }),
+    gestor ? llamarPanel('panel/descargas/list', idToken).then((r) => ({ ...r, __days: '7' })) : Promise.resolve({ status: 'error' }),
   ]);
+
+  function guardar(clave: string, valor: unknown) {
+    try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin caché local */ }
+  }
+
   if (board && board.status === 'ok') {
     saveCachedBoard({
       producciones: board.producciones || [],
@@ -139,15 +151,31 @@ async function precargarVistas(idToken: string, rol: string): Promise<void> {
     });
   }
   if (agenda && agenda.status === 'ok') {
-    try {
-      localStorage.setItem(
-        'tds-agenda-cache-v3',
-        JSON.stringify({ citas: agenda.citas || [], feriados: agenda.feriados || [] }),
-      );
-    } catch { /* sin caché local */ }
+    guardar('tds-agenda-cache-v3', { citas: agenda.citas || [], feriados: agenda.feriados || [] });
   }
   if (revistas && revistas.status === 'ok') {
-    try { localStorage.setItem('tds-revistas-cache-v1', JSON.stringify(revistas.revistas || [])); } catch { /* sin caché local */ }
+    guardar('tds-revistas-cache-v1', revistas.revistas || []);
+  }
+  if (gestor && ediciones && ediciones.status === 'ok') {
+    guardar('tds-ediciones-cache-v1', ediciones.ediciones || []);
+  }
+  if (gestor && users && users.status === 'ok') {
+    guardar('tds-users-cache-v1', { users: users.users || [], puede_editar: esAdminRolLocal });
+  }
+  if (gestor && config && config.status === 'ok') {
+    guardar('tds-config-cache-v3', config.config || {});
+  }
+  if (gestor && analytics && analytics.status === 'ok') {
+    guardar('tds-analytics-cache-' + analytics.__days, analytics.daily || []);
+    if (typeof analytics.total_historico === 'number') localStorage.setItem('tds-analytics-total-v1', String(analytics.total_historico));
+  }
+  if (gestor && descargas && descargas.status === 'ok') {
+    guardar('tds-descargas-cache-' + descargas.__days, {
+      porArchivo: descargas.porArchivo || [],
+      acciones: descargas.acciones || {},
+      total: Number(descargas.total || 0),
+      totalHistorico: Number(descargas.total_historico || 0),
+    });
   }
 }
 

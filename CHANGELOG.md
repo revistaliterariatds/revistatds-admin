@@ -49,3 +49,6 @@ y versionado semántico (SemVer).
   - El caché local de la agenda ahora guarda **citas + feriados juntos** (`tds-agenda-cache-v3`): el calendario pinta completo sin red, incluidos los feriados (antes no se cacheaban).
   - La precarga del login cubre también agenda y revistas: al entrar a cualquiera de las tres vistas principales los datos ya están en localStorage y solo se revalidan en background.
   - Estado de carga del calendario: "Cargando calendario…" con spinner cuando no hay caché.
+- Performance: patrón extendido a **todas las secciones**:
+  - La precarga del login ahora cubre también usuarios, configuración, analíticas (período por defecto 7 días) y descargas (7 días), además de la caché de ediciones — todo en un solo lote de llamadas paralelas al entrar. Las de gestión solo se piden a gestores.
+  - Estados de carga visibles en cada vista sin caché: ediciones, usuarios, revistas (spinner), analíticas ("Cargando visitas…"), descargas (KPIs en "…" + spinner) y configuración (aviso "Cargando configuración…").

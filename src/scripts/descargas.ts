@@ -45,6 +45,14 @@ async function load() {
   const days: number | string = selected === 'all' ? 'all' : Number(selected);
   const cached = readCached(days);
   if (cached) render(cached.porArchivo, cached.acciones, cached.total, cached.totalHistorico);
+  else {
+    ['kpi-total-descargas', 'kpi-leer', 'kpi-descargar', 'kpi-historico-descargas'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '…';
+    });
+    const body = document.getElementById('descargas-body');
+    if (body) body.innerHTML = '<tr><td colspan="2" class="estado-carga"><span class="spinner" aria-hidden="true"></span>Cargando descargas…</td></tr>';
+  }
   const data = await api('panel/descargas/list', { days });
   if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudieron cargar las descargas.'); return; }
   const resultado = {

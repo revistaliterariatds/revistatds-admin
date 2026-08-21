@@ -88,6 +88,10 @@ async function load() {
   hideAlert();
   const cached = readCachedRevistas();
   if (cached) render(cached);
+  else {
+    const grid = document.getElementById('revistas-grid');
+    if (grid) grid.innerHTML = '<div class="estado-carga estado-carga--full"><span class="spinner" aria-hidden="true"></span>Cargando ediciones…</div>';
+  }
   const data = await api('panel/revistas/list');
   if (data.status !== 'ok') {
     if (!cached) showAlert(data.message || 'No se pudieron cargar las ediciones.');

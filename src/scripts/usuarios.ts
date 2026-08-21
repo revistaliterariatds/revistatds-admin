@@ -53,6 +53,9 @@ async function cargar() {
     puedeEditar = cached.puede_editar;
     document.getElementById('btn-nuevo-usuario')!.hidden = !puedeEditar;
     renderUsers();
+  } else {
+    const body = document.getElementById('users-body');
+    if (body) body.innerHTML = '<tr><td colspan="6" class="estado-carga"><span class="spinner" aria-hidden="true"></span>Cargando usuarios…</td></tr>';
   }
   const data = await api('panel/users/list');
   if (data.status !== 'ok') { alertUser(data.message || 'No se pudieron cargar los usuarios.', true); return; }

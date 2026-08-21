@@ -124,6 +124,13 @@ async function load() {
   if (cachedTotal !== null) renderTotal(cachedTotal);
   const cached = readCachedChart(days);
   if (cached) renderChart(cached);
+  else {
+    // Arranque sin caché para este período: señal de actividad en el gráfico.
+    const empty = document.getElementById('analytics-empty');
+    const summary = document.getElementById('analytics-summary');
+    if (empty) { empty.hidden = false; empty.innerHTML = '<span class="estado-carga" style="justify-content:center;"><span class="spinner" aria-hidden="true"></span>Cargando visitas…</span>'; }
+    if (summary) summary.textContent = '';
+  }
   const data = await api('panel/analytics/daily', { days });
   if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudieron cargar las analíticas.'); return; }
   const daily = data.daily || [];

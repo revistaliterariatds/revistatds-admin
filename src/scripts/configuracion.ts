@@ -10,6 +10,10 @@ function showAlert(message: string, error = false) {
   el.textContent = message;
 }
 
+function hideAlert() {
+  document.getElementById('config-alert')!.hidden = true;
+}
+
 const CONFIG_CACHE_KEY = 'tds-config-cache-v3';
 
 const SUBJECT_KEYS = ['confirmation', 'correcciones', 'revision', 'consulta', 'version', 'devolucion', 'agenda', 'recordatorio', 'digest', 'token_vencido'];
@@ -50,11 +54,13 @@ function readCachedConfig(): Record<string, string> | null {
 async function load() {
   const cached = readCachedConfig();
   if (cached) fillForm(cached);
+  else showAlert('Cargando configuración…');
   const data = await api('panel/config/list');
   if (data.status !== 'ok') {
     if (!cached) showAlert(data.message || 'No se pudo cargar la configuración.', true);
     return;
   }
+  hideAlert();
   const config = data.config || {};
   try { localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config)); } catch { /* sin caché local */ }
   fillForm(config);

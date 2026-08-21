@@ -234,6 +234,10 @@ async function cargar() {
   hideAlert();
   const cached = readCachedEdiciones();
   if (cached) { ediciones = cached; renderLista(); }
+  else {
+    document.getElementById('ediciones-list')!.innerHTML =
+      '<div class="estado-carga estado-carga--full"><span class="spinner" aria-hidden="true"></span>Cargando ediciones…</div>';
+  }
   const data = await api('panel/ediciones/list');
   if (data.status !== 'ok') { if (!cached) showAlert(data.message || 'No se pudo cargar.', true); return; }
   ediciones = data.ediciones || [];
