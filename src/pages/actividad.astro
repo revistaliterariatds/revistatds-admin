@@ -1,0 +1,86 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Actividad — Tramas del Sur" description="Actividad del equipo editorial por período, edición, rol y usuario.">
+  <section class="users-page" aria-labelledby="actividad-heading">
+    <header class="board-header">
+      <div>
+        <p class="board-eyebrow">Equipo editorial</p>
+        <h1 id="actividad-heading">Actividad</h1>
+      </div>
+      <button id="btn-refrescar-actividad" class="btn-ghost" type="button">Refrescar</button>
+    </header>
+    <div id="actividad-alert" class="status-card" hidden></div>
+    <p class="config-intro" style="margin-bottom:1rem;">
+      Participación de cada integrante del equipo (acciones registradas + producciones gestionadas).
+      Hacé clic en un sector o en la leyenda para ver el detalle de una persona.
+    </p>
+
+    <div class="actividad-filtros" role="group" aria-label="Filtros de actividad">
+      <label class="actividad-campo">
+        Período
+        <select id="filtro-periodo" class="filter-select"></select>
+      </label>
+      <label class="actividad-campo">
+        Edición
+        <select id="filtro-edicion" class="filter-select"></select>
+      </label>
+      <label class="actividad-campo">
+        Rol
+        <select id="filtro-rol" class="filter-select">
+          <option value="equipo" selected>Coordinador · Supervisor · Editor</option>
+          <option value="todos">Todos los roles</option>
+          <option value="COORDINADOR">Coordinador</option>
+          <option value="WEBMASTER">Webmaster</option>
+          <option value="SUPERVISOR">Supervisor</option>
+          <option value="EDITOR">Editor</option>
+        </select>
+      </label>
+      <label class="actividad-campo">
+        Usuario
+        <select id="filtro-usuario" class="filter-select"></select>
+      </label>
+    </div>
+
+    <div class="analytics-kpis actividad-kpis">
+      <div class="analytics-kpi"><span>Puntos de actividad</span><strong id="kpi-puntos">–</strong><small id="kpi-periodo">&nbsp;</small></div>
+      <div class="analytics-kpi"><span>Usuarios activos</span><strong id="kpi-usuarios">–</strong></div>
+      <div class="analytics-kpi"><span>Producciones tocadas</span><strong id="kpi-producciones">–</strong></div>
+      <div class="analytics-kpi"><span>Acciones registradas</span><strong id="kpi-acciones">–</strong></div>
+    </div>
+
+    <section class="analytics-card" aria-label="Gráfico de actividad por usuario">
+      <div class="analytics-card-head">
+        <h2>Participación por usuario</h2>
+        <p>Cada color identifica siempre a la misma persona.</p>
+      </div>
+      <div id="actividad-cargando" class="estado-carga estado-carga--full" hidden>
+        <span class="spinner" aria-hidden="true"></span>Cargando actividad…
+      </div>
+      <div id="actividad-layout" class="actividad-layout">
+        <svg id="actividad-torta" class="actividad-torta" viewBox="0 0 340 340" role="img" aria-label="Torta de actividad por usuario"></svg>
+        <ul id="actividad-leyenda" class="actividad-leyenda"></ul>
+      </div>
+      <div id="actividad-empty" class="board-empty" hidden>Sin actividad registrada para el filtro actual.</div>
+    </section>
+
+    <section id="actividad-desglose" class="config-section" style="margin-top:1.25rem;" hidden aria-labelledby="desglose-heading">
+      <div class="config-section-head">
+        <div>
+          <p class="config-kicker">Desglose del usuario</p>
+          <h2 id="desglose-heading">—</h2>
+        </div>
+        <button id="btn-limpiar-usuario" class="btn-mini" type="button">Ver a todos</button>
+      </div>
+      <p id="desglose-resumen" class="actividad-desglose-meta"></p>
+      <ul id="actividad-barras" class="actividad-bars"></ul>
+    </section>
+
+    <p id="actividad-summary" class="analytics-summary" style="margin-top:1.25rem;" hidden></p>
+  </section>
+</Layout>
+
+<script>
+  import '../scripts/actividad.ts';
+</script>

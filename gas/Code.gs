@@ -103,6 +103,8 @@ function doPost(e) {
       result = handleSubirRevistaFinal(tokenFrom(data, e), data);  // portada + dispatch a GitHub
     } else if (action === 'panel/analytics/daily') {
       result = handleAnalyticsDaily(tokenFrom(data, e), data && data.days);
+    } else if (action === 'panel/actividad/list') {
+      result = handleActividadList(tokenFrom(data, e));  // actividad por usuario (COORDINADOR/SUPERVISOR/WEBMASTER)
     } else if (action === 'autor/estado') {
       result = handleAutorEstado(data && data.token);  // autor: ver estado
     } else if (action === 'autor/approve') {

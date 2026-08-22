@@ -62,6 +62,16 @@ Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
   - Equipo editorial (`ROLES_NOTIF_INTERNOS`, sin WEBMASTER) a los **2 min** → `enviarAvisoEdicionPublicada` (pendiente en `aviso-edicion-pendiente`).
   - Autores publicados a los **10 min** → `enviarAvisoAutoresPublicados` (pendiente en `aviso-autores-pendiente`): filas de Tablero con `estado = PUBLICADO` y `edicion = nombreEdicion(num)` al momento de publicar; un mail por autor agrupado por `email_autor`; link personal solo si hay `token_autor`; registro idempotente en hoja `Avisos` (`num_edicion | produccion_id | email_autor | fecha`, creada por `ensureSchema`); remitente `MAIL_FROM_AUTORES` si está seteada (`sendMailAutores`).
 
+## Actividad del equipo — 22/08/2026
+
+- **Solapa Actividad** (`/actividad/`, solo gestores: `esGestor` en cliente y backend): torta donut SVG con la actividad de cada integrante del equipo. Endpoint `panel/actividad/list` (`gas/actividad.gs`) → guard estándar `requireInternalUser` + `esGestor` (AuthError).
+- **Dataset posicional**: el endpoint devuelve SIEMPRE el cubo completo (sin parámetros) y el cliente filtra localmente — diccionarios (`meses | ediciones | usuarios | acciones | ids`) + eventos `[mesIdx, edIdx, usuarioIdx, accionIdx, idIdx, n]`. Cambiar filtros no genera red.
+- **Caché chunked** (`actividad:v1:*`, TTL 600 s **sin invalidación por escritura**): `base` + `meta` + chunks de ~1500 eventos porque CacheService tiene tope de 100 KB por valor. Falta una pieza → recomputa.
+- **Atribución**: `Historial.actor` guarda displayName (no email) → índice inverso desde hoja `Roles` (claves alias/nombre/email normalizadas sin acentos). Actores sintéticos `AUTOR`/`Sistema` excluidos; eventos sin dueño van al contador `descartados` (visible al pie de la vista). Renombrar un alias deja huérfana la historia previa (limitación aceptada).
+- **Atribución de edición aproximada**: cada evento se asigna a la edición **actual** de la producción (join `Historial.id_produccion` → `Tablero.edicion`), no a la vigente al momento del evento.
+- **Colores estables**: el orden alfabético de `usuarios` lo fija el server; el cliente asigna paleta fija de 12 por índice global (`i % 12`), NUNCA sobre el subconjunto filtrado.
+- Precargada desde login para gestores (última del `Promise.all`: es la más lenta, lee Historial completo).
+
 ## Development
 
 When starting the dev server, use background mode:

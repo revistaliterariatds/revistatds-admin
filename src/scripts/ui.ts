@@ -19,7 +19,7 @@ export function esAdmin(user: Usuario | null): boolean {
 
 // ── nav común (nombre, rol, pestañas según rol, logout) ──
 
-const TABS_GESTOR = ['nav-users', 'nav-config', 'nav-analytics', 'nav-descargas'];
+const TABS_GESTOR = ['nav-users', 'nav-config', 'nav-analytics', 'nav-actividad', 'nav-descargas'];
 
 export function renderNav(user: Usuario | null) {
   const navUser = document.getElementById('nav-user');

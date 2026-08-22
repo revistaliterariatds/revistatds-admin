@@ -24,6 +24,7 @@ que se ejecuta como la cuenta emisora (`revistaliterariatds@gmail.com`).
 | `users.gs` | Gestión de usuarios y roles |
 | `feriados.gs` | Feriados nacionales AR: sincronización con date.nager.at (persistidos en la hoja `Feriados`) + trigger anual |
 | `analytics.gs` | Snapshots diarios y consulta histórica de visitas |
+| `actividad.gs` | Actividad del equipo editorial (Historial + Auditoria agregados) para la solapa "Actividad" |
 | `descargas.gs` | Registro y consulta de descargas/lecturas de ediciones PDF |
 | `appsscript.json` | Manifest: scopes + webapp (executeAs `USER_DEPLOYING`, access `ANYONE_ANONYMOUS`) |
 
@@ -36,7 +37,7 @@ deployment sin `doPost` y responde "No se encontró la función de la secuencia 
 comandos: doPost".
 
 ```bash
-ORDER="Code enums utils sheets config auth files history mail envio board agenda ediciones users analytics descargas autor reminders revistas feriados"
+ORDER="Code enums utils sheets config auth files history mail envio board agenda ediciones users analytics actividad descargas autor reminders revistas feriados"
 for f in $ORDER; do cat "gas/$f.gs"; echo; done > /tmp/revistatds-panel-gas/PanelTDS.gs
 # Verificar que nada falte:
 for f in gas/*.gs; do rg -o "function [A-Za-z_][A-Za-z0-9_]*" "$f"; done | sed 's/function //' | sort -u > /tmp/f_src.txt
@@ -123,6 +124,7 @@ Respuesta: `{ "status": "ok" | "error", ... }`.
 | `panel/config/list` | idToken + COORDINADOR/SUPERVISOR | valores no secretos de `Config` |
 | `panel/config/save` | idToken + COORDINADOR/SUPERVISOR | actualiza un valor permitido de `Config` |
 | `panel/analytics/daily` | idToken + COORDINADOR/SUPERVISOR | serie de visitas por día desde Cloudflare |
+| `panel/actividad/list` | idToken + COORDINADOR/SUPERVISOR/WEBMASTER (sin EDITOR) | dataset completo de actividad del equipo: eventos `[mes, edición, usuario, acción, producción, n]` con diccionarios (`meses`/`ediciones`/`usuarios`/`acciones`/`ids`). Agrega `Historial` (actor = displayName → índice inverso desde `Roles`; excluye `AUTOR`/`Sistema`) y `Auditoria`. Caché chunked 10 min sin invalidación. El cliente filtra por mes/edición/rol/usuario y arma la torta. La edición es la **actual** de cada producción (aproximación) |
 | `descarga` | pública (anónima) | registra un clic de leer/descargar una edición PDF |
 | `panel/descargas/list` | idToken + COORDINADOR/WEBMASTER/SUPERVISOR | totales y desglose por edición |
 

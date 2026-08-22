@@ -125,7 +125,7 @@ async function llamarPanel(action: string, idToken: string): Promise<Record<stri
 async function precargarVistas(idToken: string, rol: string): Promise<void> {
   const gestor = ['COORDINADOR', 'WEBMASTER', 'SUPERVISOR'].includes(rol);
   const esAdminRolLocal = rol === 'COORDINADOR' || rol === 'WEBMASTER';
-  const [board, eds, ediciones, agenda, revistas, users, config, analytics, descargas] = await Promise.all([
+  const [board, eds, ediciones, agenda, revistas, users, config, analytics, descargas, actividad] = await Promise.all([
     llamarPanel('panel/board/list', idToken),
     gestor ? llamarPanel('panel/board/editors', idToken) : Promise.resolve({ status: 'ok', editores: [] }),
     gestor ? llamarPanel('panel/ediciones/list', idToken) : Promise.resolve({ status: 'ok', ediciones: [] }),
@@ -137,6 +137,9 @@ async function precargarVistas(idToken: string, rol: string): Promise<void> {
     gestor ? llamarPanel('panel/config/list', idToken) : Promise.resolve({ status: 'error' }),
     gestor ? llamarPanel('panel/analytics/daily', idToken).then((r) => ({ ...r, __days: '7' })) : Promise.resolve({ status: 'error' }),
     gestor ? llamarPanel('panel/descargas/list', idToken).then((r) => ({ ...r, __days: '7' })) : Promise.resolve({ status: 'error' }),
+    // Última a propósito: lee el Historial completo y es la más lenta; el
+    // Promise.race de PRECARGA_LIMITE_MS protege el login.
+    gestor ? llamarPanel('panel/actividad/list', idToken) : Promise.resolve({ status: 'error' }),
   ]);
 
   function guardar(clave: string, valor: unknown) {
@@ -175,6 +178,19 @@ async function precargarVistas(idToken: string, rol: string): Promise<void> {
       acciones: descargas.acciones || {},
       total: Number(descargas.total || 0),
       totalHistorico: Number(descargas.total_historico || 0),
+    });
+  }
+  if (gestor && actividad && actividad.status === 'ok') {
+    guardar('tds-actividad-cache-v1', {
+      generado: actividad.generado,
+      meses: actividad.meses || [],
+      ediciones: actividad.ediciones || [],
+      usuarios: actividad.usuarios || [],
+      acciones: actividad.acciones || [],
+      ids: actividad.ids || [],
+      eventos: actividad.eventos || [],
+      descartados: Number(actividad.descartados || 0),
+      colisiones: Number(actividad.colisiones || 0),
     });
   }
 }

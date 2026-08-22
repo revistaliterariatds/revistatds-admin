@@ -7,6 +7,7 @@ y versionado semántico (SemVer).
 ## [0.1.0] — unreleased
 
 ### Added
+- Solapa **Actividad** (solo gestores): torta donut SVG con la actividad de cada integrante del equipo editorial, identificándolo con un color estable. Filtros combinables por período (mes o histórico completo), número de edición, rol y usuario; al elegir un usuario se resalta su sector y se abre el desglose por tipo de acción. Backend `panel/actividad/list` (`gas/actividad.gs`): cubo posicional compacto desde `Historial` + `Auditoria`, caché chunked 10 min; el cliente agrega y filtra sin red.
 - Tablero: la última decisión del autor (aprobar / no aprobar / subir versión) queda registrada como dato en cada producción (`accion_autor` + fecha + detalle en `Tablero`), visible como badge en la fila y en el detalle. Escrita por `registrarAccionAutor()` en los handlers de token (`autor.gs`); las columnas se auto-agregan vía `ensureTableroSchema()`.
 - Scaffold Astro static SSG (`site: https://redaccion.tramasdelsur.com.ar`, `base: /`).
 - Identidad visual TDS: tokens (`src/styles/tokens.css`), logo, nav y footer idénticos al sitio.

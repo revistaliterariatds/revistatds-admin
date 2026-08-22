@@ -55,6 +55,7 @@ src/
 ├── pages/usuarios.astro    ← usuarios y roles
 ├── pages/configuracion.astro ← configuración y asuntos de mail
 ├── pages/analiticas.astro  ← visitas, contador histórico y snapshots
+├── pages/actividad.astro   ← torta de actividad del equipo por usuario (solo gestores)
 ├── pages/descargas.astro   ← descargas/lecturas de ediciones PDF
 ├── pages/agenda.astro      ← calendario de citas (crear/comentar/editar)
 ├── pages/ediciones.astro   ← ciclo de apertura/cierre de ediciones
@@ -64,6 +65,7 @@ src/
 ├── scripts/usuarios.ts     ← gestión RBAC de usuarios
 ├── scripts/configuracion.ts ← valores operativos y asuntos
 ├── scripts/analiticas.ts   ← gráfico SVG de visitas
+├── scripts/actividad.ts    ← torta de actividad + desglose por acción (solo gestores)
 ├── scripts/descargas.ts    ← contadores por edición
 ├── scripts/agenda.ts       ← calendario, citas, comentarios, caché local
 ├── scripts/ediciones.ts    ← abrir/cerrar ediciones con fecha elegida
@@ -103,6 +105,14 @@ Tramas del Sur / EDICIONES / EDICION N° xx / { RECIBIDOS, PUBLICABLES }
 ## Medición de descargas
 
 El sitio público registra clics en los PDF de ediciones (`descarga`, público). El panel muestra totales por edición con desglose "leer"/"descargar", filtro por período y **contador histórico** (clics desde la activación, como en Visitas). Los datos son append-only en la hoja `Descargas` y crecen históricamente.
+
+## Actividad del equipo
+
+- Solapa **Actividad** (solo gestores: COORDINADOR/WEBMASTER/SUPERVISOR): **torta donut SVG** con la participación de cada integrante del equipo editorial (roles `COORDINADOR`, `SUPERVISOR` y `EDITOR` por defecto; el WEBMASTER aparece al elegir "Todos los roles" o su rol), cada persona identificada con un **color estable** (asignado sobre el orden alfabético global que fija el backend).
+- **Filtros combinables**: período (mes concreto o histórico completo), número de edición, rol y usuario. Al seleccionar un usuario su sector se resalta en la torta y se abre un **desglose por tipo de acción** en barras.
+- **Métrica** = puntos ponderados: acciones registradas (peso 2 para las que implican mail a autores o publicación) + 3 puntos por producción distinta gestionada.
+- Fuente: hojas `Historial` + `Auditoria` vía `panel/actividad/list`. Como el `actor` del Historial guarda el nombre visible (no el email), el backend resuelve la identidad con un índice inverso desde `Roles`; los eventos sin dueño quedan contados (`descartados`) y visibles al pie. La edición de cada evento es la **actual** de la producción (aproximación documentada).
+- Respuesta compacta posicional (diccionarios + eventos `[mes, edicion, usuario, acción, id, n]`) cacheada en `CacheService` por chunks (~1500 eventos c/u, TTL 10 min sin invalidación). El cliente filtra localmente: cambiar filtros no genera red.
 
 ## Agenda
 
