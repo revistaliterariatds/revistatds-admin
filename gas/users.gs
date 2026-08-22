@@ -3,6 +3,7 @@
 function handleUsersList(idToken) {
   var user = requireInternalUser(idToken);
   if (!esGestor(user)) throw new AuthError('Sin permisos.');
+  ensureRolesSchema(); // agrega telefono/notas si la hoja es previa (idempotente)
 
   // La caché guarda SOLO la parte compartida (users); puede_editar se calcula
   // por request: si se cacheara, dentro de la ventana un SUPERVISOR recibía
@@ -24,6 +25,8 @@ function handleUsersList(idToken) {
         rol: String(data[i][idx.rol] || ''),
         nombre: String(data[i][idx.nombre] || ''),
         alias: String(data[i][idx.alias] || ''),
+        telefono: String(data[i][idx.telefono] || ''),
+        notas: String(data[i][idx.notas] || ''),
         usar_alias_notif: String(data[i][idx.usar_alias_notif]).toUpperCase() === 'TRUE',
         activo: String(data[i][idx.activo]).toUpperCase() === 'TRUE',
       });
@@ -43,6 +46,8 @@ function handleUserSave(idToken, payload) {
   var rol = String(payload.rol || '').trim();
   var nombre = String(payload.nombre || '').trim().slice(0, 120);
   var alias = String(payload.alias || '').trim().slice(0, 120);
+  var telefono = String(payload.telefono || '').trim().slice(0, 40);
+  var notas = String(payload.notas || '').trim().slice(0, 600);
   var activo = payload.activo === true || String(payload.activo).toUpperCase() === 'TRUE';
   var usarAlias = payload.usar_alias_notif === true || String(payload.usar_alias_notif).toUpperCase() === 'TRUE';
 
@@ -67,12 +72,17 @@ function handleUserSave(idToken, payload) {
     if (String(data[row][idx.rol] || '') !== rol) diffs.push('rol: ' + data[row][idx.rol] + ' → ' + rol);
     if (String(data[row][idx.nombre] || '') !== nombre) diffs.push('nombre modificado');
     if (String(data[row][idx.alias] || '') !== alias) diffs.push('alias modificado');
+    if (String(data[row][idx.telefono] || '') !== telefono) diffs.push('teléfono modificado');
+    if (String(data[row][idx.notas] || '') !== notas) diffs.push('notas modificadas');
     if (String(data[row][idx.usar_alias_notif]).toUpperCase() === 'TRUE' !== usarAlias) diffs.push('usar_alias_notif');
     if ((String(data[row][idx.activo]).toUpperCase() === 'TRUE') !== activo) diffs.push('activo: ' + String(data[row][idx.activo]) + ' → ' + (activo ? 'TRUE' : 'FALSE'));
     cambios = diffs.length ? diffs.join('; ') : 'Guardado sin cambios efectivos';
   }
 
-  var values = [email, rol, nombre, alias, usarAlias ? 'TRUE' : 'FALSE', activo ? 'TRUE' : 'FALSE'];
+  // Escritura POSICIONAL: el orden debe respetar la hoja física (las columnas
+  // nuevas telefono/notas van al FINAL; ensureRolesSchema las agrega ahí).
+  ensureRolesSchema();
+  var values = [email, rol, nombre, alias, usarAlias ? 'TRUE' : 'FALSE', activo ? 'TRUE' : 'FALSE', telefono, notas];
   if (row < 0) sheet.appendRow(values);
   else sheet.getRange(row + 1, 1, 1, values.length).setValues([values]);
   CacheService.getScriptCache().remove('users-list');

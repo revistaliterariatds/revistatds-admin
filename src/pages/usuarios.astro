@@ -15,7 +15,7 @@ import Layout from '../layouts/Layout.astro';
     <div id="users-alert" class="status-card" hidden></div>
     <div class="board-table-wrap">
       <table class="board-table">
-        <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Notificaciones</th><th>Estado</th><th>Acción</th></tr></thead>
+        <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Teléfono</th><th>Notas</th><th>Notificaciones</th><th>Estado</th><th>Acción</th></tr></thead>
         <tbody id="users-body"></tbody>
       </table>
     </div>
@@ -29,6 +29,13 @@ import Layout from '../layouts/Layout.astro';
       <div class="form-row">
         <div class="form-group"><label for="user-role">Rol</label><select id="user-role"><option>EDITOR</option><option>SUPERVISOR</option><option>COORDINADOR</option><option>WEBMASTER</option></select></div>
         <div class="form-group"><label for="user-alias">Alias (opcional)</label><input id="user-alias" type="text" maxlength="120" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="user-phone">Teléfono / WhatsApp (opcional)</label><input id="user-phone" type="tel" maxlength="40" placeholder="+54 9 11 5555-5555" /></div>
+      </div>
+      <div class="form-group">
+        <label for="user-notes">Notas (opcional)</label>
+        <textarea id="user-notes" rows="2" maxlength="600" placeholder="Disponibilidad, forma de contacto preferida, etc."></textarea>
       </div>
       <label class="check-row"><input id="user-alias-notif" type="checkbox" /> Usar alias en notificaciones</label>
       <label class="check-row"><input id="user-active" type="checkbox" checked /> Usuario activo</label>

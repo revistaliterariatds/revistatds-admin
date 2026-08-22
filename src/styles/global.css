@@ -470,8 +470,10 @@ footer {
 
 .form-group input:not([type="checkbox"]):not([type="radio"]),
 .form-group select:not(.filter-select),
+.form-group textarea,
 .user-form input:not([type="checkbox"]):not([type="radio"]),
-.user-form select {
+.user-form select,
+.user-form textarea {
   width: 100%;
   padding: 0.6rem 0.85rem;
   border: 1px solid var(--rule);
@@ -483,16 +485,25 @@ footer {
   line-height: 1.5;
 }
 
+.form-group textarea,
+.user-form textarea { resize: vertical; min-height: 2.6rem; }
+
 .form-group input:focus,
 .form-group select:focus,
+.form-group textarea:focus,
 .user-form input:focus,
-.user-form select:focus {
+.user-form select:focus,
+.user-form textarea:focus {
   outline: none;
   box-shadow: var(--focus-ring);
   border-color: var(--orange);
 }
 
 .user-form .form-group { margin-bottom: 1rem; }
+
+/* ── Usuarios: teléfono y notas ── */
+.celda-notas { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .celda-notas { max-width: none; overflow: visible; white-space: normal; } }
 
 /* ── Revistas: ediciones publicadas ── */
 .revistas-grid {

@@ -1,7 +1,7 @@
 // sheets.gs — DB en Google Sheets: schema, acceso y helpers.
 
 var SHEETS = {
-  Roles: ['email', 'rol', 'nombre', 'alias', 'usar_alias_notif', 'activo'],
+  Roles: ['email', 'rol', 'nombre', 'alias', 'usar_alias_notif', 'activo', 'telefono', 'notas'],
   Tablero: [
     'id', 'titulo', 'autor', 'email_autor', 'edad', 'categoria', 'estado',
     'editor_asignado', 'url_carpeta_drive', 'url_doc_correccion',
@@ -46,6 +46,25 @@ function ensureSchema() {
   });
   migrarAgendaHoraFin();
   ensureTableroSchema();
+  ensureRolesSchema();
+}
+
+// Migración idempotente: agrega al final de la hoja Roles las columnas de
+// SHEETS.Roles que falten (telefono, notas). Se invoca también on demand desde
+// users.gs, así el deploy no requiere paso manual.
+function ensureRolesSchema() {
+  var sheet = getSheet('Roles');
+  if (!sheet) return;
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) { sheet.appendRow(SHEETS.Roles); return; }
+  var idx = headerIndex(sheet);
+  var col = lastCol + 1;
+  SHEETS.Roles.forEach(function (h) {
+    if (idx[h] === undefined) {
+      sheet.getRange(1, col).setValue(h);
+      col++;
+    }
+  });
 }
 
 // Migración idempotente: agrega la columna 'hora_fin' (después de 'hora') a la
